@@ -199,7 +199,7 @@ Kokpit nigdy nie pyta Gmaila. Bezpiecznik przy zbliżaniu się do limitu: dłuż
 | Zgubione powiadomienia, wygasły watch | Dociągnięcie przy wejściu + codzienny cron |
 | Złośliwy HTML w mailu | `iframe sandbox` bez skryptów, bez zewnętrznych obrazków |
 | Odwołany dostęp / zmiana hasła kontakt@ | Stan „rozłączona”, dane zostają, ponowne połączenie dociąga zmiany |
-| Treść maili w Gemini | Tylko po kliknięciu, jeden wątek; darmowy poziom Gemini może używać danych - decyzja świadoma (§2) |
+| Treść maili w Gemini | Tylko po kliknięciu, jeden wątek. W EOG darmowy poziom Gemini podlega warunkom przetwarzania jak płatny (bez użycia treści do ulepszania modeli), ale treść i tak wychodzi poza skrzynkę - stąd decyzja B (§2) |
 | Limit 4,5 MB żądania Vercela | Załączniki łącznie ≤ 4 MB, sprawdzane w przeglądarce i na serwerze |
 | Kategorie Gmaila wyłączone w Workspace | Zapasowo `List-Unsubscribe` i `Precedence: bulk` |
 | Koniec kadencji | „Rozłącz i usuń dane”; dostęp przechodzi z kontakt@ na nową osobę bez zmian w kodzie |
