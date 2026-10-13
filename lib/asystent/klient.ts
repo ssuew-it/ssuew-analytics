@@ -11,7 +11,7 @@ export class BladKlienta extends Error {
   }
 }
 
-async function wywolaj<T>(url: string, init?: RequestInit): Promise<T> {
+export async function wywolaj<T>(url: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {
     res = await fetch(url, init)
@@ -23,7 +23,7 @@ async function wywolaj<T>(url: string, init?: RequestInit): Promise<T> {
   return dane as T
 }
 
-const json = (method: string, body: unknown): RequestInit => ({
+export const json = (method: string, body: unknown): RequestInit => ({
   method,
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body),
