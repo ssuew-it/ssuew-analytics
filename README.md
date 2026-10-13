@@ -56,6 +56,16 @@ Widzi je wyłącznie właściciel; zarząd ma w tym miejscu panel faktów bez AI
 - Do Google trafia obraz projektu z imionami i nazwiskami osób z Planera - świadoma decyzja z projektu
   `docs/superpowers/specs/2026-10-02-deck-asystent-kokpit-design.md`. W EOG darmowy poziom podlega warunkom przetwarzania jak płatny.
 
+## Strony (Google Search Console)
+
+Panel `/strony` czyta Search Console tym samym kontem serwisowym co Firebase (`FIREBASE_SERVICE_ACCOUNT`) - bez nowych zmiennych. Jednorazowo:
+
+1. Google Cloud, projekt Firebase → APIs & Services → Library → włącz „Google Search Console API”.
+2. Search Console każdej strony → Ustawienia → Użytkownicy i uprawnienia → Dodaj użytkownika: `client_email` z konta serwisowego, uprawnienie „Ograniczone”.
+3. Strony, których nie ma w Search Console, najpierw tam dodaj i zweryfikuj.
+
+Potem „Dodaj stronę” w panelu. Lista żyje w Firestore `strony/lista` (tylko serwer). Statystyki mają cache 6 h.
+
 ## Uruchomienie
 
 ```bash
