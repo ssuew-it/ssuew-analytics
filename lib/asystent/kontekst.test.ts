@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { zbudujKontekst, type DaneProjektu } from '@/lib/asystent/kontekst'
 import { POLA_DOMYSLNE, type Wydarzenie } from '@/lib/planer/typy'
+import type { StatystykiStrony } from '@/lib/strony/model'
 
 const DZIS = { rok: 2026, miesiac: 10, dzien: 2 }
 
@@ -15,7 +16,7 @@ function dane(nadpisz: Partial<DaneProjektu> = {}): DaneProjektu {
   return {
     rekrutacje: [], kohorty: [], punkty: [], projekty: [], czlonkowie: [],
     semestr: { id: '2026Z', nazwa: 'Zimowy 2026/2027' },
-    wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, notatki: [],
+    wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, notatki: [], strony: [],
     ...nadpisz,
   }
 }
@@ -59,6 +60,21 @@ describe('zbudujKontekst', () => {
   it('notatki trafiają do obrazu jako pewne ustalenia', () => {
     const k = zbudujKontekst(dane({ notatki: ['Zebrania zarządu w środy'] }), DZIS)
     expect(k.notatki).toEqual(['Zebrania zarządu w środy'])
+  })
+
+  it('strony: liczby, zmiana w procentach, alert i 3 najlepsze zapytania', () => {
+    const strona: StatystykiStrony = {
+      witryna: 'sc-domain:jwk26.pl', nazwa: 'jwk26.pl', okres: { od: '2026-09-01', do: '2026-09-28' },
+      biezace: { klikniecia: 60, wyswietlenia: 2000, ctr: 0.03, pozycja: 7.26 },
+      poprzednie: { klikniecia: 100, wyswietlenia: 2000, ctr: 0.05, pozycja: 8.1 },
+      zmiana: { klikniecia: -0.4, wyswietlenia: 0 }, dzienne: [],
+      zapytania: ['jwk', 'jwk 2026', 'juwenalia', 'czwarte'].map((tekst) => ({ tekst, klikniecia: 1, wyswietlenia: 1, pozycja: 1 })),
+      podstrony: [], alert: true,
+    }
+    expect(zbudujKontekst(dane({ strony: [strona] }), DZIS).strony).toEqual([{
+      strona: 'jwk26.pl', okres: '2026-09-01 - 2026-09-28', klikniecia: 60, wyswietlenia: 2000,
+      sredniaPozycja: 7.3, zmianaKlikniecProc: -40, alertSpadku: true, topZapytania: ['jwk', 'jwk 2026', 'juwenalia'],
+    }])
   })
 
   it('członkowie liczeni po statusach w kohortach', () => {

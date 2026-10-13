@@ -6,6 +6,7 @@ import { dzisWarszawa } from '@/lib/czas'
 import type { Wydarzenie } from '@/lib/planer/typy'
 import type { Czlonek, Kohorta, KpiMetric, Projekt, Rekrutacja } from '@/types'
 import type { Rola } from '@/lib/auth/role'
+import type { WynikStrony } from '@/lib/strony/model'
 import { zbudujKontekst, type DaneProjektu, type KontekstProjektu } from './kontekst'
 import { INSTRUKCJA_ODPRAWY, SCHEMAT_ODPRAWY, sprawdzOdprawe, wiadomoscOdprawy, type ZapisanaOdprawa } from './odprawa'
 import { BladAsystenta, zapytajGemini } from './gemini'
@@ -65,10 +66,12 @@ export function daneProjektu(
   p: StanPlanera,
   semestr: { id: string; nazwa: string },
   notatki: string[],
+  strony: WynikStrony[],
 ): DaneProjektu {
   return {
     rekrutacje: a.rekrutacje, kohorty: a.kohorty, punkty: a.punkty, projekty: a.projekty, czlonkowie: a.czlonkowie,
     semestr, wydarzenia: p.wydarzenia, sesja: p.sesja, sklad: p.sklad, propozycje: p.propozycje, notatki,
+    strony: strony.flatMap((w) => (w.ok ? [w.dane] : [])),
   }
 }
 
@@ -110,15 +113,16 @@ export async function odswiezOdpraweWTle(w: {
   planer: Promise<StanPlanera>
   zapisana: Promise<ZapisanaOdprawa | null>
   notatki: Promise<string[]>
+  strony: Promise<WynikStrony[]>
   semestr: { id: string; nazwa: string }
   teraz: Date
 }): Promise<void> {
   if (!process.env.GEMINI_API_KEY) return
   try {
-    const [a, p, zapisana, notatki] = await Promise.all([w.arkusz, w.planer, w.zapisana, w.notatki])
+    const [a, p, zapisana, notatki, strony] = await Promise.all([w.arkusz, w.planer, w.zapisana, w.notatki, w.strony])
     // Odprawa z pustego arkusza albo bez Planera byłaby o niczym - poczekamy.
     if (a.czasMs === null || !p.ok) return
-    const k = zbudujKontekst(daneProjektu(a, p, w.semestr, notatki), dzisWarszawa(w.teraz))
+    const k = zbudujKontekst(daneProjektu(a, p, w.semestr, notatki, strony), dzisWarszawa(w.teraz))
     if (!czyOdswiezyc(zapisana, sladKontekstu(k), k.meta.data, w.teraz.getTime())) return
     await generujOdprawe(k, w.teraz.getTime())
   } catch (e) {

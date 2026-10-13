@@ -7,6 +7,7 @@ import { opisCzasu, opisMiejsca, opisOsob, porownajWydarzenia } from '@/lib/plan
 import { dniWydarzenia, poczatek, porownajDaty, przesunDate, type Data } from '@/lib/planer/trwanie'
 import { KATEGORIE, type Miesiac, type Wydarzenie } from '@/lib/planer/typy'
 import type { StanSesjiWspolnej } from '@/lib/planer/stan'
+import type { StatystykiStrony } from '@/lib/strony/model'
 import type { Czlonek, Kohorta, KpiMetric, Projekt, Rekrutacja } from '@/types'
 
 /** Surowe dane całego projektu - to, co serwer i tak umie pobrać. */
@@ -23,6 +24,8 @@ export interface DaneProjektu {
   propozycje: number
   /** Ustalenia zatwierdzone przez właściciela - asystent traktuje je jak fakty. */
   notatki: string[]
+  /** Strony z Search Console, które odpowiedziały - błędne pomijamy, asystent nie zgaduje. */
+  strony: StatystykiStrony[]
 }
 
 /** Ile dni Planera widzi asystent. */
@@ -151,6 +154,16 @@ export function zbudujKontekst(d: DaneProjektu, dzis: Data) {
       kolizje,
     },
     czlonkowie,
+    strony: d.strony.map((s) => ({
+      strona: s.nazwa,
+      okres: `${s.okres.od} - ${s.okres.do}`,
+      klikniecia: s.biezace.klikniecia,
+      wyswietlenia: s.biezace.wyswietlenia,
+      sredniaPozycja: Math.round(s.biezace.pozycja * 10) / 10,
+      zmianaKlikniecProc: s.zmiana.klikniecia === null ? null : Math.round(s.zmiana.klikniecia * 100),
+      alertSpadku: s.alert,
+      topZapytania: s.zapytania.slice(0, 3).map((z) => z.tekst),
+    })),
     notatki: d.notatki,
   }
 }

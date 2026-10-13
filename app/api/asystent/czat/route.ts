@@ -7,6 +7,7 @@ import { czytajOdprawe, daneProjektu, pobierzArkusz, pobierzPlaner, zbudujKontek
 import { czytajRozmowe, tresciNotatek, zapiszRozmowe } from '@/lib/asystent/pamiecDane'
 import { dopiszPytanie, odczytajOdpowiedzCzatu, SCHEMAT_CZATU, tytulRozmowy } from '@/lib/asystent/pamiec'
 import { tylkoWlasciciel } from '@/lib/asystent/tylkoWlasciciel'
+import { statystykiStron } from '@/lib/strony/dane'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -36,13 +37,14 @@ export async function POST(req: NextRequest) {
 
   const semestr = biezacySemestr(new Date(teraz))
   try {
-    const [a, p, notatki, zapisana] = await Promise.all([
+    const [a, p, notatki, zapisana, strony] = await Promise.all([
       pobierzArkusz(),
       pobierzPlaner(semestr.id, kto.rola),
       tresciNotatek().catch(() => []),
       czytajOdprawe().catch(() => null),
+      statystykiStron().catch(() => []),
     ])
-    const k = zbudujKontekst(daneProjektu(a, p, { id: semestr.id, nazwa: semestr.nazwa }, notatki), dzisWarszawa(new Date(teraz)))
+    const k = zbudujKontekst(daneProjektu(a, p, { id: semestr.id, nazwa: semestr.nazwa }, notatki, strony), dzisWarszawa(new Date(teraz)))
     const { tekst } = await zapytajGemini({
       instrukcja: INSTRUKCJA_CZATU,
       wiadomosci: rozmowaDlaGemini(k, wiadomosci, zapisana?.odprawa ?? null),

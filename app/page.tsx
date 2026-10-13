@@ -89,7 +89,8 @@ export default async function KokpitPage() {
     })
     strony = wynikiStron.then((w) => (w ? podsumujStrony(w) : null))
     after(() => odswiezOdpraweWTle({
-      arkusz, planer, zapisana, notatki: tresciNotatek().catch(() => []), semestr: { id: semestr.id, nazwa: semestr.nazwa }, teraz,
+      arkusz, planer, zapisana, notatki: tresciNotatek().catch(() => []), strony: wynikiStron.then((w) => w ?? []),
+      semestr: { id: semestr.id, nazwa: semestr.nazwa }, teraz,
     }))
   }
 

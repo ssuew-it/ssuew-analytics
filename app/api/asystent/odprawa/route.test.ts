@@ -4,6 +4,7 @@ const ktoPyta = vi.fn()
 const generujOdprawe = vi.fn()
 vi.mock('@/lib/auth/guard', () => ({ ktoPyta: (...a: unknown[]) => ktoPyta(...a) }))
 vi.mock('@/lib/asystent/pamiecDane', () => ({ tresciNotatek: async () => [] }))
+vi.mock('@/lib/strony/dane', () => ({ statystykiStron: async () => [] }))
 vi.mock('@/lib/asystent/dane', () => ({
   pobierzArkusz: async () => ({ rekrutacje: [], kohorty: [], punkty: [], projekty: [], czlonkowie: [], czasMs: 1 }),
   pobierzPlaner: async () => ({ wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, ok: true }),

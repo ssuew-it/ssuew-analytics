@@ -5,6 +5,7 @@ import { dzisWarszawa } from '@/lib/czas'
 import { komunikatBledu } from '@/lib/asystent/gemini'
 import { daneProjektu, generujOdprawe, pobierzArkusz, pobierzPlaner, zbudujKontekst } from '@/lib/asystent/dane'
 import { tresciNotatek } from '@/lib/asystent/pamiecDane'
+import { statystykiStron } from '@/lib/strony/dane'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -18,10 +19,10 @@ export async function POST(req: NextRequest) {
   const teraz = new Date()
   const semestr = biezacySemestr(teraz)
   try {
-    const [a, p, notatki] = await Promise.all([
-      pobierzArkusz(), pobierzPlaner(semestr.id, kto.rola), tresciNotatek().catch(() => []),
+    const [a, p, notatki, strony] = await Promise.all([
+      pobierzArkusz(), pobierzPlaner(semestr.id, kto.rola), tresciNotatek().catch(() => []), statystykiStron().catch(() => []),
     ])
-    const k = zbudujKontekst(daneProjektu(a, p, { id: semestr.id, nazwa: semestr.nazwa }, notatki), dzisWarszawa(teraz))
+    const k = zbudujKontekst(daneProjektu(a, p, { id: semestr.id, nazwa: semestr.nazwa }, notatki, strony), dzisWarszawa(teraz))
     return NextResponse.json(await generujOdprawe(k, teraz.getTime()))
   } catch (e) {
     const { status, error } = komunikatBledu(e)

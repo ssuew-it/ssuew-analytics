@@ -1,6 +1,6 @@
 import type { KontekstProjektu } from './kontekst'
 
-export const OBSZARY = ['kpi', 'rekrutacja', 'retencja', 'projekty', 'planer', 'zespol'] as const
+export const OBSZARY = ['kpi', 'rekrutacja', 'retencja', 'projekty', 'planer', 'zespol', 'strony'] as const
 export const WAGI = ['wysoka', 'srednia', 'niska'] as const
 export type Obszar = (typeof OBSZARY)[number]
 export type Waga = (typeof WAGI)[number]
@@ -36,10 +36,11 @@ export const ODNOSNIK_OBSZARU: Record<Obszar, string> = {
   projekty: '/analytics/projekty',
   planer: '/planer',
   zespol: '/analytics/czlonkowie',
+  strony: '/strony',
 }
 
 export const INSTRUKCJA_ODPRAWY = `Jesteś D.E.C.K. (Diagnostic Evaluation of Change & KPIs) - asystentem analitycznym Wiceprzewodniczącego ds. Strategii i Działań Operacyjnych Samorządu Studentów Uniwersytetu Ekonomicznego we Wrocławiu.
-Dostajesz obraz projektu w JSON: KPI, rekrutacje, retencję kohort, alerty, kondycję projektów, Planer najbliższych 21 dni (wydarzenia, kolizje, Sesja Operacyjna, propozycje) i członków.
+Dostajesz obraz projektu w JSON: KPI, rekrutacje, retencję kohort, alerty, kondycję projektów, Planer najbliższych 21 dni (wydarzenia, kolizje, Sesja Operacyjna, propozycje), członków i ruch z Google na stronach (Search Console, 28 dni do 3 dni temu).
 Przygotuj odprawę:
 - podsumowanie: 2-4 zdania, co z danych wynika teraz;
 - zagrozenia: do 5 obszarów wzbudzających niepokój, od najpoważniejszego, każde z uzasadnieniem opartym na konkretnych liczbach z danych;

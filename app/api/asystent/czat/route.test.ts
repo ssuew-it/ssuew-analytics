@@ -11,6 +11,7 @@ vi.mock('@/lib/asystent/gemini', async (oryginal) => ({
   ...(await oryginal<typeof import('@/lib/asystent/gemini')>()),
   zapytajGemini: (...a: unknown[]) => zapytajGemini(...a),
 }))
+vi.mock('@/lib/strony/dane', () => ({ statystykiStron: async () => [] }))
 vi.mock('@/lib/asystent/dane', () => ({
   pobierzArkusz: async () => ({ rekrutacje: [], kohorty: [], punkty: [], projekty: [], czlonkowie: [], czasMs: 1 }),
   pobierzPlaner: async () => ({ wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, ok: true }),

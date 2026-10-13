@@ -8,7 +8,7 @@ import type { Fakt } from '@/lib/asystent/fakty'
 import { ListaFaktow, SzkieletFaktow } from './PanelFaktow'
 
 const ETYKIETA_OBSZARU: Record<Obszar, string> = {
-  kpi: 'KPI', rekrutacja: 'Rekrutacja', retencja: 'Retencja', projekty: 'Projekty', planer: 'Sesja Operacyjna', zespol: 'Zespół',
+  kpi: 'KPI', rekrutacja: 'Rekrutacja', retencja: 'Retencja', projekty: 'Projekty', planer: 'Sesja Operacyjna', zespol: 'Zespół', strony: 'Strony',
 }
 
 const STYL_WAGI: Record<Waga, string> = {

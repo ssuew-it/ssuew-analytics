@@ -28,6 +28,7 @@ describe('sprawdzOdprawe', () => {
   it('każdy obszar ma odnośnik do modułu', () => {
     expect(ODNOSNIK_OBSZARU.retencja).toBe('/analytics/retencja')
     expect(ODNOSNIK_OBSZARU.planer).toBe('/planer')
+    expect(ODNOSNIK_OBSZARU.strony).toBe('/strony')
   })
 
   it('wiadomość niesie dane jako JSON, instrukcja zakazuje długich myślników', () => {
