@@ -11,6 +11,8 @@ import { useTeraz } from '@/lib/useTeraz'
 import { odmiana, type Fakt, type NajblizszeWydarzenie } from '@/lib/asystent/fakty'
 import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import type { Rola } from '@/lib/auth/role'
+import { DNI_OKRESU, opisZmiany } from '@/lib/strony/okresy'
+import type { PodsumowanieStron } from '@/lib/strony/model'
 import { CzatDeck } from './CzatDeck'
 import { DeckTile } from './DeckTile'
 import { MatrixRain } from './MatrixRain'
@@ -58,9 +60,11 @@ type Props = {
   fakty: Promise<Fakt[]>
   /** Zapisana odprawa asystenta. Zarząd dostaje `null` - asystent jest tylko dla właściciela. */
   odprawa: Promise<ZapisanaOdprawa | null> | null
+  /** Podsumowanie Search Console. Zarząd dostaje `null`; wewnętrzne `null` - listy stron nie dało się odczytać. */
+  strony: Promise<PodsumowanieStron | null> | null
 }
 
-export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty, odprawa }: Props) {
+export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty, odprawa, strony }: Props) {
   const router = useRouter()
   const { wyloguj } = useAuth()
 
@@ -156,15 +160,11 @@ export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty,
             </DeckTile>
           )}
 
-          <DeckTile
-            stan="zablokowany"
-            href="/strony"
-            etykieta="moduł 04 · search console"
-            tytul="Strony"
-            wkrotce="etap 4"
-          >
-            <p className="text-[12px] leading-relaxed">Kliknięcia, wyświetlenia i pozycje nadzorowanych witryn.</p>
-          </DeckTile>
+          {rola === 'owner' && strony && (
+            <Suspense fallback={<KafelekStron dane={undefined} />}>
+              <KafelekStronZDanymi strony={strony} />
+            </Suspense>
+          )}
         </main>
 
         <footer className="mt-auto">
@@ -268,6 +268,48 @@ function KafelekSesji({ propozycje, najblizsze }: { propozycje: number | null; n
           ))
         )}
       </ul>
+    </DeckTile>
+  )
+}
+
+function KafelekStronZDanymi({ strony }: { strony: Promise<PodsumowanieStron | null> }) {
+  return <KafelekStron dane={use(strony)} />
+}
+
+/** `undefined` - dane jeszcze płyną; `null` - listy stron nie dało się odczytać. */
+function KafelekStron({ dane }: { dane: PodsumowanieStron | null | undefined }) {
+  const z = dane ? opisZmiany('klikniecia', dane.klikniecia, dane.poprzednieKlikniecia) : null
+  return (
+    <DeckTile
+      stan="zywy"
+      href="/strony"
+      etykieta="moduł 04 · search console"
+      tytul="Strony"
+      odznaka={dane && dane.alerty > 0 ? odmiana(dane.alerty, ['alert', 'alerty', 'alertów']) : undefined}
+    >
+      {dane === undefined ? (
+        <Brak />
+      ) : dane === null ? (
+        <p className="text-[12px] leading-relaxed text-deck-muted">Search Console nie odpowiada - szczegóły w panelu.</p>
+      ) : dane.stron === 0 ? (
+        <p className="text-[12px] leading-relaxed text-deck-muted">Dodaj pierwszą stronę, żeby śledzić ruch z Google.</p>
+      ) : (
+        <div className="flex h-full flex-col justify-between gap-3">
+          <div className="flex items-baseline gap-2 tabular-nums">
+            <span className="text-[30px] font-bold leading-none tracking-[-0.03em]">
+              <AnimatedNumber value={dane.klikniecia} />
+            </span>
+            <span className="text-[12px] font-medium text-deck-muted">kliknięć · {DNI_OKRESU} dni</span>
+          </div>
+          <div className="font-mono text-[11px] text-deck-muted">
+            {z && <span className={z.dobra === null ? '' : z.dobra ? 'text-deck-accent' : 'text-deck-danger'}>{z.tekst}</span>}{' '}
+            wobec poprzednich {DNI_OKRESU} dni
+            {dane.bledy > 0 && (
+              <div className="mt-1 text-deck-danger">{odmiana(dane.bledy, ['strona z błędem', 'strony z błędem', 'stron z błędem'])}</div>
+            )}
+          </div>
+        </div>
+      )}
     </DeckTile>
   )
 }

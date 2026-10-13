@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { DeckHub, type DaneAnalityki, type DanePlanera } from '@/components/deck/DeckHub'
 import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import type { Fakt } from '@/lib/asystent/fakty'
+import type { PodsumowanieStron } from '@/lib/strony/model'
 
 vi.mock('next/link', () => ({
   default: ({ children, href, ...rest }: { children: ReactNode; href: string }) => (
@@ -20,6 +21,9 @@ vi.mock('@/lib/auth/useAuth', () => ({ useAuth: () => ({ wyloguj }) }))
 
 const ANALITYKA: DaneAnalityki = { konwersja: 61.1, retencja: 3.81, kpiWzrosty: 20, kpiRazem: 28, alerty: 2, czasArkuszaMs: 420 }
 const PLANER: DanePlanera = { propozycje: 0, sesja: { wlaczony: false, od: null, przez: null }, najblizsze: [], ok: true }
+const STRONY: PodsumowanieStron = {
+  stron: 2, klikniecia: 125, wyswietlenia: 4000, poprzednieKlikniecia: 100, poprzednieWyswietlenia: 3000, alerty: 1, bledy: 0,
+}
 const ZAPIS: ZapisanaOdprawa = {
   slad: 's', dzien: '02.10.2026', utworzono: Date.UTC(2026, 9, 2, 12, 32), model: 'm',
   odprawa: { podsumowanie: 'Rekrutacja trzyma poziom, retencja słabnie.', zagrozenia: [], dzis: [] },
@@ -38,11 +42,13 @@ async function hub(nadpisz: {
   planer?: Partial<DanePlanera> | Promise<DanePlanera>
   fakty?: Fakt[] | Promise<Fakt[]>
   odprawa?: ZapisanaOdprawa | null | Promise<ZapisanaOdprawa | null>
+  strony?: PodsumowanieStron | null | Promise<PodsumowanieStron | null>
 } = {}) {
   const rola = nadpisz.rola ?? 'owner'
   const analityka = nadpisz.analityka instanceof Promise ? nadpisz.analityka : Promise.resolve({ ...ANALITYKA, ...nadpisz.analityka })
   const planer = nadpisz.planer instanceof Promise ? nadpisz.planer : Promise.resolve({ ...PLANER, ...nadpisz.planer })
   const odprawa = rola === 'owner' ? obietnica(nadpisz.odprawa === undefined ? ZAPIS : nadpisz.odprawa) : null
+  const strony = rola === 'owner' ? obietnica(nadpisz.strony === undefined ? STRONY : nadpisz.strony) : null
   // Dane ze strumienia (use + Suspense) dopływają w mikrozadaniach - bez
   // asynchronicznego act React nie zdąży podmienić wersji zastępczej.
   return act(async () => {
@@ -56,6 +62,7 @@ async function hub(nadpisz: {
         planer={planer}
         fakty={obietnica(nadpisz.fakty ?? [])}
         odprawa={odprawa}
+        strony={strony}
       />,
     )
   })
@@ -63,7 +70,7 @@ async function hub(nadpisz: {
 
 describe('DeckHub', () => {
   it('nagłówek, kafelki, odprawa i pasek są od razu - nie czekają na dane', async () => {
-    await hub({ analityka: nigdy(), planer: nigdy(), fakty: nigdy(), odprawa: nigdy() })
+    await hub({ analityka: nigdy(), planer: nigdy(), fakty: nigdy(), odprawa: nigdy(), strony: nigdy() })
     expect(screen.getByRole('heading', { level: 1, name: 'D.E.C.K.' })).toBeInTheDocument()
     expect(screen.getByText('Diagnostic Evaluation of Change & KPIs')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Odprawa D.E.C.K.' })).toBeInTheDocument()
@@ -162,5 +169,27 @@ describe('DeckHub', () => {
   it('pasek statusu zna sposób wejścia', async () => {
     await hub({ rola: 'board', email: 'Jula', kodem: true })
     expect(screen.getByText('kod')).toBeInTheDocument()
+  })
+
+  it('właściciel ma żywy kafelek Stron: kliknięcia, zmiana i alert', async () => {
+    await hub()
+    expect(screen.getByRole('link', { name: /Strony/ })).toHaveAttribute('href', '/strony')
+    expect(await screen.findByText('+25%')).toBeInTheDocument()
+    expect(screen.getByText('1 alert')).toBeInTheDocument()
+  })
+
+  it('kafelek Stron bez stron zachęca do dodania pierwszej', async () => {
+    await hub({ strony: { ...STRONY, stron: 0, klikniecia: 0, poprzednieKlikniecia: 0, alerty: 0 } })
+    expect(await screen.findByText(/Dodaj pierwszą stronę/)).toBeInTheDocument()
+  })
+
+  it('kafelek Stron, gdy Search Console zawiódł', async () => {
+    await hub({ strony: null })
+    expect(await screen.findByText(/Search Console nie odpowiada/)).toBeInTheDocument()
+  })
+
+  it('zarząd nie widzi kafelka Stron', async () => {
+    await hub({ rola: 'board', email: 'Jula' })
+    expect(screen.queryByRole('heading', { name: 'Strony' })).toBeNull()
   })
 })

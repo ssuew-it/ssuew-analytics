@@ -17,6 +17,8 @@ import {
 } from '@/lib/asystent/dane'
 import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import { tresciNotatek } from '@/lib/asystent/pamiecDane'
+import { statystykiStron } from '@/lib/strony/dane'
+import { podsumujStrony, type PodsumowanieStron, type WynikStrony } from '@/lib/strony/model'
 
 /** Zapas na odprawę generowaną w tle po wysłaniu strony (Gemini do 25 s). */
 export const maxDuration = 60
@@ -73,12 +75,19 @@ export default async function KokpitPage() {
     }),
   )
 
-  // Asystent jest tylko dla właściciela. Zapisaną odprawę pokazujemy od razu;
-  // ewentualną nową liczymy już po wysłaniu strony.
+  // Asystent i Strony są tylko dla właściciela. Zapisaną odprawę pokazujemy od
+  // razu; ewentualną nową liczymy już po wysłaniu strony.
   let odprawa: Promise<ZapisanaOdprawa | null> | null = null
+  let strony: Promise<PodsumowanieStron | null> | null = null
   if (kto.rola === 'owner') {
     const zapisana = czytajOdprawe().catch(() => null)
     odprawa = zapisana
+    // Jedno pobranie na wejście - kafelek i odprawa biorą z tej samej obietnicy.
+    const wynikiStron: Promise<WynikStrony[] | null> = statystykiStron().catch((e) => {
+      console.error('[strony] kokpit:', e)
+      return null
+    })
+    strony = wynikiStron.then((w) => (w ? podsumujStrony(w) : null))
     after(() => odswiezOdpraweWTle({
       arkusz, planer, zapisana, notatki: tresciNotatek().catch(() => []), semestr: { id: semestr.id, nazwa: semestr.nazwa }, teraz,
     }))
@@ -94,6 +103,7 @@ export default async function KokpitPage() {
       planer={danePlanera}
       fakty={fakty}
       odprawa={odprawa}
+      strony={strony}
     />
   )
 }
