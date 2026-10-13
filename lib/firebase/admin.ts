@@ -60,3 +60,12 @@ export function rozmowyRef() {
 export function notatkiRef() {
   return bazaAdmin().collection('asystentNotatki')
 }
+
+/**
+ * Lista stron panelu Strony. Celowo poza `ustawienia/` - tamtą kolekcję reguła
+ * daje do odczytu zarządowi, a strony są tylko dla właściciela. Kolekcja
+ * `strony` nie ma reguły klienta, więc zamyka ją reguła końcowa.
+ */
+export function stronyRef() {
+  return bazaAdmin().collection('strony').doc('lista')
+}
