@@ -181,7 +181,7 @@ export async function importujStrone(
     const zrobione = (strona ? stan.import.zrobione : 0) + ile
     const razem = Math.max(zrobione, strona ? stan.import.razem : (l.resultSizeEstimate ?? zrobione))
     const nastepnaStrona = l.nextPageToken ?? null
-    await zapiszStan({ import: { trwa: nastepnaStrona !== null, zrobione, razem } })
+    await zapiszStan({ import: { trwa: nastepnaStrona !== null, zrobione, razem, strona: nastepnaStrona } })
     return { nastepnaStrona, zrobione, razem }
   })
 }
@@ -206,7 +206,7 @@ export async function polaczSkrzynke(kod: string): Promise<'ok' | 'inne-konto'> 
     watchWygasa: Number(w.expiration),
     dzierzawaDo: 0,
     doPowtorki: false,
-    import: poprzedni ? poprzedni.import : { trwa: true, zrobione: 0, razem: 0 },
+    import: poprzedni ? poprzedni.import : { trwa: true, zrobione: 0, razem: 0, strona: null },
   })
   return 'ok'
 }

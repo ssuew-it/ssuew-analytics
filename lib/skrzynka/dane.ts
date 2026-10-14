@@ -34,7 +34,12 @@ export async function czytajStan(): Promise<StanSkrzynki | null> {
     dzierzawaDo: liczba(d.dzierzawaDo),
     doPowtorki: d.doPowtorki === true,
     polaczona: d.polaczona === true,
-    import: { trwa: d.import?.trwa === true, zrobione: liczba(d.import?.zrobione), razem: liczba(d.import?.razem) },
+    import: {
+      trwa: d.import?.trwa === true,
+      zrobione: liczba(d.import?.zrobione),
+      razem: liczba(d.import?.razem),
+      strona: typeof d.import?.strona === 'string' ? d.import.strona : null,
+    },
   }
 }
 

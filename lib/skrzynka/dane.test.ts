@@ -73,7 +73,7 @@ describe('stan', () => {
     await zapiszStan({ ostatniaSynchronizacja: 5 })
     expect(await czytajStan()).toEqual({
       email: 'kontakt@x', token: 'enc', historyId: '7', watchWygasa: null, ostatniaSynchronizacja: 5,
-      dzierzawaDo: 0, doPowtorki: false, polaczona: true, import: { trwa: false, zrobione: 0, razem: 0 },
+      dzierzawaDo: 0, doPowtorki: false, polaczona: true, import: { trwa: false, zrobione: 0, razem: 0, strona: null },
     })
   })
 })

@@ -1,16 +1,18 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 
 /**
  * Import 12 miesięcy prowadzi przeglądarka, strona po stronie - żadne
- * wywołanie serwera nie trwa długo. Ponowienie zaczyna od początku: zapis
- * jest idempotentny, więc powtórzone strony niczego nie psują.
+ * wywołanie serwera nie trwa długo. Po błędzie albo zamknięciu karty rusza
+ * od strony, na której stanął: powtarzanie całości zjadałoby limit Gmaila
+ * i dzienny budżet zapisów Firestore.
  */
-export function ImportSkrzynki({ start }: { start: { zrobione: number; razem: number } }) {
+export function ImportSkrzynki({ start }: { start: { zrobione: number; razem: number; strona: string | null } }) {
   const router = useRouter()
-  const [postep, setPostep] = useState(start)
+  const [postep, setPostep] = useState({ zrobione: start.zrobione, razem: start.razem })
+  const strona = useRef<string | null>(start.strona)
   const [blad, setBlad] = useState<string | null>(null)
   const [proba, setProba] = useState(0)
   const [gotowe, setGotowe] = useState(false)
@@ -18,14 +20,13 @@ export function ImportSkrzynki({ start }: { start: { zrobione: number; razem: nu
   useEffect(() => {
     let aktywny = true
     void (async () => {
-      let strona: string | null = null
       try {
         do {
-          const w = await klientSkrzynki.importuj(strona)
+          const w = await klientSkrzynki.importuj(strona.current)
           if (!aktywny) return
           setPostep({ zrobione: w.zrobione, razem: w.razem })
-          strona = w.nastepnaStrona
-        } while (strona)
+          strona.current = w.nastepnaStrona
+        } while (strona.current)
         if (aktywny) setGotowe(true)
       } catch (e) {
         if (aktywny) setBlad((e as Error).message)

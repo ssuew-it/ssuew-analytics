@@ -73,6 +73,8 @@ export interface PostepImportu {
   trwa: boolean
   zrobione: number
   razem: number
+  /** Token następnej strony - po przerwie import rusza stąd, a nie od początku. */
+  strona: string | null
 }
 
 export interface LicznikiSkrzynki {

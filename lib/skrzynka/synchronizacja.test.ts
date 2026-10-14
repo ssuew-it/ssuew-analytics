@@ -45,7 +45,7 @@ function watek(id: string, wiadomosci: [od: string, kiedy: number, doKogo?: stri
 
 const stan = (n: object = {}) => ({
   email: NASZ, token: 'enc:refresh', historyId: '100', watchWygasa: null, ostatniaSynchronizacja: null,
-  dzierzawaDo: 0, doPowtorki: false, polaczona: true, import: { trwa: false, zrobione: 0, razem: 0 }, ...n,
+  dzierzawaDo: 0, doPowtorki: false, polaczona: true, import: { trwa: false, zrobione: 0, razem: 0, strona: null }, ...n,
 })
 
 beforeEach(() => {
@@ -186,12 +186,12 @@ describe('importujStrone', () => {
     expect(await importujStrone(null, TERAZ)).toEqual({ nastepnaStrona: 'p2', zrobione: 2, razem: 230 })
     expect(g.listaWatkow).toHaveBeenCalledWith('newer_than:365d', null)
     expect(zapisane().sprawy.map((s) => s.status)).toEqual(['zalatwiona', 'do-odpowiedzi'])
-    expect(dane.zapiszStan).toHaveBeenCalledWith({ import: { trwa: true, zrobione: 2, razem: 230 } })
+    expect(dane.zapiszStan).toHaveBeenCalledWith({ import: { trwa: true, zrobione: 2, razem: 230, strona: 'p2' } })
 
-    dane.czytajStan.mockResolvedValue(stan({ import: { trwa: true, zrobione: 2, razem: 230 } }))
+    dane.czytajStan.mockResolvedValue(stan({ import: { trwa: true, zrobione: 2, razem: 230, strona: 'p2' } }))
     g.listaWatkow.mockResolvedValueOnce({ threads: [{ id: 'trzeci' }] })
     expect(await importujStrone('p2', TERAZ)).toEqual({ nastepnaStrona: null, zrobione: 3, razem: 230 })
-    expect(dane.zapiszStan).toHaveBeenLastCalledWith({ import: { trwa: false, zrobione: 3, razem: 230 } })
+    expect(dane.zapiszStan).toHaveBeenLastCalledWith({ import: { trwa: false, zrobione: 3, razem: 230, strona: null } })
   })
 
   it('odwołany dostęp w trakcie - rozłączona i wyjątek', async () => {
@@ -222,15 +222,15 @@ describe('polaczSkrzynke', () => {
     expect(g.obserwuj).toHaveBeenCalledWith('projects/deck-samorzad/topics/skrzynka')
     expect(dane.zapiszStan).toHaveBeenCalledWith(expect.objectContaining({
       email: 'Kontakt@samorzad.ue.wroc.pl', token: 'enc:refresh-2', polaczona: true, historyId: '500', watchWygasa: 1792000000000,
-      dzierzawaDo: 0, doPowtorki: false, import: { trwa: true, zrobione: 0, razem: 0 },
+      dzierzawaDo: 0, doPowtorki: false, import: { trwa: true, zrobione: 0, razem: 0, strona: null },
     }))
   })
 
   it('ponowne połączenie: punkt historii i import z poprzedniego stanu', async () => {
-    dane.czytajStan.mockResolvedValue(stan({ polaczona: false, historyId: '120', import: { trwa: false, zrobione: 900, razem: 900 } }))
+    dane.czytajStan.mockResolvedValue(stan({ polaczona: false, historyId: '120', import: { trwa: false, zrobione: 900, razem: 900, strona: null } }))
     g.profil.mockResolvedValue({ emailAddress: NASZ, historyId: '1' })
     await polaczSkrzynke('KOD')
-    expect(dane.zapiszStan).toHaveBeenCalledWith(expect.objectContaining({ historyId: '120', import: { trwa: false, zrobione: 900, razem: 900 } }))
+    expect(dane.zapiszStan).toHaveBeenCalledWith(expect.objectContaining({ historyId: '120', import: { trwa: false, zrobione: 900, razem: 900, strona: null } }))
   })
 })
 

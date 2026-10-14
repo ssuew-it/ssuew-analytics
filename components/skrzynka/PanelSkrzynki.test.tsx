@@ -62,29 +62,40 @@ describe('PanelSkrzynki', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Gmail nie odpowiedział')
   })
 
+  it('import przerwany wcześniej (np. zamknięta karta) - rusza od zapisanej strony', async () => {
+    klient.importuj.mockResolvedValueOnce({ nastepnaStrona: null, zrobione: 300, razem: 300 })
+    await act(async () => {
+      render(<PanelSkrzynki liczniki={L} postep={{ trwa: true, zrobione: 200, razem: 300, strona: 'p3' }} blad={null} />)
+    })
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalled())
+    expect(klient.importuj.mock.calls).toEqual([['p3']])
+  })
+
   it('import: strona po stronie z postępem, na koniec odświeżenie', async () => {
     klient.importuj
       .mockResolvedValueOnce({ nastepnaStrona: 'p2', zrobione: 100, razem: 230 })
       .mockResolvedValueOnce({ nastepnaStrona: null, zrobione: 230, razem: 230 })
     await act(async () => {
-      render(<PanelSkrzynki liczniki={L} postep={{ trwa: true, zrobione: 0, razem: 0 }} blad={null} />)
+      render(<PanelSkrzynki liczniki={L} postep={{ trwa: true, zrobione: 0, razem: 0, strona: null }} blad={null} />)
     })
     expect(await screen.findByText('Importuję 230 z ok. 230 wątków')).toBeInTheDocument()
     expect(klient.importuj.mock.calls).toEqual([[null], ['p2']])
     await vi.waitFor(() => expect(refresh).toHaveBeenCalled())
   })
 
-  it('import przerwany błędem - komunikat i ponowienie od początku', async () => {
-    klient.importuj.mockRejectedValueOnce(new Error('Gmail nie odpowiedział - spróbuj ponownie.'))
+  it('import przerwany błędem - komunikat i wznowienie od strony, na której stanął', async () => {
+    klient.importuj
+      .mockResolvedValueOnce({ nastepnaStrona: 'p2', zrobione: 100, razem: 300 })
+      .mockRejectedValueOnce(new Error('Gmail nie odpowiedział - spróbuj ponownie.'))
     await act(async () => {
-      render(<PanelSkrzynki liczniki={L} postep={{ trwa: true, zrobione: 0, razem: 0 }} blad={null} />)
+      render(<PanelSkrzynki liczniki={L} postep={{ trwa: true, zrobione: 0, razem: 0, strona: null }} blad={null} />)
     })
     expect(await screen.findByRole('alert')).toHaveTextContent('Gmail nie odpowiedział')
-    klient.importuj.mockResolvedValueOnce({ nastepnaStrona: null, zrobione: 5, razem: 5 })
+    klient.importuj.mockResolvedValueOnce({ nastepnaStrona: null, zrobione: 300, razem: 300 })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Spróbuj ponownie' }))
     })
-    expect(klient.importuj).toHaveBeenLastCalledWith(null)
+    expect(klient.importuj.mock.calls).toEqual([[null], ['p2'], ['p2']])
     await vi.waitFor(() => expect(refresh).toHaveBeenCalled())
   })
 })

@@ -116,6 +116,26 @@ describe('klient Gmaila', () => {
     }
   })
 
+  it('limit tempa (429 i 403 rateLimitExceeded) - ponawia z przerwą, po trzech próbach poddaje się', async () => {
+    vi.useFakeTimers()
+    try {
+      let n = 0
+      google(() => (++n <= 2 ? odp(n === 1 ? 429 : 403, '{"error":{"errors":[{"reason":"rateLimitExceeded"}]}}') : odp(200, { emailAddress: 'x', historyId: '1' })))
+      const p = gmail('r', 'd').profil()
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(await p).toEqual({ emailAddress: 'x', historyId: '1' })
+      expect(n).toBe(3)
+
+      google(() => new Response('slow down', { status: 429, headers: { 'Retry-After': '2' } }))
+      const q = gmail('r', 'd').profil().catch((e) => e)
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(await q).toMatchObject({ rodzaj: 'inny' })
+      expect(fetchMock.mock.calls.filter(([u]) => u !== TOKEN_URL)).toHaveLength(4 + 3)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('komunikaty błędów dla tras', () => {
     expect(komunikatBledu(new BladSkrzynki('rozlaczona', 'x'))).toEqual({ status: 409, error: 'Skrzynka jest rozłączona - połącz ją ponownie.' })
     expect(komunikatBledu(new BladSkrzynki('konfiguracja', 'x')).status).toBe(500)

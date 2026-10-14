@@ -4,6 +4,13 @@ const ZAKRESY = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me'
 const NAGLOWKI_META = ['From', 'To', 'Cc', 'Subject', 'List-Unsubscribe', 'Precedence']
+/** Przerwy przed kolejnymi próbami, gdy Gmail ogranicza tempo (limit liczony na minutę). */
+const PRZERWY_MS = [1_000, 2_000, 4_000]
+const MAKS_PRZERWA_MS = 10_000
+
+const czyLimit = (status: number, tresc: string) =>
+  status === 429 || (status === 403 && /rateLimitExceeded|userRateLimitExceeded/.test(tresc))
+const czekaj = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export type RodzajBledu = 'rozlaczona' | 'historia-za-stara' | 'brak-watku' | 'konfiguracja' | 'inny'
 
@@ -103,22 +110,27 @@ export function gmail(refreshToken: string, dostep?: string): Gmail {
   }
 
   async function wywolaj<T>(sciezka: string, cialo?: unknown): Promise<T> {
-    const naglowki: Record<string, string> = { Authorization: `Bearer ${await tokenDostepu()}` }
-    if (cialo !== undefined) naglowki['Content-Type'] = 'application/json'
-    const res = await fetch(`${GMAIL}${sciezka}`, {
-      method: cialo === undefined ? 'GET' : 'POST',
-      headers: naglowki,
-      body: cialo === undefined ? undefined : JSON.stringify(cialo),
-      cache: 'no-store',
-    })
-    if (!res.ok) {
+    for (let proba = 0; ; proba++) {
+      const naglowki: Record<string, string> = { Authorization: `Bearer ${await tokenDostepu()}` }
+      if (cialo !== undefined) naglowki['Content-Type'] = 'application/json'
+      const res = await fetch(`${GMAIL}${sciezka}`, {
+        method: cialo === undefined ? 'GET' : 'POST',
+        headers: naglowki,
+        body: cialo === undefined ? undefined : JSON.stringify(cialo),
+        cache: 'no-store',
+      })
+      if (res.ok) return res.json() as Promise<T>
       const tresc = await res.text().catch(() => '')
+      if (czyLimit(res.status, tresc) && proba < PRZERWY_MS.length) {
+        const poGoogle = Number(res.headers.get('Retry-After')) * 1000
+        await czekaj(Math.min(MAKS_PRZERWA_MS, poGoogle > 0 ? poGoogle : PRZERWY_MS[proba]))
+        continue
+      }
       if (res.status === 401) throw new BladSkrzynki('rozlaczona', `Gmail 401: ${tresc.slice(0, 200)}`)
       if (res.status === 404 && sciezka.startsWith('/history')) throw new BladSkrzynki('historia-za-stara', 'Punkt historii Gmaila jest za stary')
       if (res.status === 404) throw new BladSkrzynki('brak-watku', `Gmail 404: ${sciezka}`)
       throw new BladSkrzynki('inny', `Gmail ${res.status}: ${tresc.slice(0, 300)}`)
     }
-    return res.json() as Promise<T>
   }
 
   return {
