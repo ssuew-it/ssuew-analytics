@@ -18,7 +18,7 @@ export default async function SkrzynkaPage({ searchParams }: { searchParams: Pro
   if (kto.rola !== 'owner') redirect('/')
 
   const { blad } = await searchParams
-  const teraz = Date.now()
+  const teraz = new Date().getTime()
   const [stan, l] = await Promise.all([czytajStan().catch(() => null), liczniki(teraz).catch(() => null)])
   if (stan?.polaczona && !stan.import.trwa && (stan.ostatniaSynchronizacja ?? 0) < teraz - DOCIAGNIJ_PO_MS) {
     after(() => synchronizuj().catch((e) => console.error('[skrzynka] wejście:', e)))

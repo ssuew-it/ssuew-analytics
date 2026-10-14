@@ -66,6 +66,21 @@ Panel `/strony` czyta Search Console kontem serwisowym z `SEARCH_CONSOLE_SERVICE
 
 Potem „Dodaj stronę” w panelu. Lista żyje w Firestore `strony/lista` (tylko serwer). Statystyki mają cache 6 h.
 
+## Skrzynka kontakt@ (Gmail)
+
+Moduł 05 łączy się ze skrzynką kontakt@ wewnętrzną aplikacją OAuth w projekcie Google Cloud `deck-samorzad` (organizacja samorzad.ue.wroc.pl). Jednorazowo:
+
+1. `deck-samorzad` → APIs & Services → Library: włącz **Gmail API** i **Cloud Pub/Sub API**.
+2. OAuth consent screen: typ **Internal**, zakresy `gmail.readonly` i `gmail.send`.
+3. Credentials → Create credentials → OAuth client ID → **Web application**, Authorized redirect URI: `https://ssuew-analytics.vercel.app/api/skrzynka/oauth`. Client ID i secret → `SKRZYNKA_CLIENT_ID`, `SKRZYNKA_CLIENT_SECRET`.
+4. Pub/Sub → Topics → Create topic `skrzynka`; Permissions → Add principal `gmail-api-push@system.gserviceaccount.com`, rola **Pub/Sub Publisher**.
+5. IAM → Service accounts → Create `skrzynka-push` (bez ról).
+6. Temat `skrzynka` → Create subscription: typ **Push**, endpoint `https://ssuew-analytics.vercel.app/api/skrzynka/push`, **Enable authentication** kontem `skrzynka-push`, audience = ten sam endpoint.
+7. Vercel (zespół DZIAŁ IT SAMORZĄDU, Production): `SKRZYNKA_CLIENT_ID`, `SKRZYNKA_CLIENT_SECRET`, `SKRZYNKA_ADRES`, `SKRZYNKA_TEMAT`, `SKRZYNKA_PUSH_KONTO`, `SKRZYNKA_KLUCZ`, `CRON_SECRET` (wzory w `.env.example`).
+8. D.E.C.K. zalogowanym jako kontakt@ → Skrzynka → **Połącz skrzynkę** → zgoda Google → import 12 miesięcy.
+
+Stan połączenia (z zaszyfrowanym tokenem) leży w Firestore `skrzynka/stan`, sprawy w `skrzynkaSprawy`, kontakty i organizacje w `skrzynkaKontakty` i `skrzynkaOrganizacje` - wszystko tylko dla serwera. Push budzi synchronizację przy każdej zmianie w Odebranych i Wysłanych; cron raz dziennie odnawia obserwację Gmaila (wygasa po 7 dniach). Kokpit czyta wyłącznie liczniki z Firestore.
+
 ## Uruchomienie
 
 ```bash
