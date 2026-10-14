@@ -69,3 +69,25 @@ export function notatkiRef() {
 export function stronyRef() {
   return bazaAdmin().collection('strony').doc('lista')
 }
+
+/** Skrzynka kontakt@: stan połączenia (z zaszyfrowanym tokenem) i ustawienia. Tylko serwer - reguła końcowa. */
+export function skrzynkaStanRef() {
+  return bazaAdmin().collection('skrzynka').doc('stan')
+}
+
+export function skrzynkaUstawieniaRef() {
+  return bazaAdmin().collection('skrzynka').doc('ustawienia')
+}
+
+/** Sprawy (wątki Gmaila), kontakty i organizacje - tylko serwer; reguła końcowa zamyka je przed przeglądarką. */
+export function sprawyRef() {
+  return bazaAdmin().collection('skrzynkaSprawy')
+}
+
+export function kontaktyRef() {
+  return bazaAdmin().collection('skrzynkaKontakty')
+}
+
+export function organizacjeRef() {
+  return bazaAdmin().collection('skrzynkaOrganizacje')
+}
