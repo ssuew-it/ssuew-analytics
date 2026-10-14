@@ -6,7 +6,7 @@ import {
 import { odczytajWatek } from './naglowki'
 import { domena, drugaStrona, kontaktZAdresu, organizacjaZEmaila } from './kontakty'
 import { kierunek, ocenSprawe } from './statusy'
-import type { Kontakt, Organizacja, Sprawa, WynikSynchronizacji } from './typy'
+import type { Kontakt, Organizacja, Sprawa, WatekZGmaila, WynikSynchronizacji } from './typy'
 
 export const ZAPYTANIE_IMPORTU = 'newer_than:365d'
 const RUNDY = 3
@@ -60,37 +60,51 @@ export async function przetworzWatki(g: Gmail, ids: string[], k: { teraz: number
     pomijane(),
   ])
   const my = nasz()
-  const sprawy: Sprawa[] = []
-  const kontakty: Kontakt[] = []
-  const organizacje: Organizacja[] = []
+  const watki = surowe.flatMap((s) => {
+    const w = s ? odczytajWatek(s) : null
+    return w?.wiadomosci.length ? [w] : []
+  })
 
-  for (const s of surowe) {
-    if (!s) continue
-    const w = odczytajWatek(s)
-    if (!w.wiadomosci.length) continue
+  const sprawaZWatku = (w: WatekZGmaila, pop: Sprawa | null): Sprawa => {
     const ostatnia = w.wiadomosci[w.wiadomosci.length - 1]
     const druga = drugaStrona(w, my)
-    const org = druga ? organizacjaZEmaila(druga.email) : null
-    const pop = poprzednie.get(w.id) ?? null
     const pomijana = !!druga && (pomin.adresy.includes(druga.email) || pomin.domeny.includes(domena(druga.email)))
     const stan = ocenSprawe(
       pop && { status: pop.status, oczekujeOd: pop.oczekujeOd, nowa: pop.nowa, ostatniaKiedy: pop.ostatnia.kiedy },
       w,
       { nasz: my, pomijana, teraz: k.teraz, import: k.import },
     )
-    sprawy.push({
+    return {
       id: w.id,
       temat: w.wiadomosci[0].temat || '(bez tematu)',
       ...stan,
       kontakt: druga?.email ?? null,
-      organizacja: org?.domena ?? null,
+      organizacja: druga ? (organizacjaZEmaila(druga.email)?.domena ?? null) : null,
       ostatnia: { kiedy: ostatnia.kiedy, kierunek: kierunek(ostatnia, my), fragment: ostatnia.fragment.slice(0, 200) },
       wiadomosci: w.wiadomosci.length,
       przypisana: pop?.przypisana ?? null,
       kategoriaGmail: w.wiadomosci.flatMap((m) => m.etykiety).find((e) => e.startsWith('CATEGORY_')) ?? null,
       zmieniono: k.teraz,
-    })
+    }
+  }
+
+  // Import i synchronizacja mogą przetwarzać ten sam wątek naraz. Tuż przed
+  // zapisem sprawdzamy, czy ktoś nie zapisał go w międzyczasie: świeższego
+  // stanu nie nadpisujemy, a od starszego liczymy status jeszcze raz.
+  const swieze = await czytajSprawy(watki.map((w) => w.id))
+  const sprawy: Sprawa[] = []
+  const kontakty: Kontakt[] = []
+  const organizacje: Organizacja[] = []
+  for (const w of watki) {
+    const pop = poprzednie.get(w.id) ?? null
+    const teraz = swieze.get(w.id) ?? null
+    const ostatniaKiedy = w.wiadomosci[w.wiadomosci.length - 1].kiedy
+    const zmienionaWTrakcie = teraz !== null && teraz.zmieniono !== pop?.zmieniono
+    if (zmienionaWTrakcie && teraz.ostatnia.kiedy >= ostatniaKiedy) continue
+    sprawy.push(sprawaZWatku(w, zmienionaWTrakcie ? teraz : pop))
+    const druga = drugaStrona(w, my)
     if (druga) kontakty.push(kontaktZAdresu(druga))
+    const org = druga ? organizacjaZEmaila(druga.email) : null
     if (org) organizacje.push(org)
   }
   await zapiszWynik({ sprawy, kontakty, organizacje })

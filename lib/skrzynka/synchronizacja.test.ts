@@ -101,6 +101,27 @@ describe('przetworzWatki', () => {
     expect(zapisane().sprawy[0].status).toBe('pominieta')
   })
 
+  const zapisana = (n: Partial<Sprawa>): Sprawa => ({
+    id: 't1', temat: 'Sponsoring', status: 'do-odpowiedzi', oczekujeOd: 300, nowa: true, kontakt: 'anna@firma.pl', organizacja: 'firma.pl',
+    ostatnia: { kiedy: 300, kierunek: 'oni', fragment: '' }, wiadomosci: 3, przypisana: null, kategoriaGmail: null, zmieniono: 5, ...n,
+  })
+
+  it('wyścig: ktoś w trakcie zapisał świeższy stan wątku - nie nadpisujemy go starszym', async () => {
+    dane.czytajSprawy.mockResolvedValueOnce(new Map()).mockResolvedValueOnce(new Map([['t1', zapisana({})]]))
+    g.watek.mockResolvedValue(watek('t1', [['anna@firma.pl', 100]]))
+    expect(await przetworzWatki(g as never, ['t1'], { teraz: TERAZ, import: true })).toBe(0)
+    expect(zapisane().sprawy).toEqual([])
+  })
+
+  it('wyścig: zapis w trakcie, ale nasz wątek nowszy - status liczony od zapisanego stanu', async () => {
+    dane.czytajSprawy
+      .mockResolvedValueOnce(new Map())
+      .mockResolvedValueOnce(new Map([['t1', zapisana({ status: 'w-toku', oczekujeOd: null, nowa: false, ostatnia: { kiedy: 50, kierunek: 'oni', fragment: '' }, przypisana: 'Jula' })]]))
+    g.watek.mockResolvedValue(watek('t1', [['anna@firma.pl', 50], ['anna@firma.pl', 100]]))
+    await przetworzWatki(g as never, ['t1'], { teraz: TERAZ, import: true })
+    expect(zapisane().sprawy[0]).toMatchObject({ status: 'w-toku', oczekujeOd: null, nowa: true, przypisana: 'Jula' })
+  })
+
   it('pusta lista - nic nie zapisuje', async () => {
     expect(await przetworzWatki(g as never, [], { teraz: TERAZ, import: false })).toBe(0)
     expect(dane.zapiszWynik).not.toHaveBeenCalled()
