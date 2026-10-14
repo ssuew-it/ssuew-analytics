@@ -19,6 +19,8 @@ import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import { tresciNotatek } from '@/lib/asystent/pamiecDane'
 import { statystykiStron } from '@/lib/strony/dane'
 import { podsumujStrony, type PodsumowanieStron, type WynikStrony } from '@/lib/strony/model'
+import { liczniki as licznikiSkrzynki } from '@/lib/skrzynka/dane'
+import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
 
 /** Zapas na odprawę generowaną w tle po wysłaniu strony (Gemini do 25 s). */
 export const maxDuration = 60
@@ -79,6 +81,7 @@ export default async function KokpitPage() {
   // razu; ewentualną nową liczymy już po wysłaniu strony.
   let odprawa: Promise<ZapisanaOdprawa | null> | null = null
   let strony: Promise<PodsumowanieStron | null> | null = null
+  let skrzynka: Promise<LicznikiSkrzynki | null> | null = null
   if (kto.rola === 'owner') {
     const zapisana = czytajOdprawe().catch(() => null)
     odprawa = zapisana
@@ -88,6 +91,11 @@ export default async function KokpitPage() {
       return null
     })
     strony = wynikiStron.then((w) => (w ? podsumujStrony(w) : null))
+    // Same zapytania zliczające w Firestore - kokpit nigdy nie pyta Gmaila.
+    skrzynka = licznikiSkrzynki(teraz.getTime()).catch((e) => {
+      console.error('[skrzynka] kokpit:', e)
+      return null
+    })
     after(() => odswiezOdpraweWTle({
       arkusz, planer, zapisana, notatki: tresciNotatek().catch(() => []), strony: wynikiStron.then((w) => w ?? []),
       semestr: { id: semestr.id, nazwa: semestr.nazwa }, teraz,
@@ -105,6 +113,7 @@ export default async function KokpitPage() {
       fakty={fakty}
       odprawa={odprawa}
       strony={strony}
+      skrzynka={skrzynka}
     />
   )
 }

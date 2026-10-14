@@ -13,6 +13,7 @@ import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import type { Rola } from '@/lib/auth/role'
 import { DNI_OKRESU, opisZmiany } from '@/lib/strony/okresy'
 import type { PodsumowanieStron } from '@/lib/strony/model'
+import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
 import { CzatDeck } from './CzatDeck'
 import { DeckTile } from './DeckTile'
 import { MatrixRain } from './MatrixRain'
@@ -62,9 +63,11 @@ type Props = {
   odprawa: Promise<ZapisanaOdprawa | null> | null
   /** Podsumowanie Search Console. Zarząd dostaje `null`; wewnętrzne `null` - listy stron nie dało się odczytać. */
   strony: Promise<PodsumowanieStron | null> | null
+  /** Liczniki skrzynki kontakt@. Zarząd dostaje `null`; wewnętrzne `null` - odczyt zawiódł. */
+  skrzynka: Promise<LicznikiSkrzynki | null> | null
 }
 
-export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty, odprawa, strony }: Props) {
+export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty, odprawa, strony, skrzynka }: Props) {
   const router = useRouter()
   const { wyloguj } = useAuth()
 
@@ -163,6 +166,12 @@ export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty,
           {rola === 'owner' && strony && (
             <Suspense fallback={<KafelekStron dane={undefined} />}>
               <KafelekStronZDanymi strony={strony} />
+            </Suspense>
+          )}
+
+          {rola === 'owner' && skrzynka && (
+            <Suspense fallback={<KafelekSkrzynki dane={undefined} />}>
+              <KafelekSkrzynkiZDanymi skrzynka={skrzynka} />
             </Suspense>
           )}
         </main>
@@ -307,6 +316,45 @@ function KafelekStron({ dane }: { dane: PodsumowanieStron | null | undefined }) 
             {dane.bledy > 0 && (
               <div className="mt-1 text-deck-danger">{odmiana(dane.bledy, ['strona z błędem', 'strony z błędem', 'stron z błędem'])}</div>
             )}
+          </div>
+        </div>
+      )}
+    </DeckTile>
+  )
+}
+
+function KafelekSkrzynkiZDanymi({ skrzynka }: { skrzynka: Promise<LicznikiSkrzynki | null> }) {
+  return <KafelekSkrzynki dane={use(skrzynka)} />
+}
+
+/** `undefined` - liczby jeszcze płyną; `null` - odczyt zawiódł. */
+function KafelekSkrzynki({ dane }: { dane: LicznikiSkrzynki | null | undefined }) {
+  return (
+    <DeckTile
+      stan="zywy"
+      href="/skrzynka"
+      etykieta="moduł 05 · kontakt@"
+      tytul="Skrzynka"
+      odznaka={dane?.stan === 'polaczona' && dane.poTerminie > 0 ? `${dane.poTerminie} po terminie` : undefined}
+    >
+      {dane === undefined ? (
+        <Brak />
+      ) : dane === null ? (
+        <p className="text-[12px] leading-relaxed text-deck-muted">Nie udało się odczytać skrzynki - szczegóły w panelu.</p>
+      ) : dane.stan === 'brak' ? (
+        <p className="text-[12px] leading-relaxed text-deck-muted">Połącz skrzynkę kontakt@, żeby żaden mail nie zginął.</p>
+      ) : dane.stan === 'rozlaczona' ? (
+        <p className="text-[12px] leading-relaxed text-deck-danger">Skrzynka rozłączona - połącz ponownie.</p>
+      ) : (
+        <div className="flex h-full flex-col justify-between gap-3">
+          <div className="flex items-baseline gap-2 tabular-nums">
+            <span className="text-[30px] font-bold leading-none tracking-[-0.03em]">
+              <AnimatedNumber value={dane.doOdpowiedzi} />
+            </span>
+            <span className="text-[12px] font-medium text-deck-muted">do odpowiedzi</span>
+          </div>
+          <div className="font-mono text-[11px] text-deck-muted">
+            do przejrzenia {dane.doPrzejrzenia} · czeka na nich {dane.czekaNaNich}
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import { DeckHub, type DaneAnalityki, type DanePlanera } from '@/components/deck
 import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import type { Fakt } from '@/lib/asystent/fakty'
 import type { PodsumowanieStron } from '@/lib/strony/model'
+import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
 
 vi.mock('next/link', () => ({
   default: ({ children, href, ...rest }: { children: ReactNode; href: string }) => (
@@ -23,6 +24,9 @@ const ANALITYKA: DaneAnalityki = { konwersja: 61.1, retencja: 3.81, kpiWzrosty: 
 const PLANER: DanePlanera = { propozycje: 0, sesja: { wlaczony: false, od: null, przez: null }, najblizsze: [], ok: true }
 const STRONY: PodsumowanieStron = {
   stron: 2, klikniecia: 125, wyswietlenia: 4000, poprzednieKlikniecia: 100, poprzednieWyswietlenia: 3000, alerty: 1, bledy: 0,
+}
+const SKRZYNKA: LicznikiSkrzynki = {
+  stan: 'polaczona', doOdpowiedzi: 7, poTerminie: 2, doPrzejrzenia: 4, czekaNaNich: 3, wToku: 1, ostatniaSynchronizacja: 1,
 }
 const ZAPIS: ZapisanaOdprawa = {
   slad: 's', dzien: '02.10.2026', utworzono: Date.UTC(2026, 9, 2, 12, 32), model: 'm',
@@ -43,12 +47,14 @@ async function hub(nadpisz: {
   fakty?: Fakt[] | Promise<Fakt[]>
   odprawa?: ZapisanaOdprawa | null | Promise<ZapisanaOdprawa | null>
   strony?: PodsumowanieStron | null | Promise<PodsumowanieStron | null>
+  skrzynka?: LicznikiSkrzynki | null | Promise<LicznikiSkrzynki | null>
 } = {}) {
   const rola = nadpisz.rola ?? 'owner'
   const analityka = nadpisz.analityka instanceof Promise ? nadpisz.analityka : Promise.resolve({ ...ANALITYKA, ...nadpisz.analityka })
   const planer = nadpisz.planer instanceof Promise ? nadpisz.planer : Promise.resolve({ ...PLANER, ...nadpisz.planer })
   const odprawa = rola === 'owner' ? obietnica(nadpisz.odprawa === undefined ? ZAPIS : nadpisz.odprawa) : null
   const strony = rola === 'owner' ? obietnica(nadpisz.strony === undefined ? STRONY : nadpisz.strony) : null
+  const skrzynka = rola === 'owner' ? obietnica(nadpisz.skrzynka === undefined ? SKRZYNKA : nadpisz.skrzynka) : null
   // Dane ze strumienia (use + Suspense) dopływają w mikrozadaniach - bez
   // asynchronicznego act React nie zdąży podmienić wersji zastępczej.
   return act(async () => {
@@ -63,6 +69,7 @@ async function hub(nadpisz: {
         fakty={obietnica(nadpisz.fakty ?? [])}
         odprawa={odprawa}
         strony={strony}
+        skrzynka={skrzynka}
       />,
     )
   })
@@ -70,7 +77,7 @@ async function hub(nadpisz: {
 
 describe('DeckHub', () => {
   it('nagłówek, kafelki, odprawa i pasek są od razu - nie czekają na dane', async () => {
-    await hub({ analityka: nigdy(), planer: nigdy(), fakty: nigdy(), odprawa: nigdy(), strony: nigdy() })
+    await hub({ analityka: nigdy(), planer: nigdy(), fakty: nigdy(), odprawa: nigdy(), strony: nigdy(), skrzynka: nigdy() })
     expect(screen.getByRole('heading', { level: 1, name: 'D.E.C.K.' })).toBeInTheDocument()
     expect(screen.getByText('Diagnostic Evaluation of Change & KPIs')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Odprawa D.E.C.K.' })).toBeInTheDocument()
@@ -191,5 +198,27 @@ describe('DeckHub', () => {
   it('zarząd nie widzi kafelka Stron', async () => {
     await hub({ rola: 'board', email: 'Jula' })
     expect(screen.queryByRole('heading', { name: 'Strony' })).toBeNull()
+  })
+
+  it('kafelek Skrzynki: do odpowiedzi, po terminie i reszta statusów', async () => {
+    await hub()
+    expect(screen.getByRole('link', { name: /Skrzynka/ })).toHaveAttribute('href', '/skrzynka')
+    expect(await screen.findByText('2 po terminie')).toBeInTheDocument()
+    expect(screen.getByText('do przejrzenia 4 · czeka na nich 3')).toBeInTheDocument()
+  })
+
+  it('kafelek Skrzynki bez połączenia i po rozłączeniu', async () => {
+    await hub({ skrzynka: { ...SKRZYNKA, stan: 'brak' } })
+    expect(await screen.findByText(/Połącz skrzynkę kontakt@/)).toBeInTheDocument()
+  })
+
+  it('kafelek Skrzynki rozłączonej', async () => {
+    await hub({ skrzynka: { ...SKRZYNKA, stan: 'rozlaczona' } })
+    expect(await screen.findByText('Skrzynka rozłączona - połącz ponownie.')).toBeInTheDocument()
+  })
+
+  it('zarząd nie widzi kafelka Skrzynki', async () => {
+    await hub({ rola: 'board', email: 'Jula' })
+    expect(screen.queryByRole('heading', { name: 'Skrzynka' })).toBeNull()
   })
 })
