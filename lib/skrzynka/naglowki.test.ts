@@ -26,6 +26,10 @@ describe('odczytajAdresy', () => {
     expect(odczytajAdresy('')).toEqual([])
     expect(odczytajAdresy('undisclosed-recipients:;')).toEqual([])
   })
+
+  it('adres z „/” odrzucony - w Firestore ukośnik dzieli ścieżkę dokumentu i zatrzymałby synchronizację', () => {
+    expect(odczytajAdresy('a/b@x.pl, Jan <jan@x/y.pl>, ok@x.pl')).toEqual([{ email: 'ok@x.pl', imie: '' }])
+  })
 })
 
 function surowy(wiadomosci: { od: string; kiedy: number; do?: string; etykiety?: string[]; naglowki?: Record<string, string> }[]): WatekApi {

@@ -52,7 +52,8 @@ export function odczytajAdresy(naglowek: string): Adres[] {
     const t = c.trim()
     const m = t.match(/^(.*?)<([^>]+)>\s*$/)
     const email = (m ? m[2] : t).trim().toLowerCase()
-    if (!/^[^\s@]+@[^\s@]+$/.test(email)) return []
+    // Adres trafia jako identyfikator dokumentu Firestore - ukośnik podzieliłby ścieżkę i zablokował zapis.
+    if (!/^[^\s@/]+@[^\s@/]+$/.test(email)) return []
     const imie = dekodujNaglowek((m ? m[1] : '').trim().replace(/^"(.*)"$/, '$1').trim())
     return [{ email, imie }]
   })
