@@ -70,6 +70,18 @@ describe('token konta serwisowego', () => {
     expect(wywolaniaTokenu()).toHaveLength(2)
   })
 
+  it('osobne konto Search Console ma pierwszeństwo przed kontem Firebase', async () => {
+    const { privateKey } = await generateKeyPair('RS256', { extractable: true })
+    const wlasne = 'deck-strony@deck-samorzad.iam.gserviceaccount.com'
+    vi.stubEnv('SEARCH_CONSOLE_SERVICE_ACCOUNT', JSON.stringify({ client_email: wlasne, private_key: await exportPKCS8(privateKey) }))
+    google()
+    const { listaWitryn, emailKonta } = await modul()
+    expect(emailKonta()).toBe(wlasne)
+    await listaWitryn()
+    const jwt = new URLSearchParams(wywolaniaTokenu()[0][1].body).get('assertion')!
+    expect(decodeJwt(jwt).iss).toBe(wlasne)
+  })
+
   it('emailKonta: adres z konta albo null bez konfiguracji', async () => {
     expect((await modul()).emailKonta()).toBe(EMAIL)
     vi.stubEnv('FIREBASE_SERVICE_ACCOUNT', '')

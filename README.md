@@ -58,9 +58,9 @@ Widzi je wyłącznie właściciel; zarząd ma w tym miejscu panel faktów bez AI
 
 ## Strony (Google Search Console)
 
-Panel `/strony` czyta Search Console tym samym kontem serwisowym co Firebase (`FIREBASE_SERVICE_ACCOUNT`) - bez nowych zmiennych. Jednorazowo:
+Panel `/strony` czyta Search Console kontem serwisowym z `SEARCH_CONSOLE_SERVICE_ACCOUNT` (plik JSON klucza; obecnie konto `deck-strony` w projekcie `deck-samorzad` organizacji samorzad.ue.wroc.pl). Bez tej zmiennej używa `FIREBASE_SERVICE_ACCOUNT`. Osobny projekt, bo projekt Firebase żyje na innym koncie Google. Jednorazowo:
 
-1. Google Cloud, projekt Firebase → APIs & Services → Library → włącz „Google Search Console API”.
+1. Google Cloud, projekt konta serwisowego → APIs & Services → Library → włącz „Google Search Console API”.
 2. Search Console każdej strony → Ustawienia → Użytkownicy i uprawnienia → Dodaj użytkownika: `client_email` z konta serwisowego, uprawnienie „Ograniczone”.
 3. Strony, których nie ma w Search Console, najpierw tam dodaj i zweryfikuj.
 

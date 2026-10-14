@@ -22,17 +22,21 @@ interface Konto {
 }
 
 /**
- * To samo konto serwisowe co Firebase Admin - nic nowego do przechowywania.
- * W Search Console dodaje się je jako użytkownika „Ograniczone”.
+ * Najpierw własne konto z projektu Google Cloud organizacji Samorządu
+ * (`SEARCH_CONSOLE_SERVICE_ACCOUNT`), a bez niego konto Firebase Admin.
+ * Projekt Firebase żyje na innym koncie Google i nie da się w nim włączyć
+ * API z konta samorządowego. W Search Console konto dodaje się jako
+ * użytkownika „Ograniczone”.
  */
 function konto(): Konto {
-  const surowe = process.env.FIREBASE_SERVICE_ACCOUNT
-  if (!surowe) throw new BladGoogle('inny', 'Brak FIREBASE_SERVICE_ACCOUNT')
+  const zmienna = process.env.SEARCH_CONSOLE_SERVICE_ACCOUNT ? 'SEARCH_CONSOLE_SERVICE_ACCOUNT' : 'FIREBASE_SERVICE_ACCOUNT'
+  const surowe = process.env[zmienna]
+  if (!surowe) throw new BladGoogle('inny', 'Brak SEARCH_CONSOLE_SERVICE_ACCOUNT i FIREBASE_SERVICE_ACCOUNT')
   let k: Partial<Konto>
   try {
     k = JSON.parse(surowe)
   } catch {
-    throw new BladGoogle('inny', 'FIREBASE_SERVICE_ACCOUNT nie jest JSON-em')
+    throw new BladGoogle('inny', `${zmienna} nie jest JSON-em`)
   }
   if (typeof k.client_email !== 'string' || typeof k.private_key !== 'string') {
     throw new BladGoogle('inny', 'Konto serwisowe bez client_email albo private_key')
