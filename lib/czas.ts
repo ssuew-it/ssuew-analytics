@@ -16,3 +16,14 @@ export function dzisWarszawa(teraz: Date): Data {
 export function godzinaWarszawa(teraz: Date): string {
   return new Intl.DateTimeFormat('pl-PL', { timeZone: STREFA, hour: '2-digit', minute: '2-digit' }).format(teraz)
 }
+
+/**
+ * Chwila, w której w Warszawie zaczyna się dany dzień. Przesunięcie (UTC+1
+ * albo UTC+2) odczytujemy z południa tego dnia - w południe zmiana czasu
+ * nigdy nie wypada.
+ */
+export function polnocWarszawa(d: Data): number {
+  const poludnie = Date.UTC(d.rok, d.miesiac - 1, d.dzien, 12)
+  const godzina = Number(new Intl.DateTimeFormat('en-GB', { timeZone: STREFA, hour: '2-digit', hourCycle: 'h23' }).format(poludnie))
+  return Date.UTC(d.rok, d.miesiac - 1, d.dzien) - (godzina - 12) * 3_600_000
+}
