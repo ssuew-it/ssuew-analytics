@@ -1,5 +1,8 @@
 export const TYLKO_WLASCICIEL = 'Skrzynka jest tylko dla właściciela'
 
+/** Vercel tnie odpowiedź funkcji na 4,5 MB - większy załącznik otwiera się w Gmailu. */
+export const MAKS_POBRANIA = 4 * 1024 * 1024
+
 export const STATUSY = ['do-przejrzenia', 'do-odpowiedzi', 'w-toku', 'czeka-na-nich', 'zalatwiona', 'pominieta'] as const
 export type Status = (typeof STATUSY)[number]
 

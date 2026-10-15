@@ -3,7 +3,8 @@ import { GET as lista } from '@/app/api/skrzynka/sprawy/route'
 import { GET as szukaj } from '@/app/api/skrzynka/szukaj/route'
 import { GET as sprawa, PATCH as zmien } from '@/app/api/skrzynka/sprawy/[id]/route'
 import { GET as zalacznik } from '@/app/api/skrzynka/sprawy/[id]/zalacznik/[zid]/route'
-import type { Sprawa } from '@/lib/skrzynka/typy'
+import { BladSkrzynki } from '@/lib/skrzynka/google'
+import { MAKS_POBRANIA, type Sprawa } from '@/lib/skrzynka/typy'
 
 const { ktoPyta, dane, g } = vi.hoisted(() => ({
   ktoPyta: vi.fn(),
@@ -79,6 +80,14 @@ describe('lista i wyszukiwanie', () => {
 describe('sprawa', () => {
   const utf = (s: string) => Buffer.from(s, 'utf8').toString('base64url')
 
+  it('wątek usunięty w Gmailu - sprawa bez wiadomości, żeby dało się ją zamknąć', async () => {
+    dane.czytajSprawe.mockResolvedValueOnce(S('t1'))
+    g.watekPelny.mockRejectedValue(new BladSkrzynki('brak-watku', 'Gmail 404'))
+    const r = await sprawa(zadanie('/api/skrzynka/sprawy/t1'), p('t1'))
+    expect(r.status).toBe(200)
+    expect(await r.json()).toMatchObject({ sprawa: { id: 't1' }, wiadomosci: [] })
+  })
+
   it('brak - 404; jest - treść z Gmaila i zdjęty znacznik nowej', async () => {
     dane.czytajSprawe.mockResolvedValueOnce(null)
     expect((await sprawa(zadanie('/api/skrzynka/sprawy/brak'), p('brak'))).status).toBe(404)
@@ -122,6 +131,13 @@ describe('sprawa', () => {
 })
 
 describe('załącznik', () => {
+  it('za duży na odpowiedź funkcji - 413 z odesłaniem do Gmaila', async () => {
+    g.zalacznik.mockResolvedValue({ data: 'JVBERi0', size: MAKS_POBRANIA + 1 })
+    const r = await zalacznik(zadanie('/api/skrzynka/sprawy/t1/zalacznik/A?w=m1&nazwa=skan.pdf&typ=application%2Fpdf'), p('t1', 'A'))
+    expect(r.status).toBe(413)
+    expect((await r.json()).error).toMatch(/Gmail/)
+  })
+
   it('zawsze do pobrania; typ spoza listy bezpiecznych jako octet-stream; polska nazwa', async () => {
     g.zalacznik.mockResolvedValue({ data: Buffer.from('<svg onload=alert(1)>').toString('base64url'), size: 21 })
     const r = await zalacznik(zadanie(`/api/skrzynka/sprawy/t1/zalacznik/A?w=m1&nazwa=${encodeURIComponent('Ofert\u0105 2026.svg')}&typ=image%2Fsvg%2Bxml`), p('t1', 'A'))

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { tylkoWlasciciel } from '@/lib/asystent/tylkoWlasciciel'
 import { czytajSprawe, dodajPomijanie, skladZarzadu, zmienSprawe } from '@/lib/skrzynka/dane'
-import { komunikatBledu } from '@/lib/skrzynka/google'
+import { BladSkrzynki, komunikatBledu } from '@/lib/skrzynka/google'
 import { domena } from '@/lib/skrzynka/kontakty'
 import { klientGmaila, zRozlaczeniem } from '@/lib/skrzynka/synchronizacja'
 import { odczytajWatekPelny } from '@/lib/skrzynka/tresc'
@@ -20,7 +20,11 @@ export async function GET(req: NextRequest, { params }: Kontekst) {
   try {
     const s = await czytajSprawe(id)
     if (!s) return NextResponse.json({ error: 'Nie ma takiej sprawy' }, { status: 404 })
-    const wiadomosci = await zRozlaczeniem(async () => odczytajWatekPelny(await (await klientGmaila()).watekPelny(id)))
+    const wiadomosci = await zRozlaczeniem(async () => odczytajWatekPelny(await (await klientGmaila()).watekPelny(id))).catch((e) => {
+      // Wątek usunięty w Gmailu - sprawa zostaje widoczna, żeby dało się ją zamknąć albo pominąć.
+      if (e instanceof BladSkrzynki && e.rodzaj === 'brak-watku') return []
+      throw e
+    })
     const sprawa = s.nowa ? ((await zmienSprawe(id, { nowa: false })) ?? s) : s
     return NextResponse.json({ sprawa, wiadomosci } satisfies SzczegolySprawy)
   } catch (e) {

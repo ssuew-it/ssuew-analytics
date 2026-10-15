@@ -3,7 +3,7 @@ import { tylkoWlasciciel } from '@/lib/asystent/tylkoWlasciciel'
 import { komunikatBledu } from '@/lib/skrzynka/google'
 import { klientGmaila, zRozlaczeniem } from '@/lib/skrzynka/synchronizacja'
 import { dekodujBase64Url } from '@/lib/skrzynka/tresc'
-import { TYLKO_WLASCICIEL } from '@/lib/skrzynka/typy'
+import { MAKS_POBRANIA, TYLKO_WLASCICIEL } from '@/lib/skrzynka/typy'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -24,6 +24,9 @@ export async function GET(req: NextRequest, { params }: Kontekst) {
   const typ = BEZPIECZNE_TYPY.includes(sp.get('typ') ?? '') ? sp.get('typ')! : 'application/octet-stream'
   try {
     const z = await zRozlaczeniem(async () => (await klientGmaila()).zalacznik(wiadomoscId, zid))
+    if (z.size > MAKS_POBRANIA) {
+      return NextResponse.json({ error: 'Plik jest za duży na pobranie przez D.E.C.K. - otwórz go w Gmailu.' }, { status: 413 })
+    }
     return new NextResponse(dekodujBase64Url(z.data), {
       headers: {
         'Content-Type': typ,

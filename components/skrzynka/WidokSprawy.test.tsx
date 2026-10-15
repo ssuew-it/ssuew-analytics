@@ -67,13 +67,35 @@ describe('WidokSprawy', () => {
     expect(klient.zmien).toHaveBeenLastCalledWith('t1', { przypisana: 'Jula' })
   })
 
-  it('pomiń zawsze: adres; domena tylko dla organizacji', async () => {
+  it('pomiń zawsze: tylko po potwierdzeniu, które nazywa adres albo domenę', async () => {
     await widok()
+    const potwierdz = vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Pomiń zawsze ten adres' }))
+    expect(potwierdz).toHaveBeenLastCalledWith(expect.stringContaining('anna@firma.pl'))
+    expect(klient.zmien).not.toHaveBeenCalled()
+    potwierdz.mockReturnValueOnce(true)
     klient.zmien.mockResolvedValueOnce(S({ status: 'pominieta', oczekujeOd: null }))
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Pomiń zawsze domenę firma.pl' }))
     })
+    expect(potwierdz).toHaveBeenLastCalledWith(expect.stringContaining('@firma.pl'))
     expect(klient.zmien).toHaveBeenLastCalledWith('t1', { pomin: 'domena' })
+    potwierdz.mockRestore()
+  })
+
+  it('załącznik ponad limit funkcji - link do wątku w Gmailu zamiast pobrania', async () => {
+    const d = D()
+    d.wiadomosci[0].zalaczniki = [{ id: 'A2', wiadomoscId: 'm1', nazwa: 'Skan.pdf', typ: 'application/pdf', rozmiar: 8_000_000 }]
+    await widok(d)
+    const l = screen.getByRole('link', { name: /Skan\.pdf · 7,6 MB/ })
+    expect(l).toHaveAttribute('href', 'https://mail.google.com/mail/?authuser=kontakt%40samorzad.ue.wroc.pl#all/t1')
+    expect(l).toHaveTextContent('w Gmailu')
+  })
+
+  it('wątek usunięty w Gmailu - komunikat, akcje dalej dostępne', async () => {
+    await widok({ ...D(), wiadomosci: [] })
+    expect(screen.getByText(/nie ma już w Gmailu/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Załatwione' })).toBeInTheDocument()
   })
 
   it('nadawca z gmail.com - bez pomijania domeny', async () => {

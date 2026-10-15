@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { ExternalLink, Paperclip } from 'lucide-react'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import { ETYKIETY_STATUSOW, adresZalacznika, linkGmail, pelnaData, rozmiar } from '@/lib/skrzynka/widok'
-import type { Sprawa, Status, SzczegolySprawy, ZmianaSprawy } from '@/lib/skrzynka/typy'
+import { MAKS_POBRANIA, type Sprawa, type Status, type SzczegolySprawy, type ZmianaSprawy } from '@/lib/skrzynka/typy'
 import { TrescWiadomosci } from './TrescWiadomosci'
 
 /** Statusy do ustawienia jednym kliknięciem; Do przejrzenia ustawia tylko automat. */
@@ -47,6 +47,12 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
     } finally {
       setTrwa(false)
     }
+  }
+
+  // Listy „zawsze pomijaj” nie da się jeszcze edytować w panelu - jeden przypadkowy klik wyciszyłby nadawcę na stałe.
+  function pominZawsze(rodzaj: 'adres' | 'domena', kogo: string) {
+    if (!window.confirm(`Nowe wątki od ${kogo} będą od razu trafiać do Pominiętych. Na razie nie da się tego cofnąć w D.E.C.K. Pominąć?`)) return
+    void zmien({ pomin: rodzaj })
   }
 
   const powrot = (
@@ -96,13 +102,13 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
           </button>
         )}
         {s.kontakt && (
-          <button type="button" disabled={trwa} onClick={() => zmien({ pomin: 'adres' })} className={przycisk}>
+          <button type="button" disabled={trwa} onClick={() => pominZawsze('adres', s.kontakt!)} className={przycisk}>
             Pomiń zawsze ten adres
           </button>
         )}
         {/* Domena tylko dla organizacji - gmail.com czy wp.pl wyciszyłyby wszystkich. */}
         {s.kontakt && s.organizacja && (
-          <button type="button" disabled={trwa} onClick={() => zmien({ pomin: 'domena' })} className={przycisk}>
+          <button type="button" disabled={trwa} onClick={() => pominZawsze('domena', `wszystkich adresów @${s.organizacja}`)} className={przycisk}>
             Pomiń zawsze domenę {s.organizacja}
           </button>
         )}
@@ -127,6 +133,9 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
       </div>
       {blad && <p role="alert" className="text-deck-danger">{blad}</p>}
 
+      {dane.wiadomosci.length === 0 && (
+        <p className="text-deck-muted">Tego wątku nie ma już w Gmailu - sprawę można zamknąć albo pominąć.</p>
+      )}
       <ol className="space-y-3">
         {dane.wiadomosci.map((w) => (
           <li key={w.id} className="rounded-md border border-white/10 p-3">
@@ -139,10 +148,17 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
               <ul aria-label="Załączniki" className="mt-2 flex flex-wrap gap-2">
                 {w.zalaczniki.map((z) => (
                   <li key={z.id}>
-                    <a href={adresZalacznika(s.id, z)} className={`${przycisk} inline-flex items-center gap-1`}>
-                      <Paperclip size={12} aria-hidden="true" />
-                      {z.nazwa} · {rozmiar(z.rozmiar)}
-                    </a>
+                    {z.rozmiar > MAKS_POBRANIA ? (
+                      <a href={linkGmail(email, s.id)} target="_blank" rel="noopener noreferrer" className={`${przycisk} inline-flex items-center gap-1`}>
+                        <Paperclip size={12} aria-hidden="true" />
+                        {z.nazwa} · {rozmiar(z.rozmiar)} (w Gmailu)
+                      </a>
+                    ) : (
+                      <a href={adresZalacznika(s.id, z)} className={`${przycisk} inline-flex items-center gap-1`}>
+                        <Paperclip size={12} aria-hidden="true" />
+                        {z.nazwa} · {rozmiar(z.rozmiar)}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
