@@ -81,6 +81,8 @@ Moduł 05 łączy się ze skrzynką kontakt@ wewnętrzną aplikacją OAuth w pro
 
 Stan połączenia (z zaszyfrowanym tokenem) leży w Firestore `skrzynka/stan`, sprawy w `skrzynkaSprawy`, kontakty i organizacje w `skrzynkaKontakty` i `skrzynkaOrganizacje` - wszystko tylko dla serwera. Push budzi synchronizację przy każdej zmianie w Odebranych i Wysłanych; cron raz dziennie odnawia obserwację Gmaila (wygasa po 7 dniach). Kokpit czyta wyłącznie liczniki z Firestore.
 
+Panel `/skrzynka`: zakładki statusów z liczbami, wyszukiwarka (składnia Gmaila, wyniki tylko z zaimportowanych 12 miesięcy), lista spraw i wątek z treścią pobieraną z Gmaila na żywo. HTML maila wyświetla się w ramce bez skryptów i bez zewnętrznych obrazków; załączniki zawsze się pobierają. Ze sprawy: zmiana statusu, przypisanie osoby ze Składu zarządu (Planer → Skład), „Pomiń” i „Pomiń zawsze” (adres; domena tylko dla organizacji). Lista czyta pole `klucz` (`status|czas|id`) - bez indeksu złożonego w Firestore.
+
 ## Uruchomienie
 
 ```bash
