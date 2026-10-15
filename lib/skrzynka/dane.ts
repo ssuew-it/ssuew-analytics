@@ -1,11 +1,30 @@
 import type { DocumentData } from 'firebase-admin/firestore'
 import { kontaktyRef, organizacjeRef, skrzynkaStanRef, skrzynkaUstawieniaRef, sprawyRef } from '@/lib/firebase/admin'
 import { progAlarmu } from './statusy'
-import { STATUSY, type Kontakt, type LicznikiSkrzynki, type Organizacja, type PostepImportu, type Sprawa, type Status } from './typy'
+import { STATUSY, type Kontakt, type LicznikiSkrzynki, type Organizacja, type PostepImportu, type Sprawa, type Status, type StronaSpraw } from './typy'
 
 export const DZIERZAWA_MS = 60_000
 /** Limit partii Firestore to 500 zapisów - zostawiamy zapas. */
 const PARTIA = 400
+export const WERSJA_DANYCH = 2
+export const NA_STRONE = 50
+const MAKS_DO_ODPOWIEDZI = 300
+/** Znak większy niż każdy w kluczu - górna granica zakresu jednego statusu. */
+const KONIEC = '\uf8ff'
+
+/**
+ * Klucz listy: status, czas ostatniej wiadomości (15 cyfr) i id w jednym
+ * polu. Zakres po tym polu z sortowaniem po nim samym nie wymaga indeksu
+ * złożonego - a do konsoli projektu Firebase nie ma dostępu.
+ */
+export function kluczListy(s: Pick<Sprawa, 'id' | 'status'> & { ostatnia: { kiedy: number } }): string {
+  return `${s.status}|${String(Math.max(0, Math.floor(s.ostatnia.kiedy))).padStart(15, '0')}|${s.id}`
+}
+
+/** Dokument sprawy do zapisu: bez `id` (to identyfikator dokumentu), z kluczem listy. */
+function doZapisu({ id, ...s }: Sprawa): DocumentData {
+  return { ...s, klucz: kluczListy({ id, ...s }) }
+}
 
 export interface StanSkrzynki {
   email: string
@@ -18,6 +37,8 @@ export interface StanSkrzynki {
   doPowtorki: boolean
   polaczona: boolean
   import: PostepImportu
+  /** 1 - sprawy bez pola `klucz` (przed częścią 2a); 2 - klucze uzupełnione. */
+  wersjaDanych: number
 }
 
 const liczba = (x: unknown) => Number(x) || 0
@@ -34,6 +55,7 @@ export async function czytajStan(): Promise<StanSkrzynki | null> {
     dzierzawaDo: liczba(d.dzierzawaDo),
     doPowtorki: d.doPowtorki === true,
     polaczona: d.polaczona === true,
+    wersjaDanych: liczba(d.wersjaDanych) || 1,
     import: {
       trwa: d.import?.trwa === true,
       zrobione: liczba(d.import?.zrobione),
@@ -115,6 +137,41 @@ export async function czytajSprawy(ids: string[]): Promise<Map<string, Sprawa>> 
 }
 
 /**
+ * Jedna zakładka. „Do odpowiedzi” rośnie od najdłużej czekającej - sprawy po
+ * terminie są na górze; pozostałe od najnowszej, stronami po kluczu.
+ */
+export async function listaSpraw(status: Status, po: string | null, ile = NA_STRONE): Promise<StronaSpraw> {
+  const s = sprawyRef()
+  if (status === 'do-odpowiedzi') {
+    // Niezmiennik: `oczekujeOd` mają tylko sprawy Do odpowiedzi.
+    const z = await s.where('oczekujeOd', '>', 0).orderBy('oczekujeOd').limit(MAKS_DO_ODPOWIEDZI).get()
+    return { sprawy: z.docs.map((d) => naSprawe(d.id, d.data())), nastepna: null }
+  }
+  let q = s.where('klucz', '>=', `${status}|`).where('klucz', '<', `${status}|${KONIEC}`).orderBy('klucz', 'desc')
+  if (po) q = q.startAfter(po)
+  const z = await q.limit(ile + 1).get()
+  const docs = z.docs.slice(0, ile)
+  return {
+    sprawy: docs.map((d) => naSprawe(d.id, d.data())),
+    nastepna: z.docs.length > ile ? String(docs[docs.length - 1].get('klucz')) : null,
+  }
+}
+
+/** Jednorazowo: sprawy zapisane przed częścią 2a dostają klucz listy. Zwraca liczbę poprawionych. */
+export async function uzupelnijKlucze(): Promise<number> {
+  const s = sprawyRef()
+  const z = await s.get()
+  const doPoprawy = z.docs.filter((d) => d.get('klucz') !== kluczListy(naSprawe(d.id, d.data())))
+  for (let i = 0; i < doPoprawy.length; i += PARTIA) {
+    const partia = s.firestore.batch()
+    for (const d of doPoprawy.slice(i, i + PARTIA)) partia.update(d.ref, { klucz: kluczListy(naSprawe(d.id, d.data())) })
+    await partia.commit()
+  }
+  await zapiszStan({ wersjaDanych: WERSJA_DANYCH })
+  return doPoprawy.length
+}
+
+/**
  * Zapis wyniku synchronizacji. Organizacje tylko nowe - nazwę i typ
  * właściciel poprawia ręcznie. Kontakt bez imienia nie kasuje znanego.
  */
@@ -128,7 +185,7 @@ export async function zapiszWynik(w: { sprawy: Sprawa[]; kontakty: Kontakt[]; or
   const nowe = orgUnikalne.filter((_, i) => !istniejace[i].exists)
 
   const zapisy = [
-    ...w.sprawy.map(({ id, ...s }) => ({ ref: sprawy.doc(id), dane: s as DocumentData, scal: false })),
+    ...w.sprawy.map((s) => ({ ref: sprawy.doc(s.id), dane: doZapisu(s), scal: false })),
     ...w.kontakty.map((k) => ({
       ref: kontakty.doc(k.email),
       dane: (k.imie ? k : { email: k.email, organizacja: k.organizacja, typ: k.typ }) as DocumentData,
@@ -160,20 +217,22 @@ export async function pomijane(): Promise<{ adresy: string[]; domeny: string[] }
  */
 export async function liczniki(teraz: number): Promise<LicznikiSkrzynki> {
   const stan = await czytajStan()
-  const zero = { doOdpowiedzi: 0, poTerminie: 0, doPrzejrzenia: 0, czekaNaNich: 0, wToku: 0 }
+  const zero = { doOdpowiedzi: 0, poTerminie: 0, doPrzejrzenia: 0, czekaNaNich: 0, wToku: 0, zalatwione: 0, pominiete: 0 }
   if (!stan) return { stan: 'brak', ...zero, ostatniaSynchronizacja: null }
   const s = sprawyRef()
   const ile = (status: Status) => s.where('status', '==', status).count().get().then((x) => x.data().count)
-  const [doOdpowiedzi, poTerminie, doPrzejrzenia, czekaNaNich, wToku] = await Promise.all([
+  const [doOdpowiedzi, poTerminie, doPrzejrzenia, czekaNaNich, wToku, zalatwione, pominiete] = await Promise.all([
     ile('do-odpowiedzi'),
     s.where('oczekujeOd', '<', progAlarmu(teraz)).count().get().then((x) => x.data().count),
     ile('do-przejrzenia'),
     ile('czeka-na-nich'),
     ile('w-toku'),
+    ile('zalatwiona'),
+    ile('pominieta'),
   ])
   return {
     stan: stan.polaczona ? 'polaczona' : 'rozlaczona',
-    doOdpowiedzi, poTerminie, doPrzejrzenia, czekaNaNich, wToku,
+    doOdpowiedzi, poTerminie, doPrzejrzenia, czekaNaNich, wToku, zalatwione, pominiete,
     ostatniaSynchronizacja: stan.ostatniaSynchronizacja,
   }
 }

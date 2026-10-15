@@ -1,54 +1,95 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Sprawa } from '@/lib/skrzynka/typy'
 
-/** Firestore w pamięci - tylko to, czego używa `dane.ts`. */
+/** Firestore w pamięci - dokumenty, partie, transakcje i proste zapytania (where, orderBy, startAfter, limit, count). */
 const { baza, admin } = vi.hoisted(() => {
-  const baza = new Map<string, Record<string, unknown>>()
-  const snap = (s: string) => ({ id: s.split('/').pop()!, exists: baza.has(s), data: () => baza.get(s) })
-  const zapisz = (s: string, d: Record<string, unknown>, scal?: boolean) => baza.set(s, scal ? { ...baza.get(s), ...d } : { ...d })
+  type Dane = Record<string, unknown>
   type Ref = { sciezka: string }
+  const baza = new Map<string, Dane>()
+  const snap = (s: string) => ({
+    id: s.split('/').pop()!,
+    ref: { sciezka: s },
+    exists: baza.has(s),
+    data: () => baza.get(s),
+    get: (pole: string) => baza.get(s)?.[pole],
+  })
+  type Migawka = ReturnType<typeof snap>
+  const zapisz = (s: string, d: Dane, scal?: boolean) => baza.set(s, scal ? { ...baza.get(s), ...d } : { ...d })
   const firestore = {
     getAll: async (...refs: Ref[]) => refs.map((r) => snap(r.sciezka)),
     batch: () => {
       const ops: (() => void)[] = []
       return {
-        set: (r: Ref, d: Record<string, unknown>, o?: { merge?: boolean }) => ops.push(() => zapisz(r.sciezka, d, o?.merge)),
+        set: (r: Ref, d: Dane, o?: { merge?: boolean }) => ops.push(() => zapisz(r.sciezka, d, o?.merge)),
+        update: (r: Ref, d: Dane) => ops.push(() => zapisz(r.sciezka, d, true)),
         commit: async () => ops.forEach((f) => f()),
       }
     },
     runTransaction: async <T,>(f: (t: unknown) => Promise<T>) =>
       f({
         get: async (r: Ref) => snap(r.sciezka),
-        set: (r: Ref, d: Record<string, unknown>, o?: { merge?: boolean }) => zapisz(r.sciezka, d, o?.merge),
-        update: (r: Ref, d: Record<string, unknown>) => zapisz(r.sciezka, d, true),
+        set: (r: Ref, d: Dane, o?: { merge?: boolean }) => zapisz(r.sciezka, d, o?.merge),
+        update: (r: Ref, d: Dane) => zapisz(r.sciezka, d, true),
       }),
   }
   const dok = (sciezka: string) => ({
     sciezka,
     firestore,
     get: async () => snap(sciezka),
-    set: async (d: Record<string, unknown>, o?: { merge?: boolean }) => zapisz(sciezka, d, o?.merge),
+    set: async (d: Dane, o?: { merge?: boolean }) => zapisz(sciezka, d, o?.merge),
   })
-  const porownaj = (a: unknown, op: string, b: unknown) =>
-    op === '==' ? a === b : op === '<' ? typeof a === 'number' && a < (b as number) : false
+  const por = (a: unknown, b: unknown) => ((a as number) < (b as number) ? -1 : (a as number) > (b as number) ? 1 : 0)
+  const spelnia = (v: unknown, op: string, w: unknown) => {
+    if (v === undefined || v === null) return false
+    const r = por(v, w)
+    return op === '==' ? v === w : op === '<' ? r < 0 : op === '>' ? r > 0 : op === '>=' ? r >= 0 : op === '<=' ? r <= 0 : false
+  }
+  type Opis = { warunki: [string, string, unknown][]; kolejnosc: [string, string] | null; ile: number; po: unknown }
+  interface Zapytanie {
+    where(p: string, op: string, w: unknown): Zapytanie
+    orderBy(p: string, kier?: string): Zapytanie
+    limit(n: number): Zapytanie
+    startAfter(w: unknown): Zapytanie
+    get(): Promise<{ docs: Migawka[]; empty: boolean; size: number }>
+    count(): { get(): Promise<{ data(): { count: number } }> }
+  }
+  const zapytanie = (nazwa: string, z: Opis): Zapytanie => {
+    const wyniki = () => {
+      let docs = [...baza.keys()]
+        .filter((k) => k.startsWith(`${nazwa}/`))
+        .map(snap)
+        .filter((d) => z.warunki.every(([p, op, w]) => spelnia(d.get(p), op, w)))
+      if (z.kolejnosc) {
+        const [p, kier] = z.kolejnosc
+        const zn = kier === 'desc' ? -1 : 1
+        docs.sort((a, b) => por(a.get(p), b.get(p)) * zn)
+        if (z.po !== undefined) docs = docs.filter((d) => por(d.get(p), z.po) * zn > 0)
+      }
+      return docs.slice(0, z.ile)
+    }
+    return {
+      where: (p, op, w) => zapytanie(nazwa, { ...z, warunki: [...z.warunki, [p, op, w]] }),
+      orderBy: (p, kier = 'asc') => zapytanie(nazwa, { ...z, kolejnosc: [p, kier] }),
+      limit: (n) => zapytanie(nazwa, { ...z, ile: n }),
+      startAfter: (w) => zapytanie(nazwa, { ...z, po: w }),
+      get: async () => {
+        const docs = wyniki()
+        return { docs, empty: !docs.length, size: docs.length }
+      },
+      count: () => ({ get: async () => ({ data: () => ({ count: wyniki().length }) }) }),
+    }
+  }
   const kolekcja = (nazwa: string) => ({
     firestore,
     doc: (id: string) => dok(`${nazwa}/${id}`),
-    where: (pole: string, op: string, wartosc: unknown) => ({
-      count: () => ({
-        get: async () => ({
-          data: () => ({
-            count: [...baza].filter(([k, v]) => k.startsWith(`${nazwa}/`) && porownaj(v[pole], op, wartosc)).length,
-          }),
-        }),
-      }),
-    }),
+    ...zapytanie(nazwa, { warunki: [], kolejnosc: null, ile: Infinity, po: undefined }),
   })
   return {
     baza,
     admin: {
       skrzynkaStanRef: () => dok('skrzynka/stan'),
       skrzynkaUstawieniaRef: () => dok('skrzynka/ustawienia'),
+      ustawieniaRef: (nazwa: string) => dok(`ustawienia/${nazwa}`),
       sprawyRef: () => kolekcja('skrzynkaSprawy'),
       kontaktyRef: () => kolekcja('skrzynkaKontakty'),
       organizacjeRef: () => kolekcja('skrzynkaOrganizacje'),
@@ -57,7 +98,9 @@ const { baza, admin } = vi.hoisted(() => {
 })
 vi.mock('@/lib/firebase/admin', () => admin)
 
-import { czytajSprawy, czytajStan, liczniki, pomijane, wezDzierzawe, zapiszStan, zapiszWynik, zwolnijDzierzawe } from '@/lib/skrzynka/dane'
+import {
+  czytajSprawy, czytajStan, kluczListy, liczniki, listaSpraw, pomijane, uzupelnijKlucze, wezDzierzawe, zapiszStan, zapiszWynik, zwolnijDzierzawe,
+} from '@/lib/skrzynka/dane'
 
 const sprawa = (id: string, n: Partial<Sprawa> = {}): Sprawa => ({
   id, temat: 'T', status: 'do-odpowiedzi', oczekujeOd: 100, nowa: true, kontakt: 'anna@firma.pl', organizacja: 'firma.pl',
@@ -73,7 +116,7 @@ describe('stan', () => {
     await zapiszStan({ ostatniaSynchronizacja: 5 })
     expect(await czytajStan()).toEqual({
       email: 'kontakt@x', token: 'enc', historyId: '7', watchWygasa: null, ostatniaSynchronizacja: 5,
-      dzierzawaDo: 0, doPowtorki: false, polaczona: true, import: { trwa: false, zrobione: 0, razem: 0, strona: null },
+      dzierzawaDo: 0, doPowtorki: false, polaczona: true, wersjaDanych: 1, import: { trwa: false, zrobione: 0, razem: 0, strona: null },
     })
   })
 })
@@ -146,7 +189,53 @@ describe('liczniki', () => {
       organizacje: [],
     })
     expect(await liczniki(wtorek)).toEqual({
-      stan: 'rozlaczona', doOdpowiedzi: 2, poTerminie: 1, doPrzejrzenia: 1, czekaNaNich: 1, wToku: 1, ostatniaSynchronizacja: 9,
+      stan: 'rozlaczona', doOdpowiedzi: 2, poTerminie: 1, doPrzejrzenia: 1, czekaNaNich: 1, wToku: 1, zalatwione: 0, pominiete: 0, ostatniaSynchronizacja: 9,
     })
+  })
+})
+
+describe('lista spraw', () => {
+  const kiedy = (k: number) => ({ ostatnia: { kiedy: k, kierunek: 'oni' as const, fragment: '' } })
+
+  it('klucz: status, czas z zerami do 15 cyfr, id', () => {
+    expect(kluczListy({ id: 't1', status: 'zalatwiona', ...kiedy(1792000000000) })).toBe('zalatwiona|001792000000000|t1')
+  })
+
+  it('jeden status od najnowszej; strony; inne statusy poza listą', async () => {
+    await zapiszWynik({
+      sprawy: [
+        sprawa('a', { status: 'zalatwiona', oczekujeOd: null, ...kiedy(100) }),
+        sprawa('b', { status: 'zalatwiona', oczekujeOd: null, ...kiedy(300) }),
+        sprawa('c', { status: 'zalatwiona', oczekujeOd: null, ...kiedy(200) }),
+        sprawa('d', { status: 'pominieta', oczekujeOd: null, ...kiedy(400) }),
+      ],
+      kontakty: [],
+      organizacje: [],
+    })
+    const s1 = await listaSpraw('zalatwiona', null, 2)
+    expect(s1.sprawy.map((s) => s.id)).toEqual(['b', 'c'])
+    expect(s1.nastepna).toBe('zalatwiona|000000000000200|c')
+    const s2 = await listaSpraw('zalatwiona', s1.nastepna, 2)
+    expect(s2.sprawy.map((s) => s.id)).toEqual(['a'])
+    expect(s2.nastepna).toBeNull()
+  })
+
+  it('Do odpowiedzi: najdłużej czekające na górze', async () => {
+    await zapiszWynik({
+      sprawy: [sprawa('x', { oczekujeOd: 500 }), sprawa('y', { oczekujeOd: 100 }), sprawa('z', { status: 'w-toku', oczekujeOd: null })],
+      kontakty: [],
+      organizacje: [],
+    })
+    expect((await listaSpraw('do-odpowiedzi', null)).sprawy.map((s) => s.id)).toEqual(['y', 'x'])
+  })
+
+  it('sprawy sprzed wersji 2 dostają klucz raz', async () => {
+    await zapiszStan({ token: 'enc', polaczona: true })
+    baza.set('skrzynkaSprawy/stara', { temat: 'T', status: 'zalatwiona', oczekujeOd: null, ostatnia: { kiedy: 100, kierunek: 'oni', fragment: '' } })
+    expect((await listaSpraw('zalatwiona', null)).sprawy).toEqual([])
+    expect(await uzupelnijKlucze()).toBe(1)
+    expect((await listaSpraw('zalatwiona', null)).sprawy.map((s) => s.id)).toEqual(['stara'])
+    expect((await czytajStan())?.wersjaDanych).toBe(2)
+    expect(await uzupelnijKlucze()).toBe(0)
   })
 })

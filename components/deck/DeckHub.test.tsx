@@ -26,7 +26,7 @@ const STRONY: PodsumowanieStron = {
   stron: 2, klikniecia: 125, wyswietlenia: 4000, poprzednieKlikniecia: 100, poprzednieWyswietlenia: 3000, alerty: 1, bledy: 0,
 }
 const SKRZYNKA: LicznikiSkrzynki = {
-  stan: 'polaczona', doOdpowiedzi: 7, poTerminie: 2, doPrzejrzenia: 4, czekaNaNich: 3, wToku: 1, ostatniaSynchronizacja: 1,
+  stan: 'polaczona', doOdpowiedzi: 7, poTerminie: 2, doPrzejrzenia: 4, czekaNaNich: 3, wToku: 1, zalatwione: 0, pominiete: 0, ostatniaSynchronizacja: 1,
 }
 const ZAPIS: ZapisanaOdprawa = {
   slad: 's', dzien: '02.10.2026', utworzono: Date.UTC(2026, 9, 2, 12, 32), model: 'm',

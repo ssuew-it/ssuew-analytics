@@ -84,6 +84,8 @@ export interface LicznikiSkrzynki {
   doPrzejrzenia: number
   czekaNaNich: number
   wToku: number
+  zalatwione: number
+  pominiete: number
   ostatniaSynchronizacja: number | null
 }
 
@@ -92,3 +94,9 @@ export type WynikSynchronizacji =
   | { stan: 'zajete' }
   | { stan: 'niepolaczona' }
   | { stan: 'rozlaczona' }
+
+/** Strona listy spraw; `nastepna` to kursor kolejnej strony albo `null`. */
+export interface StronaSpraw {
+  sprawy: Sprawa[]
+  nastepna: string | null
+}

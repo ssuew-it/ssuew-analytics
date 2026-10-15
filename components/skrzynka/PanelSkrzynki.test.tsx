@@ -12,6 +12,7 @@ vi.mock('@/lib/skrzynka/klient', () => ({
 
 const L: LicznikiSkrzynki = {
   stan: 'polaczona', doOdpowiedzi: 7, poTerminie: 2, doPrzejrzenia: 15, czekaNaNich: 4, wToku: 1,
+  zalatwione: 0, pominiete: 0,
   ostatniaSynchronizacja: Date.UTC(2026, 9, 14, 8, 5),
 }
 
