@@ -3,14 +3,19 @@ import type { WatekApi } from '@/lib/skrzynka/naglowki'
 import type { Sprawa } from '@/lib/skrzynka/typy'
 
 // vi.mock jest wynoszony nad importy - zaślepki muszą powstać w vi.hoisted, inaczej fabryka trafi na niezainicjowane stałe.
-const { dane, g, wymienKod, utworzonyZ } = vi.hoisted(() => ({
+const { dane, g, wymienKod, utworzonyZ, odwolajToken } = vi.hoisted(() => ({
   dane: {
     czytajStan: vi.fn(), zapiszStan: vi.fn(), wezDzierzawe: vi.fn(), zwolnijDzierzawe: vi.fn(),
     czytajSprawy: vi.fn(), zapiszWynik: vi.fn(), pomijane: vi.fn(),
+    czytajSprawe: vi.fn(), czytajUstawienia: vi.fn(), rozlaczStan: vi.fn(), usunDaneSkrzynki: vi.fn(),
   },
-  g: { profil: vi.fn(), watek: vi.fn(), listaWatkow: vi.fn(), historia: vi.fn(), obserwuj: vi.fn() },
+  g: {
+    profil: vi.fn(), watek: vi.fn(), listaWatkow: vi.fn(), historia: vi.fn(), obserwuj: vi.fn(),
+    watekDoOdpowiedzi: vi.fn(), wyslij: vi.fn(), zatrzymaj: vi.fn(),
+  },
   wymienKod: vi.fn(),
   utworzonyZ: vi.fn(),
+  odwolajToken: vi.fn(),
 }))
 
 vi.mock('@/lib/skrzynka/dane', () => dane)
@@ -22,9 +27,12 @@ vi.mock('@/lib/skrzynka/google', async (oryginal) => ({
     return g
   },
   wymienKod: (...a: unknown[]) => wymienKod(...a),
+  odwolajToken: (...a: unknown[]) => odwolajToken(...a),
 }))
 
-import { importujStrone, klientGmaila, polaczSkrzynke, przetworzWatki, synchronizuj, odnowObserwacje } from '@/lib/skrzynka/synchronizacja'
+import {
+  importujStrone, klientGmaila, odnowObserwacje, polaczSkrzynke, przetworzWatki, rozlaczSkrzynke, synchronizuj, wyslijOdpowiedz,
+} from '@/lib/skrzynka/synchronizacja'
 import { BladSkrzynki } from '@/lib/skrzynka/google'
 
 const NASZ = 'kontakt@samorzad.ue.wroc.pl'
@@ -55,6 +63,7 @@ beforeEach(() => {
   Object.values(g).forEach((f) => f.mockReset())
   wymienKod.mockReset()
   utworzonyZ.mockReset()
+  odwolajToken.mockReset()
   dane.czytajSprawy.mockResolvedValue(new Map())
   dane.pomijane.mockResolvedValue({ adresy: [], domeny: [] })
   dane.czytajStan.mockResolvedValue(stan())
@@ -203,7 +212,7 @@ describe('importujStrone', () => {
 
 describe('polaczSkrzynke', () => {
   beforeEach(() => {
-    wymienKod.mockResolvedValue({ refreshToken: 'refresh-2', dostep: 'dostep' })
+    wymienKod.mockResolvedValue({ refreshToken: 'refresh-2', dostep: 'dostep', zakresy: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send'] })
     g.obserwuj.mockResolvedValue({ historyId: '500', expiration: '1792000000000' })
   })
 
@@ -212,6 +221,13 @@ describe('polaczSkrzynke', () => {
     expect(await polaczSkrzynke('KOD')).toBe('inne-konto')
     expect(dane.zapiszStan).not.toHaveBeenCalled()
     expect(g.obserwuj).not.toHaveBeenCalled()
+  })
+
+  it('zgoda bez wysyłki - nic nie zapisuje, prosi o pełną zgodę', async () => {
+    wymienKod.mockResolvedValue({ refreshToken: 'r', dostep: 'd', zakresy: ['https://www.googleapis.com/auth/gmail.readonly'] })
+    g.profil.mockResolvedValue({ emailAddress: NASZ, historyId: '1' })
+    expect(await polaczSkrzynke('KOD')).toBe('brak-wysylki')
+    expect(dane.zapiszStan).not.toHaveBeenCalled()
   })
 
   it('pierwsze połączenie: zaszyfrowany token, obserwacja, punkt historii z obserwacji, import do zrobienia', async () => {
@@ -252,5 +268,85 @@ describe('klientGmaila', () => {
     await expect(klientGmaila()).rejects.toMatchObject({ rodzaj: 'rozlaczona' })
     expect(await klientGmaila()).toBe(g)
     expect(utworzonyZ).toHaveBeenLastCalledWith('refresh')
+  })
+})
+
+describe('wyslijOdpowiedz', () => {
+  const S = { id: 't1', status: 'do-odpowiedzi' } as Sprawa
+  const doOdpowiedzi = {
+    id: 't1',
+    messages: [{
+      id: 'm1', internalDate: '1', labelIds: ['INBOX'],
+      payload: { headers: [
+        { name: 'From', value: 'Anna <anna@firma.pl>' }, { name: 'To', value: NASZ },
+        { name: 'Subject', value: 'Oferta' }, { name: 'Message-ID', value: '<a1@firma.pl>' },
+      ] },
+    }],
+  }
+  beforeEach(() => {
+    dane.czytajUstawienia.mockResolvedValue({ stopka: 'Stopka', pomijaneAdresy: [], pomijaneDomeny: [] })
+    g.watekDoOdpowiedzi.mockResolvedValue(doOdpowiedzi)
+    g.wyslij.mockResolvedValue({ id: 'w1', threadId: 't1' })
+  })
+
+  it('mail do adresata w tym samym wątku, ze stopką; potem automat i świeża sprawa', async () => {
+    dane.czytajSprawe.mockResolvedValueOnce(S).mockResolvedValueOnce({ ...S, status: 'czeka-na-nich' })
+    g.watek.mockResolvedValue(watek('t1', [['anna@firma.pl', 1], [NASZ, 2]]))
+    expect(await wyslijOdpowiedz('t1', 'Dziękujemy', [], TERAZ)).toMatchObject({ status: 'czeka-na-nich' })
+    const [mime, watekId] = g.wyslij.mock.calls[0]
+    expect(watekId).toBe('t1')
+    expect(mime).toContain('<kontakt@samorzad.ue.wroc.pl>')
+    expect(mime).toContain('To: anna@firma.pl\r\n')
+    expect(mime).toContain('Subject: Re: Oferta\r\n')
+    expect(mime).toContain('In-Reply-To: <a1@firma.pl>\r\n')
+    expect(Buffer.from(mime.split('\r\n\r\n')[1].replace(/\r\n/g, ''), 'base64').toString('utf8')).toBe('Dziękujemy\r\n\r\nStopka')
+    expect(zapisane().sprawy[0]).toMatchObject({ id: 't1', status: 'czeka-na-nich' })
+  })
+
+  it('nie ma sprawy - null; nie ma do kogo - błąd; nic nie wysłane', async () => {
+    dane.czytajSprawe.mockResolvedValueOnce(null)
+    expect(await wyslijOdpowiedz('brak', 'x', [])).toBeNull()
+    dane.czytajSprawe.mockResolvedValue(S)
+    g.watekDoOdpowiedzi.mockResolvedValue({ id: 't1', messages: [] })
+    await expect(wyslijOdpowiedz('t1', 'x', [])).rejects.toMatchObject({ rodzaj: 'brak-adresata' })
+    expect(g.wyslij).not.toHaveBeenCalled()
+  })
+
+  it('rozłączona skrzynka - błąd rozłączenia', async () => {
+    dane.czytajSprawe.mockResolvedValue(S)
+    dane.czytajStan.mockResolvedValue(stan({ polaczona: false }))
+    await expect(wyslijOdpowiedz('t1', 'x', [])).rejects.toMatchObject({ rodzaj: 'rozlaczona' })
+  })
+})
+
+describe('rozlaczSkrzynke', () => {
+  beforeEach(() => {
+    g.zatrzymaj.mockResolvedValue(undefined)
+    odwolajToken.mockResolvedValue(undefined)
+  })
+
+  it('zatrzymuje obserwację, odwołuje token i zostawia dane', async () => {
+    await rozlaczSkrzynke(false)
+    expect(utworzonyZ).toHaveBeenCalledWith('refresh')
+    expect(g.zatrzymaj).toHaveBeenCalled()
+    expect(odwolajToken).toHaveBeenCalledWith('refresh')
+    expect(dane.rozlaczStan).toHaveBeenCalled()
+    expect(dane.usunDaneSkrzynki).not.toHaveBeenCalled()
+  })
+
+  it('Google nie odpowiada - i tak usuwa dane po naszej stronie', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    g.zatrzymaj.mockRejectedValue(new Error('500'))
+    odwolajToken.mockRejectedValue(new Error('400'))
+    await rozlaczSkrzynke(true)
+    expect(dane.usunDaneSkrzynki).toHaveBeenCalled()
+    expect(dane.rozlaczStan).not.toHaveBeenCalled()
+  })
+
+  it('bez stanu - bez Google, tylko po naszej stronie', async () => {
+    dane.czytajStan.mockResolvedValue(null)
+    await rozlaczSkrzynke(false)
+    expect(g.zatrzymaj).not.toHaveBeenCalled()
+    expect(dane.rozlaczStan).toHaveBeenCalled()
   })
 })

@@ -1,8 +1,10 @@
-import { BladSkrzynki, gmail as utworzGmail, wymienKod, type Gmail } from './google'
+import { BladSkrzynki, ZAKRES_WYSYLKI, gmail as utworzGmail, odwolajToken, wymienKod, type Gmail } from './google'
 import { odszyfruj, zaszyfruj } from './szyfr'
 import {
-  czytajSprawy, czytajStan, pomijane, wezDzierzawe, zapiszStan, zapiszWynik, zwolnijDzierzawe, type StanSkrzynki,
+  czytajSprawe, czytajSprawy, czytajStan, czytajUstawienia, pomijane, rozlaczStan, usunDaneSkrzynki, wezDzierzawe, zapiszStan, zapiszWynik,
+  zwolnijDzierzawe, type StanSkrzynki,
 } from './dane'
+import { przygotujOdpowiedz, zbudujMail, type PlikWysylki } from './mime'
 import { odczytajWatek } from './naglowki'
 import { domena, drugaStrona, kontaktZAdresu, organizacjaZEmaila } from './kontakty'
 import { kierunek, ocenSprawe } from './statusy'
@@ -13,7 +15,7 @@ const RUNDY = 3
 const ROWNOLEGLE = 10
 const MAKS_PRZEGLADU = 500
 
-function nasz(): string {
+export function nasz(): string {
   const e = process.env.DECK_OWNER_EMAIL
   if (!e) throw new BladSkrzynki('konfiguracja', 'Brak DECK_OWNER_EMAIL')
   return e.toLowerCase()
@@ -198,11 +200,13 @@ export async function importujStrone(
  * włączona. Ponowne połączenie zachowuje punkt historii i stan importu -
  * synchronizacja dociągnie zmiany z czasu rozłączenia.
  */
-export async function polaczSkrzynke(kod: string): Promise<'ok' | 'inne-konto'> {
-  const { refreshToken, dostep } = await wymienKod(kod)
+export async function polaczSkrzynke(kod: string): Promise<'ok' | 'inne-konto' | 'brak-wysylki'> {
+  const { refreshToken, dostep, zakresy } = await wymienKod(kod)
   const g = utworzGmail(refreshToken, dostep)
   const profil = await g.profil()
   if (profil.emailAddress.toLowerCase() !== nasz()) return 'inne-konto'
+  // Bez wysyłki panel nie odpowie na żadną sprawę - lepiej od razu poprosić o pełną zgodę.
+  if (!zakresy.includes(ZAKRES_WYSYLKI)) return 'brak-wysylki'
   const w = await g.obserwuj(temat())
   const poprzedni = await czytajStan()
   await zapiszStan({
@@ -226,4 +230,46 @@ export async function odnowObserwacje(): Promise<void> {
     const w = await gmailZeStanu(stan).obserwuj(temat())
     await zapiszStan({ watchWygasa: Number(w.expiration) })
   })
+}
+
+/** Nadawca odpowiedzi z D.E.C.K. (spec §7). */
+export const NADAWCA = 'Samorząd Studentów UEW'
+
+/**
+ * Odpowiedź w wątku z kontakt@: adresat i nagłówki z wątku, stopka z
+ * ustawień. Po wysyłce sprawa od razu przechodzi przez automat statusów -
+ * bez czekania na push. `null` - nie ma takiej sprawy.
+ */
+export async function wyslijOdpowiedz(id: string, tekst: string, pliki: PlikWysylki[], teraz = Date.now()): Promise<Sprawa | null> {
+  if (!(await czytajSprawe(id))) return null
+  const g = await klientGmaila()
+  return zRozlaczeniem(async () => {
+    const odp = przygotujOdpowiedz(await g.watekDoOdpowiedzi(id), nasz())
+    if (!odp) throw new BladSkrzynki('brak-adresata', `Wątek ${id} bez adresata`)
+    const { stopka } = await czytajUstawienia()
+    await g.wyslij(zbudujMail({ od: nasz(), nazwaOd: NADAWCA, ...odp, tekst, stopka, pliki }), id)
+    await przetworzWatki(g, [id], { teraz, import: false })
+    return czytajSprawe(id)
+  })
+}
+
+/**
+ * „Rozłącz”: zatrzymanie obserwacji i odwołanie tokenu w Google - starannie,
+ * ale bez blokowania: gdy Google nie odpowie, i tak rozłączamy po naszej
+ * stronie (obserwacja wygaśnie sama po 7 dniach). Potem stan bez tokenu albo
+ * usunięcie spraw, kontaktów i organizacji.
+ */
+export async function rozlaczSkrzynke(usunDane: boolean): Promise<void> {
+  const stan = await czytajStan()
+  if (stan) {
+    try {
+      const token = odszyfruj(stan.token)
+      await utworzGmail(token).zatrzymaj().catch((e) => console.error('[skrzynka] stop:', e))
+      await odwolajToken(token).catch((e) => console.error('[skrzynka] odwołanie:', e))
+    } catch (e) {
+      console.error('[skrzynka] rozłączenie:', e)
+    }
+  }
+  if (usunDane) await usunDaneSkrzynki()
+  else await rozlaczStan()
 }
