@@ -83,6 +83,8 @@ Stan połączenia (z zaszyfrowanym tokenem) leży w Firestore `skrzynka/stan`, s
 
 Panel `/skrzynka`: zakładki statusów z liczbami, wyszukiwarka (składnia Gmaila, wyniki tylko z zaimportowanych 12 miesięcy), lista spraw i wątek z treścią pobieraną z Gmaila na żywo. HTML maila wyświetla się w ramce bez skryptów i bez zewnętrznych obrazków; załączniki zawsze się pobierają. Ze sprawy: zmiana statusu, przypisanie osoby ze Składu zarządu (Planer → Skład), „Pomiń” i „Pomiń zawsze” (adres; domena tylko dla organizacji). Lista czyta pole `klucz` (`status|czas|id`) - bez indeksu złożonego w Firestore.
 
+Odpowiedź z widoku sprawy idzie z kontakt@ jako „Samorząd Studentów UEW” w tym samym wątku - do Reply-To albo nadawcy ostatniej ich wiadomości (okno pokazuje adresata) - ze stopką z Ustawień; załączniki łącznie do 4 MB (limit żądania funkcji Vercela to 4,5 MB). Zgoda Google bez uprawnienia do wysyłki jest odrzucana przy połączeniu. Zakładki Kontakty i Organizacje: karta osoby albo organizacji z jej sprawami; nazwę i typ organizacji zmienia się na karcie, synchronizacja tego nie nadpisuje. Ustawienia: stopka, listy „zawsze pomijaj” (domeny skrzynek prywatnych i studentów odrzucane) i „Rozłącz” - odwołuje dostęp w Google, opcjonalnie usuwa sprawy, kontakty i organizacje (koniec kadencji). Po „Rozłącz” bez usuwania ponowne połączenie robi import od nowa.
+
 ## Uruchomienie
 
 ```bash
