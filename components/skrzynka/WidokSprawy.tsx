@@ -4,6 +4,7 @@ import { ExternalLink, Paperclip } from 'lucide-react'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import { ETYKIETY_STATUSOW, adresZalacznika, linkGmail, pelnaData, rozmiar } from '@/lib/skrzynka/widok'
 import { MAKS_POBRANIA, type Sprawa, type Status, type SzczegolySprawy, type ZmianaSprawy } from '@/lib/skrzynka/typy'
+import { OknoOdpowiedzi } from './OknoOdpowiedzi'
 import { TrescWiadomosci } from './TrescWiadomosci'
 
 /** Statusy do ustawienia jednym kliknięciem; Do przejrzenia ustawia tylko automat. */
@@ -53,6 +54,17 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
   function pominZawsze(rodzaj: 'adres' | 'domena', kogo: string) {
     if (!window.confirm(`Nowe wątki od ${kogo} będą od razu trafiać do Pominiętych. Na razie nie da się tego cofnąć w D.E.C.K. Pominąć?`)) return
     void zmien({ pomin: rodzaj })
+  }
+
+  async function poWyslaniu(s: Sprawa) {
+    setDane((d) => d && { ...d, sprawa: s })
+    onZmiana(s)
+    // Wysłana wiadomość ma się pojawić w wątku - wczytujemy go jeszcze raz.
+    try {
+      setDane(await klientSkrzynki.sprawa(id))
+    } catch {
+      // Zostaje poprzedni widok - odpowiedź i tak poszła.
+    }
   }
 
   const powrot = (
@@ -123,6 +135,8 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
             className="deck-input rounded-md px-2 py-1"
           >
             <option value="">nikt</option>
+            {/* Osoba, która wypadła ze Składu, dalej widnieje przy sprawie - inaczej lista pokazałaby „nikt”. */}
+            {s.przypisana && !sklad.includes(s.przypisana) && <option value={s.przypisana}>{s.przypisana} (poza Składem)</option>}
             {sklad.map((o) => (
               <option key={o} value={o}>
                 {o}
@@ -166,6 +180,9 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
           </li>
         ))}
       </ol>
+      {dane.wiadomosci.length > 0 && (
+        <OknoOdpowiedzi key={s.id} sprawaId={s.id} adresat={dane.adresat} stopka={dane.stopka} onWyslano={poWyslaniu} />
+      )}
     </section>
   )
 }

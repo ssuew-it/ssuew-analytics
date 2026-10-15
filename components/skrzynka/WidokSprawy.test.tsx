@@ -3,9 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { WidokSprawy } from '@/components/skrzynka/WidokSprawy'
 import type { Sprawa, SzczegolySprawy } from '@/lib/skrzynka/typy'
 
-const klient = { sprawa: vi.fn(), zmien: vi.fn() }
+const klient = { sprawa: vi.fn(), zmien: vi.fn(), odpowiedz: vi.fn() }
 vi.mock('@/lib/skrzynka/klient', () => ({
-  klientSkrzynki: { sprawa: (...a: unknown[]) => klient.sprawa(...a), zmien: (...a: unknown[]) => klient.zmien(...a) },
+  klientSkrzynki: {
+    sprawa: (...a: unknown[]) => klient.sprawa(...a),
+    zmien: (...a: unknown[]) => klient.zmien(...a),
+    odpowiedz: (...a: unknown[]) => klient.odpowiedz(...a),
+  },
 }))
 
 const EMAIL = 'kontakt@samorzad.ue.wroc.pl'
@@ -104,6 +108,31 @@ describe('WidokSprawy', () => {
     await widok(D({ kontakt: 'ktos@gmail.com', organizacja: null }))
     expect(screen.getByRole('button', { name: 'Pomiń zawsze ten adres' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Pomiń zawsze domenę/ })).toBeNull()
+  })
+
+  it('odpowiedź: okno pod wątkiem; po wysyłce rodzic dostaje sprawę, a wątek wczytuje się jeszcze raz', async () => {
+    const { onZmiana } = await widok()
+    expect(screen.getByRole('region', { name: 'Odpowiedź' })).toHaveTextContent('Do: anna@firma.pl')
+    expect(screen.getByLabelText('Stopka')).toHaveTextContent('Samorząd Studentów UEW')
+    klient.odpowiedz.mockResolvedValueOnce(S({ status: 'czeka-na-nich', oczekujeOd: null }))
+    fireEvent.change(screen.getByLabelText('Treść odpowiedzi'), { target: { value: 'Dziękujemy' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Wyślij' }))
+    })
+    expect(klient.odpowiedz).toHaveBeenCalledWith('t1', 'Dziękujemy', [])
+    expect(onZmiana).toHaveBeenCalledWith(expect.objectContaining({ status: 'czeka-na-nich' }))
+    expect(klient.sprawa).toHaveBeenCalledTimes(2)
+  })
+
+  it('wątek usunięty w Gmailu - bez okna odpowiedzi', async () => {
+    await widok({ ...D(), wiadomosci: [], adresat: null })
+    expect(screen.queryByRole('region', { name: 'Odpowiedź' })).toBeNull()
+  })
+
+  it('przypisana osoba spoza Składu dalej widoczna w wyborze', async () => {
+    await widok(D({ przypisana: 'Ola' }))
+    expect(screen.getByLabelText('Przypisz')).toHaveValue('Ola')
+    expect(screen.getByRole('option', { name: 'Ola (poza Składem)' })).toBeInTheDocument()
   })
 
   it('błąd wczytania i powrót do listy', async () => {
