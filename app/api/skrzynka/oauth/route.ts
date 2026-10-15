@@ -18,7 +18,8 @@ export async function GET(req: NextRequest) {
   const stan = p.get('state')
   if (!kod || !stan || !(await sprawdzStan(stan, kto.uid))) return wroc('stan')
   try {
-    return wroc((await polaczSkrzynke(kod)) === 'ok' ? undefined : 'inne-konto')
+    const wynik = await polaczSkrzynke(kod)
+    return wroc(wynik === 'ok' ? undefined : wynik)
   } catch (e) {
     console.error('[skrzynka] połączenie:', e)
     return wroc('polaczenie')

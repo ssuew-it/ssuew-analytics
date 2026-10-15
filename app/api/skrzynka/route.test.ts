@@ -69,7 +69,7 @@ describe('połączenie', () => {
     expect(r.headers.get('location')).toBe(`${BAZA}/skrzynka?blad=konfiguracja`)
   })
 
-  it('powrót: odmowa, zły state, inne konto, błąd, sukces', async () => {
+  it('powrót: odmowa, zły state, inne konto, zgoda bez wysyłki, błąd, sukces', async () => {
     const gdzie = async (q: string) => (await oauth(zadanie(`/api/skrzynka/oauth${q}`))).headers.get('location')
     expect(await gdzie('?error=access_denied')).toBe(`${BAZA}/skrzynka?blad=odmowa`)
     sprawdzStan.mockResolvedValueOnce(false)
@@ -77,6 +77,8 @@ describe('połączenie', () => {
     expect(await gdzie('?state=s')).toBe(`${BAZA}/skrzynka?blad=stan`)
     s.polaczSkrzynke.mockResolvedValueOnce('inne-konto')
     expect(await gdzie('?code=k&state=s')).toBe(`${BAZA}/skrzynka?blad=inne-konto`)
+    s.polaczSkrzynke.mockResolvedValueOnce('brak-wysylki')
+    expect(await gdzie('?code=k&state=s')).toBe(`${BAZA}/skrzynka?blad=brak-wysylki`)
     s.polaczSkrzynke.mockRejectedValueOnce(new Error('sieć'))
     expect(await gdzie('?code=k&state=s')).toBe(`${BAZA}/skrzynka?blad=polaczenie`)
     s.polaczSkrzynke.mockResolvedValueOnce('ok')

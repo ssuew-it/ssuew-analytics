@@ -128,6 +128,9 @@ export interface WiadomoscPelna {
 export interface SzczegolySprawy {
   sprawa: Sprawa
   wiadomosci: WiadomoscPelna[]
+  /** Dokąd pójdzie odpowiedź (Reply-To albo nadawca); `null` - nie ma do kogo odpowiedzieć. */
+  adresat: string | null
+  stopka: string
 }
 
 /** Ręczna zmiana sprawy z panelu. `pomin` = Pominięta + nadawca (adres albo domena) na listę „zawsze pomijaj”. */

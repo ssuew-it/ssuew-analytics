@@ -23,6 +23,8 @@ const D = (n: Partial<Sprawa> = {}): SzczegolySprawy => ({
     },
     { id: 'm2', kiedy: Date.UTC(2026, 9, 2, 8), od: { email: EMAIL, imie: '' }, do: [], temat: 'Re: Sponsoring', tekst: 'Dziękujemy, wrócimy z odpowiedzią.', html: null, zalaczniki: [] },
   ],
+  adresat: 'anna@firma.pl',
+  stopka: '-- \nSamorząd Studentów UEW',
 })
 
 async function widok(d: SzczegolySprawy = D()) {

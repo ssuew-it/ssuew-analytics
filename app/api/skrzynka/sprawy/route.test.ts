@@ -3,27 +3,31 @@ import { GET as lista } from '@/app/api/skrzynka/sprawy/route'
 import { GET as szukaj } from '@/app/api/skrzynka/szukaj/route'
 import { GET as sprawa, PATCH as zmien } from '@/app/api/skrzynka/sprawy/[id]/route'
 import { GET as zalacznik } from '@/app/api/skrzynka/sprawy/[id]/zalacznik/[zid]/route'
+import { POST as odpowiedz } from '@/app/api/skrzynka/sprawy/[id]/odpowiedz/route'
 import { BladSkrzynki } from '@/lib/skrzynka/google'
-import { MAKS_POBRANIA, type Sprawa } from '@/lib/skrzynka/typy'
+import { MAKS_POBRANIA, MAKS_ZALACZNIKOW, type Sprawa } from '@/lib/skrzynka/typy'
 
-const { ktoPyta, dane, g } = vi.hoisted(() => ({
+const { ktoPyta, dane, g, wyslijOdpowiedz } = vi.hoisted(() => ({
   ktoPyta: vi.fn(),
   dane: {
     listaSpraw: vi.fn(), czytajSprawy: vi.fn(), czytajSprawe: vi.fn(), zmienSprawe: vi.fn(),
-    dodajPomijanie: vi.fn(), skladZarzadu: vi.fn(),
+    dodajPomijanie: vi.fn(), skladZarzadu: vi.fn(), czytajUstawienia: vi.fn(),
   },
   g: { listaWatkow: vi.fn(), watekPelny: vi.fn(), zalacznik: vi.fn() },
+  wyslijOdpowiedz: vi.fn(),
 }))
 vi.mock('@/lib/auth/guard', () => ({ ktoPyta: (...a: unknown[]) => ktoPyta(...a) }))
 vi.mock('@/lib/skrzynka/dane', () => dane)
 vi.mock('@/lib/skrzynka/synchronizacja', () => ({
   klientGmaila: async () => g,
   zRozlaczeniem: <T,>(f: () => Promise<T>) => f(),
+  nasz: () => 'kontakt@samorzad.ue.wroc.pl',
+  wyslijOdpowiedz: (...a: unknown[]) => wyslijOdpowiedz(...a),
 }))
 
 const BAZA = 'https://ssuew-analytics.vercel.app'
 const zadanie = (sciezka: string, body?: unknown) =>
-  ({ url: `${BAZA}${sciezka}`, nextUrl: new URL(`${BAZA}${sciezka}`), json: async () => body }) as never
+  ({ url: `${BAZA}${sciezka}`, nextUrl: new URL(`${BAZA}${sciezka}`), json: async () => body, formData: async () => body }) as never
 const p = (id: string, zid?: string) => ({ params: Promise.resolve(zid ? { id, zid } : { id }) }) as never
 
 const S = (id: string, n: Partial<Sprawa> = {}): Sprawa => ({
@@ -35,7 +39,9 @@ beforeEach(() => {
   ktoPyta.mockReset().mockResolvedValue({ uid: 'u', email: 'kontakt@samorzad.ue.wroc.pl', rola: 'owner' })
   Object.values(dane).forEach((f) => f.mockReset())
   Object.values(g).forEach((f) => f.mockReset())
+  wyslijOdpowiedz.mockReset()
   dane.skladZarzadu.mockResolvedValue(['Jula'])
+  dane.czytajUstawienia.mockResolvedValue({ stopka: 'Stopka', pomijaneAdresy: [], pomijaneDomeny: [] })
 })
 
 describe('dostęp', () => {
@@ -49,8 +55,10 @@ describe('dostęp', () => {
       await sprawa(zadanie('/api/skrzynka/sprawy/t1'), p('t1')),
       await zmien(zadanie('/api/skrzynka/sprawy/t1', { status: 'w-toku' }), p('t1')),
       await zalacznik(zadanie('/api/skrzynka/sprawy/t1/zalacznik/A?w=m1'), p('t1', 'A')),
+      await odpowiedz(zadanie('/api/skrzynka/sprawy/t1/odpowiedz', new FormData()), p('t1')),
     ]) expect(r.status).toBe(403)
     expect(dane.zmienSprawe).not.toHaveBeenCalled()
+    expect(wyslijOdpowiedz).not.toHaveBeenCalled()
   })
 })
 
@@ -85,10 +93,10 @@ describe('sprawa', () => {
     g.watekPelny.mockRejectedValue(new BladSkrzynki('brak-watku', 'Gmail 404'))
     const r = await sprawa(zadanie('/api/skrzynka/sprawy/t1'), p('t1'))
     expect(r.status).toBe(200)
-    expect(await r.json()).toMatchObject({ sprawa: { id: 't1' }, wiadomosci: [] })
+    expect(await r.json()).toMatchObject({ sprawa: { id: 't1' }, wiadomosci: [], adresat: null, stopka: 'Stopka' })
   })
 
-  it('brak - 404; jest - treść z Gmaila i zdjęty znacznik nowej', async () => {
+  it('brak - 404; jest - treść z Gmaila, adresat i stopka odpowiedzi, zdjęty znacznik nowej', async () => {
     dane.czytajSprawe.mockResolvedValueOnce(null)
     expect((await sprawa(zadanie('/api/skrzynka/sprawy/brak'), p('brak'))).status).toBe(404)
     dane.czytajSprawe.mockResolvedValueOnce(S('t1', { nowa: true }))
@@ -100,6 +108,8 @@ describe('sprawa', () => {
     const d = await (await sprawa(zadanie('/api/skrzynka/sprawy/t1'), p('t1'))).json()
     expect(d.sprawa.nowa).toBe(false)
     expect(d.wiadomosci[0]).toMatchObject({ id: 'm1', tekst: 'Treść' })
+    expect(d.adresat).toBe('anna@firma.pl')
+    expect(d.stopka).toBe('Stopka')
     expect(dane.zmienSprawe).toHaveBeenCalledWith('t1', { nowa: false })
   })
 
@@ -153,5 +163,41 @@ describe('załącznik', () => {
     const r = await zalacznik(zadanie('/api/skrzynka/sprawy/t1/zalacznik/A?w=m1&nazwa=o.pdf&typ=application%2Fpdf'), p('t1', 'A'))
     expect(r.headers.get('content-type')).toBe('application/pdf')
     expect((await zalacznik(zadanie('/api/skrzynka/sprawy/t1/zalacznik/A'), p('t1', 'A'))).status).toBe(400)
+  })
+})
+
+describe('odpowiedź', () => {
+  const formularz = (tekst: string, pliki: File[] = []) => {
+    const fd = new FormData()
+    fd.append('tekst', tekst)
+    for (const plik of pliki) fd.append('pliki', plik)
+    return fd
+  }
+  const wyslij = (fd: FormData) => odpowiedz(zadanie('/api/skrzynka/sprawy/t1/odpowiedz', fd), p('t1'))
+
+  it('tekst bez spacji na brzegach i załączniki do wysyłki; wynik - sprawa po automacie', async () => {
+    wyslijOdpowiedz.mockResolvedValue(S('t1', { status: 'czeka-na-nich', oczekujeOd: null }))
+    const r = await wyslij(formularz('  Dziękujemy  ', [new File([Uint8Array.from([1, 2, 3])], 'Umowa.pdf', { type: 'application/pdf' })]))
+    expect((await r.json()).status).toBe('czeka-na-nich')
+    expect(wyslijOdpowiedz).toHaveBeenCalledWith('t1', 'Dziękujemy', [{ nazwa: 'Umowa.pdf', typ: 'application/pdf', dane: Uint8Array.from([1, 2, 3]) }])
+  })
+
+  it('pusta treść 400; załączniki ponad 4 MB 413 - nic nie wysłane; dokładnie 4 MB przechodzi', async () => {
+    expect((await wyslij(formularz('   '))).status).toBe(400)
+    const zaDuzo = await wyslij(formularz('x', [new File([new Uint8Array(MAKS_ZALACZNIKOW)], 'a.bin'), new File([Uint8Array.from([1])], 'b.bin')]))
+    expect(zaDuzo.status).toBe(413)
+    expect((await zaDuzo.json()).error).toBe('Załączniki mogą mieć łącznie najwyżej 4 MB.')
+    expect(wyslijOdpowiedz).not.toHaveBeenCalled()
+    wyslijOdpowiedz.mockResolvedValue(S('t1'))
+    expect((await wyslij(formularz('x', [new File([new Uint8Array(MAKS_ZALACZNIKOW)], 'a.bin')]))).status).toBe(200)
+  })
+
+  it('brak sprawy 404; brak zgody na wysyłkę 403 z komunikatem', async () => {
+    wyslijOdpowiedz.mockResolvedValueOnce(null)
+    expect((await wyslij(formularz('x'))).status).toBe(404)
+    wyslijOdpowiedz.mockRejectedValueOnce(new BladSkrzynki('brak-zgody', 'Gmail 403'))
+    const r = await wyslij(formularz('x'))
+    expect(r.status).toBe(403)
+    expect((await r.json()).error).toMatch(/zgody na wysyłkę/)
   })
 })
