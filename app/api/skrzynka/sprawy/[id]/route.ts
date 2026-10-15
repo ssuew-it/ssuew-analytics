@@ -46,19 +46,26 @@ export async function PATCH(req: NextRequest, { params }: Kontekst) {
   const { id } = await params
   const z = sprawdzZmiane(await req.json().catch(() => null), await skladZarzadu().catch(() => []))
   if (!z) return NextResponse.json({ error: 'Niepoprawna zmiana' }, { status: 400 })
-  const s = await czytajSprawe(id)
-  if (!s) return NextResponse.json({ error: 'Nie ma takiej sprawy' }, { status: 404 })
-  if (z.pomin) {
-    if (!s.kontakt) return NextResponse.json({ error: 'Ta sprawa nie ma nadawcy do pominięcia.' }, { status: 400 })
-    // Domena skrzynki prywatnej (gmail.com) albo studentów wyciszyłaby wszystkich - tylko organizacje.
-    if (z.pomin === 'domena' && !s.organizacja) {
-      return NextResponse.json({ error: 'Tej domeny nie można pominąć w całości - pomiń sam adres.' }, { status: 400 })
+  try {
+    const s = await czytajSprawe(id)
+    if (!s) return NextResponse.json({ error: 'Nie ma takiej sprawy' }, { status: 404 })
+    if (z.pomin) {
+      if (!s.kontakt) return NextResponse.json({ error: 'Ta sprawa nie ma nadawcy do pominięcia.' }, { status: 400 })
+      // Domena skrzynki prywatnej (gmail.com) albo studentów wyciszyłaby wszystkich - tylko organizacje.
+      if (z.pomin === 'domena' && !s.organizacja) {
+        return NextResponse.json({ error: 'Tej domeny nie można pominąć w całości - pomiń sam adres.' }, { status: 400 })
+      }
+      await dodajPomijanie(z.pomin, z.pomin === 'adres' ? s.kontakt : domena(s.kontakt))
     }
-    await dodajPomijanie(z.pomin, z.pomin === 'adres' ? s.kontakt : domena(s.kontakt))
+    const zmiana = {
+      ...(z.pomin ? { status: 'pominieta' as const } : z.status ? { status: z.status } : {}),
+      ...(z.przypisana !== undefined ? { przypisana: z.przypisana } : {}),
+    }
+    // Sprawa mogła zniknąć między odczytem a transakcją (Rozłącz z usuwaniem danych).
+    const nowa = await zmienSprawe(id, zmiana)
+    return nowa ? NextResponse.json(nowa) : NextResponse.json({ error: 'Nie ma takiej sprawy' }, { status: 404 })
+  } catch (e) {
+    console.error('[skrzynka] zmiana sprawy:', e)
+    return NextResponse.json({ error: 'Nie udało się zapisać zmiany - spróbuj ponownie.' }, { status: 500 })
   }
-  const zmiana = {
-    ...(z.pomin ? { status: 'pominieta' as const } : z.status ? { status: z.status } : {}),
-    ...(z.przypisana !== undefined ? { przypisana: z.przypisana } : {}),
-  }
-  return NextResponse.json(await zmienSprawe(id, zmiana))
 }

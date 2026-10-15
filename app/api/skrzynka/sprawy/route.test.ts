@@ -124,6 +124,17 @@ describe('sprawa', () => {
     expect(dane.zmienSprawe).toHaveBeenLastCalledWith('t1', { status: 'w-toku', przypisana: 'Jula' })
   })
 
+  it('zmiana: sprawa znika w trakcie - 404; błąd bazy - 500 z komunikatem', async () => {
+    dane.czytajSprawe.mockResolvedValue(S('t1'))
+    dane.zmienSprawe.mockResolvedValueOnce(null)
+    expect((await zmien(zadanie('/api/skrzynka/sprawy/t1', { status: 'w-toku' }), p('t1'))).status).toBe(404)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    dane.zmienSprawe.mockRejectedValueOnce(new Error('firestore'))
+    const r = await zmien(zadanie('/api/skrzynka/sprawy/t1', { status: 'w-toku' }), p('t1'))
+    expect(r.status).toBe(500)
+    expect((await r.json()).error).toBe('Nie udało się zapisać zmiany - spróbuj ponownie.')
+  })
+
   it('pomiń zawsze: adres albo domena organizacji; domena skrzynki prywatnej - 400', async () => {
     dane.czytajSprawe.mockResolvedValue(S('t1'))
     dane.zmienSprawe.mockResolvedValue(S('t1', { status: 'pominieta', oczekujeOd: null }))

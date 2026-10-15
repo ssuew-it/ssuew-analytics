@@ -97,5 +97,6 @@ describe('bezpiecznyHtml', () => {
     expect(h).not.toMatch(/script|onclick|onerror|javascript:|<iframe|<form/i)
     expect(h).toContain(`content="default-src 'none'; img-src data: cid:; style-src 'unsafe-inline'; font-src data:"`)
     expect(h).toContain('<base target="_blank">')
+    expect(h).toContain('<meta name="referrer" content="no-referrer">')
   })
 })

@@ -15,6 +15,8 @@ export function bezpiecznyHtml(html: string): string {
     '<!doctype html><html><head><meta charset="utf-8">' +
     `<meta http-equiv="Content-Security-Policy" content="${CSP_MAILA}">` +
     '<base target="_blank">' +
+    // Klik w link z maila nie zdradza nadawcy adresu D.E.C.K.
+    '<meta name="referrer" content="no-referrer">' +
     '<style>body{font:14px/1.5 system-ui,sans-serif;margin:12px;color:#111;background:#fff;overflow-wrap:anywhere}img{max-width:100%;height:auto}</style>' +
     `</head><body>${czysty}</body></html>`
   )
