@@ -2419,7 +2419,7 @@ Expected: `0`.
 
 Na koniec sprawdź, że w zmienionych plikach nie ma długich myślników:
 
-Run: `git diff --name-only HEAD | xargs -r grep -l $'—\|–' ; echo $?`
+Run: `git diff --name-only main | PYTHONIOENCODING=utf-8 python -c "import sys,io; print([p for p in sys.stdin.read().split() if any(z in io.open(p,encoding='utf-8').read() for z in ('\u2014','\u2013'))])"` → `[]`.
 Expected: brak plików i `1`.
 
 - [ ] **Krok 8: Commit**

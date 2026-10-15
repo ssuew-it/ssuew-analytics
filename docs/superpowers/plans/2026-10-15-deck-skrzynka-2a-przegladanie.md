@@ -2278,7 +2278,7 @@ Run: `npx vitest run > "$TMP/vt.log" 2>&1; echo $?` → `0` (przy pojedynczym pr
 Run: `npx tsc --noEmit > "$TMP/tsc.log" 2>&1; echo $?` → `0`
 Run: `npm run lint > "$TMP/lint.log" 2>&1; echo $?` → `0`
 Run: `npm run build > "$TMP/build.log" 2>&1; echo $?` → `0`; w logu `ƒ /api/skrzynka/sprawy`, `ƒ /api/skrzynka/szukaj`, `ƒ /api/skrzynka/sprawy/[id]`, `ƒ /api/skrzynka/sprawy/[id]/zalacznik/[zid]`.
-Run: `git diff --name-only main | xargs -r grep -l $'\u2014\|\u2013'; echo $?` → bez plików.
+Run: `git diff --name-only main | PYTHONIOENCODING=utf-8 python -c "import sys,io; print([p for p in sys.stdin.read().split() if any(z in io.open(p,encoding='utf-8').read() for z in ('\u2014','\u2013'))])"` → `[]`.
 
 - [ ] **Krok 3: Commit, scalenie i wypchnięcie (zgoda użytkownika: „na maina od razu”)**
 

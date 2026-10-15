@@ -3024,7 +3024,7 @@ Run: `npx vitest run > "$TMP/vt.log" 2>&1; echo $?` → `0`
 Run: `npx tsc --noEmit > "$TMP/tsc.log" 2>&1; echo $?` → `0`
 Run: `npm run lint > "$TMP/lint.log" 2>&1; echo $?` → `0`
 Run: `npm run build > "$TMP/build.log" 2>&1; echo $?` → `0`; w logu `ƒ /skrzynka` i trasy `/api/skrzynka/*`.
-Run: `git diff --name-only main | xargs -r grep -l $'—\|–'; echo $?` → bez plików.
+Run: `git diff --name-only main | PYTHONIOENCODING=utf-8 python -c "import sys,io; print([p for p in sys.stdin.read().split() if any(z in io.open(p,encoding='utf-8').read() for z in ('\u2014','\u2013'))])"` → `[]`.
 
 - [ ] **Krok 4: Commit i pull request**
 
