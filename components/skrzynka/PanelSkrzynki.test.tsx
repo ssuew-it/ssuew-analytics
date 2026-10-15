@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { PanelSkrzynki } from '@/components/skrzynka/PanelSkrzynki'
 import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
@@ -16,6 +16,11 @@ vi.mock('@/components/skrzynka/ListaSpraw', () => ({
     return <button type="button" onClick={() => p.onWybierz('t1')}>sprawa t1</button>
   },
 }))
+vi.mock('@/components/skrzynka/Kontakty', () => ({
+  Kontakty: (p: { onWybierz: (id: string) => void }) => <button type="button" onClick={() => p.onWybierz('t9')}>kartoteka kontaktów</button>,
+}))
+vi.mock('@/components/skrzynka/Organizacje', () => ({ Organizacje: () => <p>kartoteka organizacji</p> }))
+vi.mock('@/components/skrzynka/UstawieniaSkrzynki', () => ({ UstawieniaSkrzynki: () => <p>ustawienia skrzynki</p> }))
 vi.mock('@/components/skrzynka/WidokSprawy', () => ({
   WidokSprawy: (p: { id: string; onZmiana: (s: object) => void; onZamknij: () => void }) => (
     <div>
@@ -55,6 +60,9 @@ describe('PanelSkrzynki', () => {
   it('błąd z powrotu zgody i nieczytelny stan', () => {
     panel({ liczniki: { ...L, stan: 'brak' }, blad: 'inne-konto' })
     expect(screen.getByRole('alert')).toHaveTextContent(/kontakt@samorzad\.ue\.wroc\.pl/)
+    cleanup()
+    panel({ liczniki: { ...L, stan: 'brak' }, blad: 'brak-wysylki' })
+    expect(screen.getByRole('alert')).toHaveTextContent(/zaznacz wszystkie uprawnienia/)
     panel({ liczniki: null })
     expect(screen.getAllByRole('alert').at(-1)).toHaveTextContent(/Nie udało się odczytać stanu skrzynki/)
   })
@@ -68,6 +76,26 @@ describe('PanelSkrzynki', () => {
     expect(listaProps).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'do-odpowiedzi', szukane: '' }))
     fireEvent.click(screen.getByRole('tab', { name: /Załatwione/ }))
     expect(listaProps).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'zalatwiona' }))
+  })
+
+  it('Kontakty i Organizacje: zakładki bez liczb; sprawa z karty otwiera się obok', () => {
+    panel()
+    fireEvent.click(screen.getByRole('tab', { name: 'Kontakty' }))
+    expect(screen.queryByRole('button', { name: 'sprawa t1' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'kartoteka kontaktów' }))
+    expect(screen.getByText('widok t9')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Organizacje' }))
+    expect(screen.getByText('kartoteka organizacji')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Organizacje' })).toHaveTextContent(/^Organizacje$/)
+  })
+
+  it('Ustawienia zamiast list; drugi klik wraca', () => {
+    panel()
+    fireEvent.click(screen.getByRole('button', { name: 'Ustawienia' }))
+    expect(screen.getByText('ustawienia skrzynki')).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Ustawienia' }))
+    expect(screen.getByRole('tablist', { name: 'Statusy spraw' })).toBeInTheDocument()
   })
 
   it('wyszukiwanie i powrót do zakładek', () => {

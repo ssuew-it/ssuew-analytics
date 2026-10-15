@@ -1,12 +1,15 @@
 'use client'
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw, Search } from 'lucide-react'
+import { RefreshCw, Search, Settings } from 'lucide-react'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import { ETYKIETY_STATUSOW, ZAKLADKI } from '@/lib/skrzynka/widok'
 import type { LicznikiSkrzynki, PostepImportu, Status } from '@/lib/skrzynka/typy'
 import { ImportSkrzynki } from './ImportSkrzynki'
+import { Kontakty } from './Kontakty'
 import { ListaSpraw } from './ListaSpraw'
+import { Organizacje } from './Organizacje'
+import { UstawieniaSkrzynki } from './UstawieniaSkrzynki'
 import { WidokSprawy } from './WidokSprawy'
 
 const BLEDY: Record<string, string> = {
@@ -15,7 +18,16 @@ const BLEDY: Record<string, string> = {
   stan: 'Link połączenia wygasł albo jest nieprawidłowy - spróbuj jeszcze raz.',
   polaczenie: 'Nie udało się połączyć ze skrzynką - spróbuj ponownie.',
   konfiguracja: 'Skrzynka nie jest skonfigurowana na serwerze (zmienne SKRZYNKA_* na Vercelu).',
+  'brak-wysylki': 'Zgoda Google nie obejmuje wysyłki maili - połącz skrzynkę jeszcze raz i zaznacz wszystkie uprawnienia.',
 }
+
+/** Zakładki statusów i dwie kartoteki - bez liczb, bo liczenie osób i organizacji to dodatkowe odczyty przy każdym wejściu. */
+type Zakladka = Status | 'kontakty' | 'organizacje'
+const KARTOTEKI: { z: Zakladka; nazwa: string }[] = [
+  { z: 'kontakty', nazwa: 'Kontakty' },
+  { z: 'organizacje', nazwa: 'Organizacje' },
+]
+const czyStatus = (z: Zakladka): z is Status => z !== 'kontakty' && z !== 'organizacje'
 
 const LICZBA: Record<Status, (l: LicznikiSkrzynki) => number> = {
   'do-odpowiedzi': (l) => l.doOdpowiedzi,
@@ -37,7 +49,8 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email }: {
   email: string
 }) {
   const router = useRouter()
-  const [status, setStatus] = useState<Status>('do-odpowiedzi')
+  const [zakladka, setZakladka] = useState<Zakladka>('do-odpowiedzi')
+  const [ustawienia, setUstawienia] = useState(false)
   const [wpisane, setWpisane] = useState('')
   const [szukane, setSzukane] = useState('')
   const [wybrana, setWybrana] = useState<string | null>(null)
@@ -64,8 +77,8 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email }: {
     }
   }
 
-  function zakladka(s: Status) {
-    setStatus(s)
+  function wybierzZakladke(s: Zakladka) {
+    setZakladka(s)
     setSzukane('')
     setWpisane('')
     setWybrana(null)
@@ -123,55 +136,86 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email }: {
               <RefreshCw size={12} aria-hidden="true" className={trwa ? 'animate-spin' : ''} />
               Dociągnij
             </button>
+            <button
+              type="button"
+              aria-pressed={ustawienia}
+              onClick={() => setUstawienia((u) => !u)}
+              className="deck-button inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11.5px]"
+            >
+              <Settings size={12} aria-hidden="true" />
+              Ustawienia
+            </button>
             {bladDociagania && <span role="alert" className="text-deck-danger">{bladDociagania}</span>}
           </div>
 
-          {szukane ? (
-            <div className="flex items-center gap-3 text-[12.5px]">
-              <span className="text-deck-text">Wyniki dla „{szukane}”</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSzukane('')
-                  setWpisane('')
-                }}
-                className="text-deck-muted hover:underline"
-              >
-                Wyczyść
-              </button>
-            </div>
+          {ustawienia ? (
+            <UstawieniaSkrzynki />
           ) : (
-            <div role="tablist" aria-label="Statusy spraw" className="flex flex-wrap gap-1.5">
-              {ZAKLADKI.map((z) => (
-                <button
-                  key={z}
-                  type="button"
-                  role="tab"
-                  aria-selected={z === status}
-                  onClick={() => zakladka(z)}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] transition ${
-                    z === status ? 'border-deck-accent/50 bg-deck-accent/10 text-deck-text' : 'border-white/10 text-deck-muted hover:text-deck-text'
-                  }`}
-                >
-                  {ETYKIETY_STATUSOW[z]}
-                  <span className={`font-mono text-[11px] ${z === 'do-odpowiedzi' && liczniki.poTerminie > 0 ? 'text-deck-danger' : ''}`}>
-                    {LICZBA[z](liczniki)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+            <>
+              {szukane ? (
+                <div className="flex items-center gap-3 text-[12.5px]">
+                  <span className="text-deck-text">Wyniki dla „{szukane}”</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSzukane('')
+                      setWpisane('')
+                    }}
+                    className="text-deck-muted hover:underline"
+                  >
+                    Wyczyść
+                  </button>
+                </div>
+              ) : (
+                <div role="tablist" aria-label="Statusy spraw" className="flex flex-wrap gap-1.5">
+                  {[...ZAKLADKI.map((z) => ({ z: z as Zakladka, nazwa: ETYKIETY_STATUSOW[z] })), ...KARTOTEKI].map(({ z, nazwa }) => (
+                    <button
+                      key={z}
+                      type="button"
+                      role="tab"
+                      aria-selected={z === zakladka}
+                      onClick={() => wybierzZakladke(z)}
+                      className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] transition ${
+                        z === zakladka ? 'border-deck-accent/50 bg-deck-accent/10 text-deck-text' : 'border-white/10 text-deck-muted hover:text-deck-text'
+                      }`}
+                    >
+                      {nazwa}
+                      {czyStatus(z) && (
+                        <span className={`font-mono text-[11px] ${z === 'do-odpowiedzi' && liczniki.poTerminie > 0 ? 'text-deck-danger' : ''}`}>
+                          {LICZBA[z](liczniki)}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
-            <div className={wybrana ? 'hidden lg:block' : ''}>
-              <ListaSpraw key={`${status}|${szukane}`} status={status} szukane={szukane} wybrana={wybrana} onWybierz={setWybrana} wersja={wersja} />
-            </div>
-            {wybrana ? (
-              <WidokSprawy key={wybrana} id={wybrana} sklad={sklad} email={email} onZmiana={poZmianie} onZamknij={() => setWybrana(null)} />
-            ) : (
-              <p className="hidden text-[12.5px] text-deck-muted lg:block">Wybierz sprawę z listy.</p>
-            )}
-          </div>
+              <div className="grid gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
+                <div className={wybrana ? 'hidden lg:block' : ''}>
+                  {szukane || czyStatus(zakladka) ? (
+                    <ListaSpraw
+                      key={`${zakladka}|${szukane}`}
+                      status={czyStatus(zakladka) ? zakladka : 'do-odpowiedzi'}
+                      szukane={szukane}
+                      wybrana={wybrana}
+                      onWybierz={setWybrana}
+                      wersja={wersja}
+                      onZmiana={poZmianie}
+                    />
+                  ) : zakladka === 'kontakty' ? (
+                    <Kontakty wybrana={wybrana} onWybierz={setWybrana} />
+                  ) : (
+                    <Organizacje wybrana={wybrana} onWybierz={setWybrana} />
+                  )}
+                </div>
+                {wybrana ? (
+                  <WidokSprawy key={wybrana} id={wybrana} sklad={sklad} email={email} onZmiana={poZmianie} onZamknij={() => setWybrana(null)} />
+                ) : (
+                  <p className="hidden text-[12.5px] text-deck-muted lg:block">Wybierz sprawę z listy.</p>
+                )}
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
