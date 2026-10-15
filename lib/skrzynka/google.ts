@@ -8,11 +8,12 @@ const NAGLOWKI_META = ['From', 'To', 'Cc', 'Subject', 'List-Unsubscribe', 'Prece
 const PRZERWY_MS = [1_000, 2_000, 4_000]
 const MAKS_PRZERWA_MS = 10_000
 
+/** Gmail zgłasza limit tempa jako 429 albo 403 - z `rateLimitExceeded` albo jako „Quota exceeded … per minute per user”. */
 const czyLimit = (status: number, tresc: string) =>
-  status === 429 || (status === 403 && /rateLimitExceeded|userRateLimitExceeded/.test(tresc))
+  status === 429 || (status === 403 && /rateLimitExceeded|userRateLimitExceeded|Quota exceeded|RESOURCE_EXHAUSTED/i.test(tresc))
 const czekaj = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-export type RodzajBledu = 'rozlaczona' | 'historia-za-stara' | 'brak-watku' | 'konfiguracja' | 'inny'
+export type RodzajBledu = 'rozlaczona' | 'historia-za-stara' | 'brak-watku' | 'limit' | 'konfiguracja' | 'inny'
 
 export class BladSkrzynki extends Error {
   readonly rodzaj: RodzajBledu
@@ -27,6 +28,7 @@ export class BladSkrzynki extends Error {
 export function komunikatBledu(e: unknown): { status: number; error: string } {
   if (e instanceof BladSkrzynki && e.rodzaj === 'rozlaczona') return { status: 409, error: 'Skrzynka jest rozłączona - połącz ją ponownie.' }
   if (e instanceof BladSkrzynki && e.rodzaj === 'konfiguracja') return { status: 500, error: 'Skrzynka nie jest skonfigurowana na serwerze.' }
+  if (e instanceof BladSkrzynki && e.rodzaj === 'limit') return { status: 429, error: 'Gmail chwilowo ogranicza tempo - spróbuję ponownie za minutę.' }
   console.error('[skrzynka]', e)
   return { status: 502, error: 'Gmail nie odpowiedział - spróbuj ponownie.' }
 }
@@ -121,7 +123,8 @@ export function gmail(refreshToken: string, dostep?: string): Gmail {
       })
       if (res.ok) return res.json() as Promise<T>
       const tresc = await res.text().catch(() => '')
-      if (czyLimit(res.status, tresc) && proba < PRZERWY_MS.length) {
+      if (czyLimit(res.status, tresc)) {
+        if (proba >= PRZERWY_MS.length) throw new BladSkrzynki('limit', `Gmail ${res.status}: ${tresc.slice(0, 300)}`)
         const poGoogle = Number(res.headers.get('Retry-After')) * 1000
         await czekaj(Math.min(MAKS_PRZERWA_MS, poGoogle > 0 ? poGoogle : PRZERWY_MS[proba]))
         continue

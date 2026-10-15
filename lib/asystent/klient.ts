@@ -4,10 +4,13 @@ import type { Notatka, Rozmowa, SkrotRozmowy, ZrodloNotatki } from './pamiec'
 /** Błąd z ludzkim komunikatem; przy czacie niesie id rozmowy, w której zostało pytanie. */
 export class BladKlienta extends Error {
   readonly rozmowaId: string | null
-  constructor(wiadomosc: string, rozmowaId: string | null = null) {
+  /** Status HTTP odpowiedzi; `null` przy braku połączenia. */
+  readonly status: number | null
+  constructor(wiadomosc: string, rozmowaId: string | null = null, status: number | null = null) {
     super(wiadomosc)
     this.name = 'BladKlienta'
     this.rozmowaId = rozmowaId
+    this.status = status
   }
 }
 
@@ -19,7 +22,7 @@ export async function wywolaj<T>(url: string, init?: RequestInit): Promise<T> {
     throw new BladKlienta('Brak połączenia - spróbuj ponownie.')
   }
   const dane = await res.json().catch(() => ({}))
-  if (!res.ok) throw new BladKlienta(dane.error ?? 'Coś poszło nie tak - spróbuj ponownie.', dane.rozmowaId ?? null)
+  if (!res.ok) throw new BladKlienta(dane.error ?? 'Coś poszło nie tak - spróbuj ponownie.', dane.rozmowaId ?? null, res.status)
   return dane as T
 }
 

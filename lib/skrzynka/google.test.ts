@@ -129,14 +129,30 @@ describe('klient Gmaila', () => {
       google(() => new Response('slow down', { status: 429, headers: { 'Retry-After': '2' } }))
       const q = gmail('r', 'd').profil().catch((e) => e)
       await vi.advanceTimersByTimeAsync(30_000)
-      expect(await q).toMatchObject({ rodzaj: 'inny' })
+      expect(await q).toMatchObject({ rodzaj: 'limit' })
       expect(fetchMock.mock.calls.filter(([u]) => u !== TOKEN_URL)).toHaveLength(4 + 3)
     } finally {
       vi.useRealTimers()
     }
   })
 
+  it('limit w formacie „Quota exceeded” (403 bez reason) też jest ponawiany', async () => {
+    vi.useFakeTimers()
+    try {
+      let n = 0
+      const quota = JSON.stringify({ error: { code: 403, message: "Quota exceeded for quota metric 'Total Query Cost' and limit 'Units per minute per user' of service 'gmail.googleapis.com'", status: 'PERMISSION_DENIED' } })
+      google(() => (++n === 1 ? odp(403, quota) : odp(200, { emailAddress: 'x', historyId: '1' })))
+      const p = gmail('r', 'd').profil()
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(await p).toEqual({ emailAddress: 'x', historyId: '1' })
+      expect(n).toBe(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('komunikaty błędów dla tras', () => {
+    expect(komunikatBledu(new BladSkrzynki('limit', 'x'))).toEqual({ status: 429, error: 'Gmail chwilowo ogranicza tempo - spróbuję ponownie za minutę.' })
     expect(komunikatBledu(new BladSkrzynki('rozlaczona', 'x'))).toEqual({ status: 409, error: 'Skrzynka jest rozłączona - połącz ją ponownie.' })
     expect(komunikatBledu(new BladSkrzynki('konfiguracja', 'x')).status).toBe(500)
     expect(komunikatBledu(new Error('?')).status).toBe(502)
