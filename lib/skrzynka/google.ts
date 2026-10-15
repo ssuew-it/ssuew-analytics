@@ -1,4 +1,5 @@
 import type { WatekApi } from './naglowki'
+import type { WatekPelnyApi } from './tresc'
 
 const ZAKRESY = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send']
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
@@ -81,6 +82,8 @@ export async function wymienKod(kod: string): Promise<{ refreshToken: string; do
 export interface Gmail {
   profil(): Promise<{ emailAddress: string; historyId: string }>
   watek(id: string): Promise<WatekApi>
+  watekPelny(id: string): Promise<WatekPelnyApi>
+  zalacznik(wiadomoscId: string, id: string): Promise<{ data: string; size: number }>
   listaWatkow(zapytanie: string, strona: string | null): Promise<{ threads?: { id: string }[]; nextPageToken?: string; resultSizeEstimate?: number }>
   historia(od: string, strona: string | null): Promise<{
     history?: { messagesAdded?: { message: { threadId: string } }[] }[]
@@ -139,6 +142,9 @@ export function gmail(refreshToken: string, dostep?: string): Gmail {
   return {
     profil: () => wywolaj('/profile'),
     watek: (id) => wywolaj(`/threads/${encodeURIComponent(id)}?${parametry({ format: 'metadata', metadataHeaders: NAGLOWKI_META })}`),
+    watekPelny: (id) => wywolaj(`/threads/${encodeURIComponent(id)}?${parametry({ format: 'full' })}`),
+    zalacznik: (wiadomoscId, id) =>
+      wywolaj(`/messages/${encodeURIComponent(wiadomoscId)}/attachments/${encodeURIComponent(id)}`),
     listaWatkow: (zapytanie, strona) => wywolaj(`/threads?${parametry({ q: zapytanie, maxResults: '100', pageToken: strona })}`),
     historia: (od, strona) => wywolaj(`/history?${parametry({ startHistoryId: od, historyTypes: 'messageAdded', pageToken: strona })}`),
     // Tylko Odebrane i Wysłane - przeczytanie maila czy zmiana etykiety nie budzą serwera.

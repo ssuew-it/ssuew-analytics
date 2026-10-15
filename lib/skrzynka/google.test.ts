@@ -151,6 +151,17 @@ describe('klient Gmaila', () => {
     }
   })
 
+  it('pełny wątek i pobranie załącznika (identyfikator kodowany w ścieżce)', async () => {
+    google(() => odp(200, { data: 'YWJj', size: 3 }))
+    const g = gmail('r', 'd')
+    await g.watekPelny('t1')
+    const u = new URL(fetchMock.mock.calls.at(-1)![0])
+    expect(u.pathname).toBe('/gmail/v1/users/me/threads/t1')
+    expect(u.searchParams.get('format')).toBe('full')
+    expect(await g.zalacznik('m1', 'A/B')).toEqual({ data: 'YWJj', size: 3 })
+    expect(fetchMock.mock.calls.at(-1)![0]).toBe('https://gmail.googleapis.com/gmail/v1/users/me/messages/m1/attachments/A%2FB')
+  })
+
   it('komunikaty błędów dla tras', () => {
     expect(komunikatBledu(new BladSkrzynki('limit', 'x'))).toEqual({ status: 429, error: 'Gmail chwilowo ogranicza tempo - spróbuję ponownie za minutę.' })
     expect(komunikatBledu(new BladSkrzynki('rozlaczona', 'x'))).toEqual({ status: 409, error: 'Skrzynka jest rozłączona - połącz ją ponownie.' })

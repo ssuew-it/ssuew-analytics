@@ -100,3 +100,29 @@ export interface StronaSpraw {
   sprawy: Sprawa[]
   nastepna: string | null
 }
+
+export interface Zalacznik {
+  /** `attachmentId` Gmaila. */
+  id: string
+  wiadomoscId: string
+  nazwa: string
+  typ: string
+  rozmiar: number
+}
+
+/** Wiadomość z treścią - tylko w odpowiedzi trasy, nigdy w bazie. */
+export interface WiadomoscPelna {
+  id: string
+  kiedy: number
+  od: Adres | null
+  do: Adres[]
+  temat: string
+  tekst: string | null
+  html: string | null
+  zalaczniki: Zalacznik[]
+}
+
+export interface SzczegolySprawy {
+  sprawa: Sprawa
+  wiadomosci: WiadomoscPelna[]
+}
