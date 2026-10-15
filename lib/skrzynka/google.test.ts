@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { BladSkrzynki, adresZgody, gmail, komunikatBledu, wymienKod } from '@/lib/skrzynka/google'
+import { BladSkrzynki, adresZgody, gmail, komunikatBledu, odwolajToken, wymienKod } from '@/lib/skrzynka/google'
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const fetchMock = vi.fn()
@@ -47,8 +47,10 @@ describe('zgoda i wymiana kodu', () => {
   })
 
   it('wymiana kodu zwraca refresh token; bez niego - błąd', async () => {
-    fetchMock.mockResolvedValueOnce(odp(200, { access_token: 'a', refresh_token: 'r', expires_in: 3600 }))
-    expect(await wymienKod('KOD')).toEqual({ refreshToken: 'r', dostep: 'a' })
+    fetchMock.mockResolvedValueOnce(odp(200, { access_token: 'a', refresh_token: 'r', expires_in: 3600, scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send' }))
+    expect(await wymienKod('KOD')).toEqual({
+      refreshToken: 'r', dostep: 'a', zakresy: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send'],
+    })
     const cialo = new URLSearchParams(fetchMock.mock.calls[0][1].body)
     expect(Object.fromEntries(cialo)).toMatchObject({ grant_type: 'authorization_code', code: 'KOD', redirect_uri: 'https://ssuew-analytics.vercel.app/api/skrzynka/oauth' })
     fetchMock.mockResolvedValueOnce(odp(200, { access_token: 'a', expires_in: 3600 }))
@@ -162,10 +164,46 @@ describe('klient Gmaila', () => {
     expect(fetchMock.mock.calls.at(-1)![0]).toBe('https://gmail.googleapis.com/gmail/v1/users/me/messages/m1/attachments/A%2FB')
   })
 
+  it('odpowiedź: nagłówki wątku do odpowiedzi, wysyłka przez upload z wątkiem, zatrzymanie obserwacji', async () => {
+    google((url) => (url.includes('/stop') ? new Response(null, { status: 204 }) : odp(200, { id: 'w1', threadId: 't1' })))
+    const g = gmail('r', 'd')
+    await g.watekDoOdpowiedzi('t1')
+    const u = new URL(fetchMock.mock.calls.at(-1)![0])
+    expect(u.searchParams.getAll('metadataHeaders')).toEqual(['From', 'To', 'Reply-To', 'Subject', 'Message-ID', 'References'])
+    expect(await g.wyslij('From: kontakt@x\r\n\r\nTreść', 't1')).toEqual({ id: 'w1', threadId: 't1' })
+    const [url, init] = fetchMock.mock.calls.at(-1)!
+    expect(url).toBe('https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=multipart')
+    expect(init.method).toBe('POST')
+    expect(init.headers['Content-Type']).toBe('multipart/related; boundary=deck_wysylka_granica')
+    expect(init.body).toBe(
+      '--deck_wysylka_granica\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{"threadId":"t1"}\r\n' +
+        '--deck_wysylka_granica\r\nContent-Type: message/rfc822\r\n\r\nFrom: kontakt@x\r\n\r\nTreść\r\n--deck_wysylka_granica--',
+    )
+    await g.zatrzymaj()
+    expect(fetchMock.mock.calls.at(-1)![0]).toBe('https://gmail.googleapis.com/gmail/v1/users/me/stop')
+  })
+
+  it('brak zgody na wysyłkę (403 insufficient scopes) - osobny rodzaj błędu', async () => {
+    google(() => odp(403, { error: { message: 'Request had insufficient authentication scopes.' } }))
+    await expect(gmail('r', 'd').wyslij('x', 't1')).rejects.toMatchObject({ rodzaj: 'brak-zgody' })
+  })
+
+  it('odwołanie tokenu w Google; odmowa - błąd', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('', { status: 200 }))
+    await odwolajToken('refresh-1')
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('https://oauth2.googleapis.com/revoke')
+    expect(Object.fromEntries(new URLSearchParams(init.body))).toEqual({ token: 'refresh-1' })
+    fetchMock.mockResolvedValueOnce(odp(400, { error: 'invalid_token' }))
+    await expect(odwolajToken('x')).rejects.toBeInstanceOf(BladSkrzynki)
+  })
+
   it('komunikaty błędów dla tras', () => {
     expect(komunikatBledu(new BladSkrzynki('limit', 'x'))).toEqual({ status: 429, error: 'Gmail chwilowo ogranicza tempo - spróbuję ponownie za minutę.' })
     expect(komunikatBledu(new BladSkrzynki('rozlaczona', 'x'))).toEqual({ status: 409, error: 'Skrzynka jest rozłączona - połącz ją ponownie.' })
     expect(komunikatBledu(new BladSkrzynki('konfiguracja', 'x')).status).toBe(500)
+    expect(komunikatBledu(new BladSkrzynki('brak-zgody', 'x')).status).toBe(403)
+    expect(komunikatBledu(new BladSkrzynki('brak-adresata', 'x')).status).toBe(400)
     expect(komunikatBledu(new Error('?')).status).toBe(502)
   })
 })
