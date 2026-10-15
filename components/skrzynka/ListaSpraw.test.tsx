@@ -3,9 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ListaSpraw } from '@/components/skrzynka/ListaSpraw'
 import type { Sprawa } from '@/lib/skrzynka/typy'
 
-const klient = { sprawy: vi.fn(), szukaj: vi.fn() }
+const klient = { sprawy: vi.fn(), szukaj: vi.fn(), zmien: vi.fn() }
 vi.mock('@/lib/skrzynka/klient', () => ({
-  klientSkrzynki: { sprawy: (...a: unknown[]) => klient.sprawy(...a), szukaj: (...a: unknown[]) => klient.szukaj(...a) },
+  klientSkrzynki: {
+    sprawy: (...a: unknown[]) => klient.sprawy(...a),
+    szukaj: (...a: unknown[]) => klient.szukaj(...a),
+    zmien: (...a: unknown[]) => klient.zmien(...a),
+  },
 }))
 
 const S = (id: string, n: Partial<Sprawa> = {}): Sprawa => ({
@@ -66,5 +70,42 @@ describe('ListaSpraw', () => {
     klient.sprawy.mockRejectedValue(new Error('Gmail nie odpowiedział - spróbuj ponownie.'))
     await lista()
     expect(screen.getByRole('alert')).toHaveTextContent('Gmail nie odpowiedział')
+  })
+})
+
+describe('ListaSpraw - Do przejrzenia i błędy', () => {
+  it('Do przejrzenia: jednym kliknięciem do odpowiedzi albo do pominiętych; sprawa znika, rodzic odświeża liczby', async () => {
+    klient.sprawy.mockResolvedValue({ sprawy: [S('t1', { status: 'do-przejrzenia' }), S('t2', { status: 'do-przejrzenia' })], nastepna: null })
+    klient.zmien.mockResolvedValue({})
+    const onZmiana = vi.fn()
+    await lista({ status: 'do-przejrzenia', onZmiana })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Do odpowiedzi: Temat t1' }))
+    })
+    expect(klient.zmien).toHaveBeenCalledWith('t1', { status: 'do-odpowiedzi' })
+    expect(screen.queryByRole('button', { name: /Temat t1/ })).toBeNull()
+    expect(onZmiana).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Pomiń: Temat t2' }))
+    })
+    expect(klient.zmien).toHaveBeenLastCalledWith('t2', { status: 'pominieta' })
+  })
+
+  it('inne zakładki bez szybkich akcji', async () => {
+    klient.sprawy.mockResolvedValue({ sprawy: [S('t1')], nastepna: null })
+    await lista()
+    expect(screen.queryByRole('button', { name: /^Pomiń:/ })).toBeNull()
+  })
+
+  it('błąd przy „Pokaż więcej” zostawia wczytaną listę', async () => {
+    klient.sprawy
+      .mockResolvedValueOnce({ sprawy: [S('t1')], nastepna: 'k1' })
+      .mockRejectedValueOnce(new Error('Gmail nie odpowiedział - spróbuj ponownie.'))
+    await lista()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }))
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('Gmail nie odpowiedział')
+    expect(screen.getByRole('button', { name: /Temat t1/ })).toBeInTheDocument()
   })
 })
