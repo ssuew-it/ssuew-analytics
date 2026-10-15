@@ -1,5 +1,6 @@
 import type { DocumentData } from 'firebase-admin/firestore'
-import { kontaktyRef, organizacjeRef, skrzynkaStanRef, skrzynkaUstawieniaRef, sprawyRef } from '@/lib/firebase/admin'
+import { kontaktyRef, organizacjeRef, skrzynkaStanRef, skrzynkaUstawieniaRef, sprawyRef, ustawieniaRef } from '@/lib/firebase/admin'
+import { naSklad } from '@/lib/planer/stan'
 import { progAlarmu } from './statusy'
 import { STATUSY, type Kontakt, type LicznikiSkrzynki, type Organizacja, type PostepImportu, type Sprawa, type Status, type StronaSpraw } from './typy'
 
@@ -171,6 +172,58 @@ export async function uzupelnijKlucze(): Promise<number> {
   return doPoprawy.length
 }
 
+export async function czytajSprawe(id: string): Promise<Sprawa | null> {
+  const d = (await sprawyRef().doc(id).get()).data()
+  return d ? naSprawe(id, d) : null
+}
+
+/**
+ * Ręczna zmiana z panelu, w transakcji. Niezmiennik: czas czekania ma tylko
+ * „Do odpowiedzi”, a ręczne oznaczenie liczy go od teraz. `zmieniono` = teraz
+ * - synchronizacja nie nadpisze sprawy zmienionej w trakcie jej pracy.
+ */
+export async function zmienSprawe(
+  id: string,
+  z: { status?: Status; przypisana?: string | null; nowa?: boolean },
+  teraz = Date.now(),
+): Promise<Sprawa | null> {
+  const ref = sprawyRef().doc(id)
+  return ref.firestore.runTransaction(async (t) => {
+    const d = (await t.get(ref)).data()
+    if (!d) return null
+    const s = naSprawe(id, d)
+    const nowa: Sprawa = {
+      ...s,
+      ...(z.przypisana !== undefined ? { przypisana: z.przypisana } : {}),
+      ...(z.nowa !== undefined ? { nowa: z.nowa } : {}),
+      zmieniono: teraz,
+    }
+    if (z.status && z.status !== s.status) {
+      nowa.status = z.status
+      nowa.oczekujeOd = z.status === 'do-odpowiedzi' ? teraz : null
+    }
+    t.set(ref, doZapisu(nowa))
+    return nowa
+  })
+}
+
+/** Lista „zawsze pomijaj” - małymi literami, bez powtórzeń. */
+export async function dodajPomijanie(rodzaj: 'adres' | 'domena', wartosc: string): Promise<void> {
+  const ref = skrzynkaUstawieniaRef()
+  const pole = rodzaj === 'adres' ? 'pomijaneAdresy' : 'pomijaneDomeny'
+  const v = wartosc.toLowerCase()
+  await ref.firestore.runTransaction(async (t) => {
+    const d = (await t.get(ref)).data()
+    const lista = Array.isArray(d?.[pole]) ? (d[pole] as unknown[]).filter((x): x is string => typeof x === 'string') : []
+    if (!lista.includes(v)) t.set(ref, { [pole]: [...lista, v] }, { merge: true })
+  })
+}
+
+/** Skład zarządu z ustawień Planera - lista do przypisywania spraw. */
+export async function skladZarzadu(): Promise<string[]> {
+  return naSklad((await ustawieniaRef('sklad').get()).data())
+}
+
 /**
  * Zapis wyniku synchronizacji. Organizacje tylko nowe - nazwę i typ
  * właściciel poprawia ręcznie. Kontakt bez imienia nie kasuje znanego.
@@ -184,9 +237,12 @@ export async function zapiszWynik(w: { sprawy: Sprawa[]; kontakty: Kontakt[]; or
   const istniejace = orgUnikalne.length ? await baza.getAll(...orgUnikalne.map((o) => organizacje.doc(o.domena))) : []
   const nowe = orgUnikalne.filter((_, i) => !istniejace[i].exists)
 
+  // Jedna osoba z kilkoma wątkami w partii to jeden zapis; wersja z imieniem wygrywa.
+  const kontaktyUnikalne = [...w.kontakty.reduce((m, k) => (m.get(k.email)?.imie && !k.imie ? m : m.set(k.email, k)), new Map<string, Kontakt>()).values()]
+
   const zapisy = [
     ...w.sprawy.map((s) => ({ ref: sprawy.doc(s.id), dane: doZapisu(s), scal: false })),
-    ...w.kontakty.map((k) => ({
+    ...kontaktyUnikalne.map((k) => ({
       ref: kontakty.doc(k.email),
       dane: (k.imie ? k : { email: k.email, organizacja: k.organizacja, typ: k.typ }) as DocumentData,
       scal: true,

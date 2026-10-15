@@ -126,3 +126,10 @@ export interface SzczegolySprawy {
   sprawa: Sprawa
   wiadomosci: WiadomoscPelna[]
 }
+
+/** Ręczna zmiana sprawy z panelu. `pomin` = Pominięta + nadawca (adres albo domena) na listę „zawsze pomijaj”. */
+export interface ZmianaSprawy {
+  status?: Status
+  przypisana?: string | null
+  pomin?: 'adres' | 'domena'
+}

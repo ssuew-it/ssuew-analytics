@@ -99,7 +99,7 @@ const { baza, admin } = vi.hoisted(() => {
 vi.mock('@/lib/firebase/admin', () => admin)
 
 import {
-  czytajSprawy, czytajStan, kluczListy, liczniki, listaSpraw, pomijane, uzupelnijKlucze, wezDzierzawe, zapiszStan, zapiszWynik, zwolnijDzierzawe,
+  czytajSprawe, czytajSprawy, czytajStan, dodajPomijanie, kluczListy, liczniki, listaSpraw, pomijane, skladZarzadu, uzupelnijKlucze, wezDzierzawe, zapiszStan, zapiszWynik, zmienSprawe, zwolnijDzierzawe,
 } from '@/lib/skrzynka/dane'
 
 const sprawa = (id: string, n: Partial<Sprawa> = {}): Sprawa => ({
@@ -237,5 +237,51 @@ describe('lista spraw', () => {
     expect((await listaSpraw('zalatwiona', null)).sprawy.map((s) => s.id)).toEqual(['stara'])
     expect((await czytajStan())?.wersjaDanych).toBe(2)
     expect(await uzupelnijKlucze()).toBe(0)
+  })
+})
+
+describe('zmiany ręczne', () => {
+  it('status: niezmiennik czekania, ręczne Do odpowiedzi liczy od teraz, klucz i zmieniono', async () => {
+    await zapiszWynik({ sprawy: [sprawa('t1')], kontakty: [], organizacje: [] })
+    const a = await zmienSprawe('t1', { status: 'w-toku' }, 5_000)
+    expect(a).toMatchObject({ status: 'w-toku', oczekujeOd: null, zmieniono: 5_000 })
+    expect(baza.get('skrzynkaSprawy/t1')).toMatchObject({ klucz: 'w-toku|000000000000100|t1', zmieniono: 5_000 })
+    expect((await listaSpraw('w-toku', null)).sprawy.map((s) => s.id)).toEqual(['t1'])
+    const b = await zmienSprawe('t1', { status: 'do-odpowiedzi' }, 9_000)
+    expect(b).toMatchObject({ status: 'do-odpowiedzi', oczekujeOd: 9_000 })
+  })
+
+  it('przypisanie i znacznik nowej wiadomości bez zmiany statusu; brak sprawy - null', async () => {
+    await zapiszWynik({ sprawy: [sprawa('t1')], kontakty: [], organizacje: [] })
+    expect(await zmienSprawe('t1', { przypisana: 'Jula', nowa: false }, 1)).toMatchObject({ status: 'do-odpowiedzi', oczekujeOd: 100, przypisana: 'Jula', nowa: false })
+    expect(await zmienSprawe('t1', { przypisana: null }, 2)).toMatchObject({ przypisana: null })
+    expect(await zmienSprawe('brak', { status: 'w-toku' })).toBeNull()
+    expect(await czytajSprawe('t1')).toMatchObject({ id: 't1', przypisana: null })
+    expect(await czytajSprawe('brak')).toBeNull()
+  })
+
+  it('pomijanie: małymi literami i bez powtórzeń', async () => {
+    await dodajPomijanie('adres', 'News@Sklep.pl')
+    await dodajPomijanie('adres', 'news@sklep.pl')
+    await dodajPomijanie('domena', 'Reklama.pl')
+    expect(await pomijane()).toEqual({ adresy: ['news@sklep.pl'], domeny: ['reklama.pl'] })
+  })
+
+  it('Skład zarządu z ustawień Planera', async () => {
+    expect(await skladZarzadu()).toEqual([])
+    baza.set('ustawienia/sklad', { osoby: ['Jula', 'Kuba'] })
+    expect(await skladZarzadu()).toEqual(['Jula', 'Kuba'])
+  })
+
+  it('kontakty w partii bez powtórzeń - wygrywa wersja z imieniem', async () => {
+    await zapiszWynik({
+      sprawy: [],
+      kontakty: [
+        { email: 'anna@firma.pl', imie: 'Anna', organizacja: 'firma.pl', typ: null },
+        { email: 'anna@firma.pl', imie: '', organizacja: 'firma.pl', typ: null },
+      ],
+      organizacje: [],
+    })
+    expect(baza.get('skrzynkaKontakty/anna@firma.pl')).toMatchObject({ imie: 'Anna' })
   })
 })

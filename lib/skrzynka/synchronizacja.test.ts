@@ -24,7 +24,7 @@ vi.mock('@/lib/skrzynka/google', async (oryginal) => ({
   wymienKod: (...a: unknown[]) => wymienKod(...a),
 }))
 
-import { importujStrone, polaczSkrzynke, przetworzWatki, synchronizuj, odnowObserwacje } from '@/lib/skrzynka/synchronizacja'
+import { importujStrone, klientGmaila, polaczSkrzynke, przetworzWatki, synchronizuj, odnowObserwacje } from '@/lib/skrzynka/synchronizacja'
 import { BladSkrzynki } from '@/lib/skrzynka/google'
 
 const NASZ = 'kontakt@samorzad.ue.wroc.pl'
@@ -243,5 +243,14 @@ describe('odnowObserwacje', () => {
     g.obserwuj.mockClear()
     await odnowObserwacje()
     expect(g.obserwuj).not.toHaveBeenCalled()
+  })
+})
+
+describe('klientGmaila', () => {
+  it('niepołączona - rozłączona; połączona - klient na odszyfrowanym tokenie', async () => {
+    dane.czytajStan.mockResolvedValueOnce(stan({ polaczona: false }))
+    await expect(klientGmaila()).rejects.toMatchObject({ rodzaj: 'rozlaczona' })
+    expect(await klientGmaila()).toBe(g)
+    expect(utworzonyZ).toHaveBeenLastCalledWith('refresh')
   })
 })

@@ -35,13 +35,20 @@ async function poKilka<T, W>(lista: T[], f: (x: T) => Promise<W>): Promise<W[]> 
 }
 
 /** Odwołany dostęp oznaczamy w stanie - kafelek i panel powiedzą „rozłączona”. */
-async function zRozlaczeniem<T>(f: () => Promise<T>): Promise<T> {
+export async function zRozlaczeniem<T>(f: () => Promise<T>): Promise<T> {
   try {
     return await f()
   } catch (e) {
     if (e instanceof BladSkrzynki && e.rodzaj === 'rozlaczona') await zapiszStan({ polaczona: false })
     throw e
   }
+}
+
+/** Klient Gmaila połączonej skrzynki - do tras panelu (treść, załącznik, wyszukiwanie). */
+export async function klientGmaila(): Promise<Gmail> {
+  const stan = await czytajStan()
+  if (!stan?.polaczona) throw new BladSkrzynki('rozlaczona', 'Skrzynka nie jest połączona')
+  return gmailZeStanu(stan)
 }
 
 /** Pobiera wątki, przepuszcza przez automat statusów i zapisuje. Zwraca liczbę zapisanych spraw. */
