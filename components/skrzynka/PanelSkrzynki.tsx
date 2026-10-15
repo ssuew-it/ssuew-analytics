@@ -1,10 +1,13 @@
 'use client'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Search } from 'lucide-react'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
-import type { LicznikiSkrzynki, PostepImportu } from '@/lib/skrzynka/typy'
+import { ETYKIETY_STATUSOW, ZAKLADKI } from '@/lib/skrzynka/widok'
+import type { LicznikiSkrzynki, PostepImportu, Status } from '@/lib/skrzynka/typy'
 import { ImportSkrzynki } from './ImportSkrzynki'
+import { ListaSpraw } from './ListaSpraw'
+import { WidokSprawy } from './WidokSprawy'
 
 const BLEDY: Record<string, string> = {
   'inne-konto': 'Zgoda przyszła z innego konta niż kontakt@samorzad.ue.wroc.pl - zaloguj się w Google jako kontakt@ i spróbuj ponownie.',
@@ -14,24 +17,46 @@ const BLEDY: Record<string, string> = {
   konfiguracja: 'Skrzynka nie jest skonfigurowana na serwerze (zmienne SKRZYNKA_* na Vercelu).',
 }
 
+const LICZBA: Record<Status, (l: LicznikiSkrzynki) => number> = {
+  'do-odpowiedzi': (l) => l.doOdpowiedzi,
+  'w-toku': (l) => l.wToku,
+  'czeka-na-nich': (l) => l.czekaNaNich,
+  'do-przejrzenia': (l) => l.doPrzejrzenia,
+  zalatwiona: (l) => l.zalatwione,
+  pominieta: (l) => l.pominiete,
+}
+
 const kiedy = (ms: number) =>
   new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', dateStyle: 'short', timeStyle: 'short' }).format(ms)
 
-export function PanelSkrzynki({ liczniki, postep, blad }: {
+export function PanelSkrzynki({ liczniki, postep, blad, sklad, email }: {
   liczniki: LicznikiSkrzynki | null
   postep: PostepImportu | null
   blad: string | null
+  sklad: string[]
+  email: string
 }) {
   const router = useRouter()
+  const [status, setStatus] = useState<Status>('do-odpowiedzi')
+  const [wpisane, setWpisane] = useState('')
+  const [szukane, setSzukane] = useState('')
+  const [wybrana, setWybrana] = useState<string | null>(null)
+  const [wersja, setWersja] = useState(0)
   const [trwa, setTrwa] = useState(false)
   const [bladDociagania, setBladDociagania] = useState<string | null>(null)
+
+  // Zmiana sprawy przesuwa ją między zakładkami: lista wczytuje się ponownie, liczby odświeża serwer.
+  const poZmianie = useCallback(() => {
+    setWersja((v) => v + 1)
+    router.refresh()
+  }, [router])
 
   async function dociagnij() {
     setTrwa(true)
     setBladDociagania(null)
     try {
       await klientSkrzynki.synchronizuj()
-      router.refresh()
+      poZmianie()
     } catch (e) {
       setBladDociagania((e as Error).message)
     } finally {
@@ -39,20 +64,22 @@ export function PanelSkrzynki({ liczniki, postep, blad }: {
     }
   }
 
+  function zakladka(s: Status) {
+    setStatus(s)
+    setSzukane('')
+    setWpisane('')
+    setWybrana(null)
+  }
+
   const komunikat = blad ? (BLEDY[blad] ?? BLEDY.polaczenie) : null
+  const alert = 'rounded-lg border border-deck-danger-border bg-deck-danger-bg px-4 py-3 text-[12.5px] text-deck-danger'
 
   return (
     <div className="space-y-4">
-      {komunikat && (
-        <p role="alert" className="rounded-lg border border-deck-danger-border bg-deck-danger-bg px-4 py-3 text-[12.5px] text-deck-danger">
-          {komunikat}
-        </p>
-      )}
+      {komunikat && <p role="alert" className={alert}>{komunikat}</p>}
 
       {liczniki === null ? (
-        <p role="alert" className="rounded-lg border border-deck-danger-border bg-deck-danger-bg px-4 py-3 text-[12.5px] text-deck-danger">
-          Nie udało się odczytać stanu skrzynki - odśwież stronę za chwilę.
-        </p>
+        <p role="alert" className={alert}>Nie udało się odczytać stanu skrzynki - odśwież stronę za chwilę.</p>
       ) : liczniki.stan !== 'polaczona' ? (
         <section className="deck-card max-w-[640px] space-y-3 rounded-lg p-5 text-[12.5px]">
           {liczniki.stan === 'rozlaczona' ? (
@@ -69,35 +96,84 @@ export function PanelSkrzynki({ liczniki, postep, blad }: {
       ) : (
         <>
           {postep?.trwa && <ImportSkrzynki start={postep} />}
-          <section aria-label="Sprawy według statusu" className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <Liczba etykieta="Do odpowiedzi" wartosc={liczniki.doOdpowiedzi} />
-            <Liczba etykieta="Po terminie" wartosc={liczniki.poTerminie} alarm={liczniki.poTerminie > 0} />
-            <Liczba etykieta="Do przejrzenia" wartosc={liczniki.doPrzejrzenia} />
-            <Liczba etykieta="Czeka na nich" wartosc={liczniki.czekaNaNich} />
-            <Liczba etykieta="W toku" wartosc={liczniki.wToku} />
-          </section>
+
           <div className="flex flex-wrap items-center gap-3 text-[12px] text-deck-muted">
-            <span>
-              Ostatnia synchronizacja: {liczniki.ostatniaSynchronizacja ? kiedy(liczniki.ostatniaSynchronizacja) : 'jeszcze nie było'}
-            </span>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                setSzukane(wpisane.trim())
+                setWybrana(null)
+              }}
+              className="flex flex-1 items-center gap-2"
+            >
+              <input
+                value={wpisane}
+                onChange={(e) => setWpisane(e.target.value)}
+                aria-label="Szukaj w skrzynce"
+                placeholder="Szukaj w skrzynce (jak w Gmailu: from:, has:attachment…)"
+                className="deck-input min-w-0 flex-1 rounded-md px-2.5 py-1.5"
+              />
+              <button type="submit" disabled={wpisane.trim().length < 2} className="deck-button inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11.5px] disabled:opacity-50">
+                <Search size={12} aria-hidden="true" />
+                Szukaj
+              </button>
+            </form>
+            <span>Synchronizacja: {liczniki.ostatniaSynchronizacja ? kiedy(liczniki.ostatniaSynchronizacja) : 'jeszcze nie było'}</span>
             <button type="button" onClick={dociagnij} disabled={trwa} className="deck-button inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11.5px] disabled:opacity-50">
               <RefreshCw size={12} aria-hidden="true" className={trwa ? 'animate-spin' : ''} />
               Dociągnij
             </button>
             {bladDociagania && <span role="alert" className="text-deck-danger">{bladDociagania}</span>}
           </div>
-          <p className="text-[12px] text-deck-muted">Lista spraw, odpowiedzi i kontakty pojawią się w kolejnym etapie.</p>
+
+          {szukane ? (
+            <div className="flex items-center gap-3 text-[12.5px]">
+              <span className="text-deck-text">Wyniki dla „{szukane}”</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSzukane('')
+                  setWpisane('')
+                }}
+                className="text-deck-muted hover:underline"
+              >
+                Wyczyść
+              </button>
+            </div>
+          ) : (
+            <div role="tablist" aria-label="Statusy spraw" className="flex flex-wrap gap-1.5">
+              {ZAKLADKI.map((z) => (
+                <button
+                  key={z}
+                  type="button"
+                  role="tab"
+                  aria-selected={z === status}
+                  onClick={() => zakladka(z)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] transition ${
+                    z === status ? 'border-deck-accent/50 bg-deck-accent/10 text-deck-text' : 'border-white/10 text-deck-muted hover:text-deck-text'
+                  }`}
+                >
+                  {ETYKIETY_STATUSOW[z]}
+                  <span className={`font-mono text-[11px] ${z === 'do-odpowiedzi' && liczniki.poTerminie > 0 ? 'text-deck-danger' : ''}`}>
+                    {LICZBA[z](liczniki)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="grid gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
+            <div className={wybrana ? 'hidden lg:block' : ''}>
+              <ListaSpraw key={`${status}|${szukane}`} status={status} szukane={szukane} wybrana={wybrana} onWybierz={setWybrana} wersja={wersja} />
+            </div>
+            {wybrana ? (
+              <WidokSprawy key={wybrana} id={wybrana} sklad={sklad} email={email} onZmiana={poZmianie} onZamknij={() => setWybrana(null)} />
+            ) : (
+              <p className="hidden text-[12.5px] text-deck-muted lg:block">Wybierz sprawę z listy.</p>
+            )}
+          </div>
         </>
       )}
-    </div>
-  )
-}
-
-function Liczba({ etykieta, wartosc, alarm = false }: { etykieta: string; wartosc: number; alarm?: boolean }) {
-  return (
-    <div className="deck-card rounded-lg p-4">
-      <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-deck-muted/70">{etykieta}</div>
-      <div className={`mt-1.5 text-[24px] font-semibold tabular-nums ${alarm ? 'text-deck-danger' : 'text-deck-text'}`}>{wartosc}</div>
     </div>
   )
 }
