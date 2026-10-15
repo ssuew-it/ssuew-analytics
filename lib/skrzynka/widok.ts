@@ -1,5 +1,5 @@
 import { dzisWarszawa } from '@/lib/czas'
-import type { Status, Zalacznik } from './typy'
+import type { Status, TypOrganizacji, Zalacznik } from './typy'
 
 export const ETYKIETY_STATUSOW: Record<Status, string> = {
   'do-odpowiedzi': 'Do odpowiedzi',
@@ -8,6 +8,15 @@ export const ETYKIETY_STATUSOW: Record<Status, string> = {
   'do-przejrzenia': 'Do przejrzenia',
   zalatwiona: 'Załatwione',
   pominieta: 'Pominięte',
+}
+
+export const ETYKIETY_TYPOW: Record<TypOrganizacji, string> = {
+  partner: 'Partner',
+  sponsor: 'Sponsor',
+  uczelnia: 'Uczelnia',
+  'organizacja-studencka': 'Organizacja studencka',
+  media: 'Media',
+  inne: 'Inne',
 }
 
 /** Kolejność zakładek: od tego, co wymaga ruchu, do archiwum. */
