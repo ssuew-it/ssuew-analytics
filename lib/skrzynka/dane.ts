@@ -2,7 +2,10 @@ import type { DocumentData } from 'firebase-admin/firestore'
 import { kontaktyRef, organizacjeRef, skrzynkaStanRef, skrzynkaUstawieniaRef, sprawyRef, ustawieniaRef } from '@/lib/firebase/admin'
 import { naSklad } from '@/lib/planer/stan'
 import { progAlarmu } from './statusy'
-import { STATUSY, type Kontakt, type LicznikiSkrzynki, type Organizacja, type PostepImportu, type Sprawa, type Status, type StronaSpraw } from './typy'
+import {
+  STATUSY, TYPY_ORGANIZACJI, type KartaKontaktu, type KartaOrganizacji, type Kontakt, type LicznikiSkrzynki, type Organizacja,
+  type PostepImportu, type Sprawa, type Status, type StronaKontaktow, type StronaSpraw, type TypOrganizacji, type UstawieniaSkrzynki,
+} from './typy'
 
 export const DZIERZAWA_MS = 60_000
 /** Limit partii Firestore to 500 zapisów - zostawiamy zapas. */
@@ -257,6 +260,126 @@ export async function zapiszWynik(w: { sprawy: Sprawa[]; kontakty: Kontakt[]; or
     }
     await partia.commit()
   }
+}
+
+/** Stopka dopisywana do odpowiedzi, dopóki właściciel nie ustawi własnej („-- ” to znacznik podpisu w poczcie). */
+export const DOMYSLNA_STOPKA = '-- \nSamorząd Studentów Uniwersytetu Ekonomicznego we Wrocławiu\nkontakt@samorzad.ue.wroc.pl'
+export const KONTAKTY_NA_STRONE = 100
+/** Karta osoby albo organizacji - tyle spraw wystarczy; więcej ma tylko poczta masowa. */
+const MAKS_NA_KARCIE = 200
+
+const listaTekstow = (x: unknown) =>
+  Array.isArray(x) ? x.filter((y): y is string => typeof y === 'string').map((y) => y.toLowerCase()) : []
+
+export async function czytajUstawienia(): Promise<UstawieniaSkrzynki> {
+  const d = (await skrzynkaUstawieniaRef().get()).data()
+  return {
+    stopka: typeof d?.stopka === 'string' ? d.stopka : DOMYSLNA_STOPKA,
+    pomijaneAdresy: listaTekstow(d?.pomijaneAdresy),
+    pomijaneDomeny: listaTekstow(d?.pomijaneDomeny),
+  }
+}
+
+export async function zapiszUstawienia(z: Partial<UstawieniaSkrzynki>): Promise<UstawieniaSkrzynki> {
+  await skrzynkaUstawieniaRef().set(z, { merge: true })
+  return czytajUstawienia()
+}
+
+const naKontakt = (email: string, x: DocumentData): Kontakt => ({
+  email,
+  imie: String(x.imie ?? ''),
+  organizacja: typeof x.organizacja === 'string' ? x.organizacja : null,
+  typ: x.typ === 'student' ? 'student' : null,
+})
+
+const naOrganizacje = (domena: string, x: DocumentData): Organizacja => ({
+  domena,
+  nazwa: String(x.nazwa ?? '') || domena,
+  typ: TYPY_ORGANIZACJI.includes(x.typ as TypOrganizacji) ? (x.typ as TypOrganizacji) : 'inne',
+})
+
+const odNajnowszej = (a: Sprawa, b: Sprawa) => b.ostatnia.kiedy - a.ostatnia.kiedy
+
+/** Kontakty alfabetycznie po adresie, stronami - sortowanie po jednym polu nie wymaga indeksu złożonego. */
+export async function listaKontaktow(po: string | null, ile = KONTAKTY_NA_STRONE): Promise<StronaKontaktow> {
+  let q = kontaktyRef().orderBy('email')
+  if (po) q = q.startAfter(po)
+  const z = await q.limit(ile + 1).get()
+  const docs = z.docs.slice(0, ile)
+  return {
+    kontakty: docs.map((d) => naKontakt(d.id, d.data())),
+    nastepna: z.docs.length > ile ? docs[docs.length - 1].id : null,
+  }
+}
+
+/** Osoba ze swoimi sprawami od najnowszej. Równość na jednym polu - też bez indeksu złożonego. */
+export async function kartaKontaktu(email: string): Promise<KartaKontaktu | null> {
+  const [k, s] = await Promise.all([
+    kontaktyRef().doc(email).get(),
+    sprawyRef().where('kontakt', '==', email).limit(MAKS_NA_KARCIE).get(),
+  ])
+  const d = k.data()
+  if (!d) return null
+  return { kontakt: naKontakt(email, d), sprawy: s.docs.map((x) => naSprawe(x.id, x.data())).sort(odNajnowszej) }
+}
+
+/** Organizacji jest najwyżej kilkaset - całość, po polsku alfabetycznie (Firestore sortowałby wielkie litery przed małymi). */
+export async function listaOrganizacji(): Promise<Organizacja[]> {
+  const z = await organizacjeRef().limit(1000).get()
+  return z.docs.map((d) => naOrganizacje(d.id, d.data())).sort((a, b) => a.nazwa.localeCompare(b.nazwa, 'pl'))
+}
+
+export async function kartaOrganizacji(domena: string): Promise<KartaOrganizacji | null> {
+  const [o, k, s] = await Promise.all([
+    organizacjeRef().doc(domena).get(),
+    kontaktyRef().where('organizacja', '==', domena).limit(MAKS_NA_KARCIE).get(),
+    sprawyRef().where('organizacja', '==', domena).limit(MAKS_NA_KARCIE).get(),
+  ])
+  const d = o.data()
+  if (!d) return null
+  return {
+    organizacja: naOrganizacje(domena, d),
+    kontakty: k.docs.map((x) => naKontakt(x.id, x.data())).sort((a, b) => a.email.localeCompare(b.email)),
+    sprawy: s.docs.map((x) => naSprawe(x.id, x.data())).sort(odNajnowszej),
+  }
+}
+
+/** Nazwę i typ zmienia tylko właściciel - synchronizacja zapisuje organizacje wyłącznie nowe. */
+export async function zmienOrganizacje(domena: string, z: { nazwa?: string; typ?: TypOrganizacji }): Promise<Organizacja | null> {
+  const ref = organizacjeRef().doc(domena)
+  return ref.firestore.runTransaction(async (t) => {
+    const d = (await t.get(ref)).data()
+    if (!d) return null
+    const nowa = { ...naOrganizacje(domena, d), ...z }
+    t.set(ref, nowa)
+    return nowa
+  })
+}
+
+/**
+ * „Rozłącz” bez usuwania: stan bez tokenu (panel i kafelek pokażą „Połącz
+ * skrzynkę”), sprawy, kontakty i organizacje zostają. `wersjaDanych` zostaje,
+ * żeby nie przeliczać kluczy jeszcze raz.
+ */
+export async function rozlaczStan(): Promise<void> {
+  await skrzynkaStanRef().set({ polaczona: false, wersjaDanych: WERSJA_DANYCH })
+}
+
+/** „Rozłącz i usuń dane”: sprawy, kontakty, organizacje i stan; ustawienia (stopka, pomijani) zostają. Zwraca liczbę usuniętych dokumentów. */
+export async function usunDaneSkrzynki(): Promise<number> {
+  let n = 0
+  for (const k of [sprawyRef(), kontaktyRef(), organizacjeRef()]) {
+    for (;;) {
+      const z = await k.limit(PARTIA).get()
+      if (z.empty) break
+      const partia = k.firestore.batch()
+      for (const d of z.docs) partia.delete(d.ref)
+      await partia.commit()
+      n += z.size
+    }
+  }
+  await skrzynkaStanRef().delete()
+  return n
 }
 
 export async function pomijane(): Promise<{ adresy: string[]; domeny: string[] }> {

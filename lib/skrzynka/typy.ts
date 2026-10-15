@@ -136,3 +136,28 @@ export interface ZmianaSprawy {
   przypisana?: string | null
   pomin?: 'adres' | 'domena'
 }
+
+/** Spec §2: załączniki odpowiedzi łącznie do 4 MB - żądanie do funkcji Vercela ma limit 4,5 MB. */
+export const MAKS_ZALACZNIKOW = 4 * 1024 * 1024
+
+export interface UstawieniaSkrzynki {
+  stopka: string
+  pomijaneAdresy: string[]
+  pomijaneDomeny: string[]
+}
+
+export interface StronaKontaktow {
+  kontakty: Kontakt[]
+  nastepna: string | null
+}
+
+export interface KartaKontaktu {
+  kontakt: Kontakt
+  sprawy: Sprawa[]
+}
+
+export interface KartaOrganizacji {
+  organizacja: Organizacja
+  kontakty: Kontakt[]
+  sprawy: Sprawa[]
+}

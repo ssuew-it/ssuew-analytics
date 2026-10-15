@@ -22,6 +22,7 @@ const { baza, admin } = vi.hoisted(() => {
       return {
         set: (r: Ref, d: Dane, o?: { merge?: boolean }) => ops.push(() => zapisz(r.sciezka, d, o?.merge)),
         update: (r: Ref, d: Dane) => ops.push(() => zapisz(r.sciezka, d, true)),
+        delete: (r: Ref) => ops.push(() => baza.delete(r.sciezka)),
         commit: async () => ops.forEach((f) => f()),
       }
     },
@@ -37,6 +38,9 @@ const { baza, admin } = vi.hoisted(() => {
     firestore,
     get: async () => snap(sciezka),
     set: async (d: Dane, o?: { merge?: boolean }) => zapisz(sciezka, d, o?.merge),
+    delete: async () => {
+      baza.delete(sciezka)
+    },
   })
   const por = (a: unknown, b: unknown) => ((a as number) < (b as number) ? -1 : (a as number) > (b as number) ? 1 : 0)
   const spelnia = (v: unknown, op: string, w: unknown) => {
@@ -99,7 +103,9 @@ const { baza, admin } = vi.hoisted(() => {
 vi.mock('@/lib/firebase/admin', () => admin)
 
 import {
-  czytajSprawe, czytajSprawy, czytajStan, dodajPomijanie, kluczListy, liczniki, listaSpraw, pomijane, skladZarzadu, uzupelnijKlucze, wezDzierzawe, zapiszStan, zapiszWynik, zmienSprawe, zwolnijDzierzawe,
+  DOMYSLNA_STOPKA, czytajSprawe, czytajSprawy, czytajStan, czytajUstawienia, dodajPomijanie, kartaKontaktu, kartaOrganizacji, kluczListy,
+  liczniki, listaKontaktow, listaOrganizacji, listaSpraw, pomijane, rozlaczStan, skladZarzadu, usunDaneSkrzynki, uzupelnijKlucze,
+  wezDzierzawe, zapiszStan, zapiszUstawienia, zapiszWynik, zmienOrganizacje, zmienSprawe, zwolnijDzierzawe,
 } from '@/lib/skrzynka/dane'
 
 const sprawa = (id: string, n: Partial<Sprawa> = {}): Sprawa => ({
@@ -283,5 +289,91 @@ describe('zmiany ręczne', () => {
       organizacje: [],
     })
     expect(baza.get('skrzynkaKontakty/anna@firma.pl')).toMatchObject({ imie: 'Anna' })
+  })
+})
+
+describe('ustawienia', () => {
+  it('bez dokumentu - domyślna stopka i puste listy; zapis scala z resztą', async () => {
+    expect(await czytajUstawienia()).toEqual({ stopka: DOMYSLNA_STOPKA, pomijaneAdresy: [], pomijaneDomeny: [] })
+    await dodajPomijanie('adres', 'a@x.pl')
+    expect(await zapiszUstawienia({ stopka: 'Pozdrawiamy' })).toEqual({ stopka: 'Pozdrawiamy', pomijaneAdresy: ['a@x.pl'], pomijaneDomeny: [] })
+    expect(await zapiszUstawienia({ pomijaneAdresy: [] })).toEqual({ stopka: 'Pozdrawiamy', pomijaneAdresy: [], pomijaneDomeny: [] })
+  })
+})
+
+describe('kontakty i organizacje', () => {
+  const kiedy = (k: number) => ({ ostatnia: { kiedy: k, kierunek: 'oni' as const, fragment: '' } })
+  const wypelnij = () =>
+    zapiszWynik({
+      sprawy: [
+        sprawa('t1', { kontakt: 'anna@firma.pl', ...kiedy(100) }),
+        sprawa('t2', { kontakt: 'anna@firma.pl', ...kiedy(300) }),
+        sprawa('t3', { kontakt: 'jan@firma.pl', ...kiedy(200) }),
+        sprawa('t4', { kontakt: 'ola@gmail.com', organizacja: null, ...kiedy(400) }),
+      ],
+      kontakty: [
+        { email: 'jan@firma.pl', imie: 'Jan', organizacja: 'firma.pl', typ: null },
+        { email: 'anna@firma.pl', imie: 'Anna', organizacja: 'firma.pl', typ: null },
+        { email: 'ola@gmail.com', imie: '', organizacja: null, typ: null },
+      ],
+      organizacje: [
+        { domena: 'ue.wroc.pl', nazwa: 'Uniwersytet Ekonomiczny', typ: 'uczelnia' },
+        { domena: 'firma.pl', nazwa: 'firma.pl', typ: 'inne' },
+      ],
+    })
+
+  it('kontakty alfabetycznie po adresie, stronami', async () => {
+    await wypelnij()
+    const s1 = await listaKontaktow(null, 2)
+    expect(s1.kontakty.map((k) => k.email)).toEqual(['anna@firma.pl', 'jan@firma.pl'])
+    expect(s1.nastepna).toBe('jan@firma.pl')
+    expect(await listaKontaktow(s1.nastepna, 2)).toEqual({ kontakty: [{ email: 'ola@gmail.com', imie: '', organizacja: null, typ: null }], nastepna: null })
+  })
+
+  it('karta osoby: sprawy od najnowszej; nieznana osoba - null', async () => {
+    await wypelnij()
+    const k = await kartaKontaktu('anna@firma.pl')
+    expect(k?.kontakt).toEqual({ email: 'anna@firma.pl', imie: 'Anna', organizacja: 'firma.pl', typ: null })
+    expect(k?.sprawy.map((s) => s.id)).toEqual(['t2', 't1'])
+    expect(await kartaKontaktu('brak@x.pl')).toBeNull()
+  })
+
+  it('organizacje po polsku alfabetycznie; karta z osobami i sprawami; zmiana nazwy i typu', async () => {
+    await wypelnij()
+    expect((await listaOrganizacji()).map((o) => o.nazwa)).toEqual(['firma.pl', 'Uniwersytet Ekonomiczny'])
+    const k = await kartaOrganizacji('firma.pl')
+    expect(k?.kontakty.map((x) => x.email)).toEqual(['anna@firma.pl', 'jan@firma.pl'])
+    expect(k?.sprawy.map((s) => s.id)).toEqual(['t2', 't3', 't1'])
+    expect(await kartaOrganizacji('brak.pl')).toBeNull()
+    expect(await zmienOrganizacje('firma.pl', { nazwa: 'Firma S.A.', typ: 'sponsor' })).toEqual({ domena: 'firma.pl', nazwa: 'Firma S.A.', typ: 'sponsor' })
+    expect(baza.get('skrzynkaOrganizacje/firma.pl')).toEqual({ domena: 'firma.pl', nazwa: 'Firma S.A.', typ: 'sponsor' })
+    expect(await zmienOrganizacje('brak.pl', { typ: 'media' })).toBeNull()
+  })
+})
+
+describe('rozłączenie', () => {
+  const polacz = async () => {
+    await zapiszStan({ email: 'kontakt@x', token: 'enc', polaczona: true, historyId: '7' })
+    await zapiszWynik({
+      sprawy: [sprawa('t1'), sprawa('t2')],
+      kontakty: [{ email: 'anna@firma.pl', imie: 'Anna', organizacja: 'firma.pl', typ: null }],
+      organizacje: [{ domena: 'firma.pl', nazwa: 'firma.pl', typ: 'inne' }],
+    })
+    baza.set('skrzynka/ustawienia', { stopka: 'S' })
+  }
+
+  it('bez usuwania: stan bez tokenu (panel pokaże „Połącz skrzynkę”), dane zostają', async () => {
+    await polacz()
+    await rozlaczStan()
+    expect(await czytajStan()).toBeNull()
+    expect(baza.get('skrzynka/stan')).toEqual({ polaczona: false, wersjaDanych: 2 })
+    expect(baza.has('skrzynkaSprawy/t1')).toBe(true)
+    expect((await liczniki(0)).stan).toBe('brak')
+  })
+
+  it('z usuwaniem: sprawy, kontakty, organizacje i stan znikają; ustawienia zostają', async () => {
+    await polacz()
+    expect(await usunDaneSkrzynki()).toBe(4)
+    expect([...baza.keys()]).toEqual(['skrzynka/ustawienia'])
   })
 })
