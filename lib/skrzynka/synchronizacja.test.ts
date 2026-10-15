@@ -317,6 +317,14 @@ describe('wyslijOdpowiedz', () => {
     dane.czytajStan.mockResolvedValue(stan({ polaczona: false }))
     await expect(wyslijOdpowiedz('t1', 'x', [])).rejects.toMatchObject({ rodzaj: 'rozlaczona' })
   })
+
+  it('mail poszedł, a automat statusów zawiódł - wynik to sukces, nie błąd (ponowne „Wyślij” byłoby drugim mailem)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    dane.czytajSprawe.mockResolvedValue(S)
+    g.watek.mockRejectedValue(new BladSkrzynki('limit', 'Gmail 429'))
+    expect(await wyslijOdpowiedz('t1', 'Dziękujemy', [], TERAZ)).toEqual(S)
+    expect(g.wyslij).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('rozlaczSkrzynke', () => {

@@ -211,4 +211,11 @@ describe('odpowiedź', () => {
     expect(r.status).toBe(403)
     expect((await r.json()).error).toMatch(/zgody na wysyłkę/)
   })
+
+  it('limit Gmaila przy wysyłce - jasno: odpowiedź nie poszła, nic nie ponawia się samo', async () => {
+    wyslijOdpowiedz.mockRejectedValueOnce(new BladSkrzynki('limit', 'Gmail 429'))
+    const r = await wyslij(formularz('x'))
+    expect(r.status).toBe(429)
+    expect((await r.json()).error).toBe('Gmail chwilowo ogranicza wysyłkę - odpowiedź nie poszła, wyślij ją ponownie za minutę.')
+  })
 })

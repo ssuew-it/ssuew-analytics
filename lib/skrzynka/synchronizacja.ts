@@ -241,15 +241,23 @@ export const NADAWCA = 'Samorząd Studentów UEW'
  * bez czekania na push. `null` - nie ma takiej sprawy.
  */
 export async function wyslijOdpowiedz(id: string, tekst: string, pliki: PlikWysylki[], teraz = Date.now()): Promise<Sprawa | null> {
-  if (!(await czytajSprawe(id))) return null
+  const sprawa = await czytajSprawe(id)
+  if (!sprawa) return null
   const g = await klientGmaila()
   return zRozlaczeniem(async () => {
     const odp = przygotujOdpowiedz(await g.watekDoOdpowiedzi(id), nasz())
     if (!odp) throw new BladSkrzynki('brak-adresata', `Wątek ${id} bez adresata`)
     const { stopka } = await czytajUstawienia()
     await g.wyslij(zbudujMail({ od: nasz(), nazwaOd: NADAWCA, ...odp, tekst, stopka, pliki }), id)
-    await przetworzWatki(g, [id], { teraz, import: false })
-    return czytajSprawe(id)
+    // Mail już poszedł - błąd odtąd nie może wyglądać jak nieudana wysyłka, bo
+    // ponowne „Wyślij” byłoby drugim mailem. Status poprawi push albo synchronizacja.
+    try {
+      await przetworzWatki(g, [id], { teraz, import: false })
+      return (await czytajSprawe(id)) ?? sprawa
+    } catch (e) {
+      console.error('[skrzynka] status po wysyłce, wątek', id, e)
+      return sprawa
+    }
   })
 }
 

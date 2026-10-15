@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { tylkoWlasciciel } from '@/lib/asystent/tylkoWlasciciel'
-import { komunikatBledu } from '@/lib/skrzynka/google'
+import { BladSkrzynki, komunikatBledu } from '@/lib/skrzynka/google'
 import { wyslijOdpowiedz } from '@/lib/skrzynka/synchronizacja'
 import { MAKS_ZALACZNIKOW, TYLKO_WLASCICIEL } from '@/lib/skrzynka/typy'
 
@@ -30,6 +30,10 @@ export async function POST(req: NextRequest, { params }: Kontekst) {
     if (!s) return NextResponse.json({ error: 'Nie ma takiej sprawy' }, { status: 404 })
     return NextResponse.json(s)
   } catch (e) {
+    // Ogólny komunikat limitu obiecuje ponowienie, a wysyłki nikt sam nie ponowi.
+    if (e instanceof BladSkrzynki && e.rodzaj === 'limit') {
+      return NextResponse.json({ error: 'Gmail chwilowo ogranicza wysyłkę - odpowiedź nie poszła, wyślij ją ponownie za minutę.' }, { status: 429 })
+    }
     const { status, error } = komunikatBledu(e)
     return NextResponse.json({ error }, { status })
   }
