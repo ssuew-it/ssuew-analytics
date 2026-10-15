@@ -18,7 +18,7 @@ export interface WatekPelnyApi {
 const POMIJANE_ETYKIETY = ['DRAFT', 'SPAM', 'TRASH']
 
 /** Gmail podaje treść w base64url bez wypełnienia. */
-export function dekodujBase64Url(dane: string): Uint8Array {
+export function dekodujBase64Url(dane: string): Uint8Array<ArrayBuffer> {
   const b64 = dane.replace(/-/g, '+').replace(/_/g, '/')
   return Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), (c) => c.charCodeAt(0))
 }
