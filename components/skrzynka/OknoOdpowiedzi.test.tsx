@@ -57,6 +57,24 @@ describe('OknoOdpowiedzi', () => {
     expect(onWyslano).not.toHaveBeenCalled()
   })
 
+  it('w trakcie wysyłki treść i załączniki są zablokowane, a drugie kliknięcie nie wysyła drugi raz', async () => {
+    let zakoncz: (s: unknown) => void = () => {}
+    klient.odpowiedz.mockReturnValue(new Promise((r) => { zakoncz = r }))
+    okno()
+    wpisz('Raz wystarczy')
+    dodaj(plik('Skan.pdf', 10))
+    const przycisk = screen.getByRole('button', { name: 'Wyślij' })
+    await act(async () => {
+      fireEvent.click(przycisk)
+      fireEvent.click(przycisk)
+    })
+    expect(klient.odpowiedz).toHaveBeenCalledTimes(1)
+    expect(screen.getByLabelText('Treść odpowiedzi')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Usuń Skan.pdf' })).toBeDisabled()
+    await act(async () => zakoncz({ id: 't1', status: 'czeka-na-nich' }))
+    expect(screen.getByLabelText('Treść odpowiedzi')).toBeEnabled()
+  })
+
   it('ponad 4 MB łącznie - ostrzeżenie i blokada; usunięcie pliku odblokowuje', () => {
     okno()
     wpisz('x')

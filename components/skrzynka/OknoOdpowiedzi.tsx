@@ -20,12 +20,16 @@ export function OknoOdpowiedzi({ sprawaId, adresat, stopka, onWyslano }: {
   const [trwa, setTrwa] = useState(false)
   const [blad, setBlad] = useState<string | null>(null)
   const wybor = useRef<HTMLInputElement>(null)
+  // Stan `trwa` dociera do przycisku dopiero po renderze - szybkie drugie kliknięcie wysłałoby drugi mail.
+  const wysylka = useRef(false)
   const razem = pliki.reduce((s, p) => s + p.size, 0)
   const zaDuzo = razem > MAKS_ZALACZNIKOW
 
   if (!adresat) return <p className="text-[12px] text-deck-muted">W tym wątku nie ma do kogo odpowiedzieć - napisz z Gmaila.</p>
 
   async function wyslij() {
+    if (wysylka.current) return
+    wysylka.current = true
     setTrwa(true)
     setBlad(null)
     try {
@@ -36,6 +40,7 @@ export function OknoOdpowiedzi({ sprawaId, adresat, stopka, onWyslano }: {
     } catch (e) {
       setBlad((e as Error).message)
     } finally {
+      wysylka.current = false
       setTrwa(false)
     }
   }
@@ -51,6 +56,7 @@ export function OknoOdpowiedzi({ sprawaId, adresat, stopka, onWyslano }: {
         aria-label="Treść odpowiedzi"
         value={tekst}
         onChange={(e) => setTekst(e.target.value)}
+        disabled={trwa}
         rows={6}
         className="deck-input w-full rounded-md px-2.5 py-2 text-[12.5px] leading-relaxed"
       />
@@ -73,7 +79,7 @@ export function OknoOdpowiedzi({ sprawaId, adresat, stopka, onWyslano }: {
             {pliki.map((p, i) => (
               <li key={`${p.name}-${i}`} className="deck-chip inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px]">
                 {p.name} · {rozmiar(p.size)}
-                <button type="button" aria-label={`Usuń ${p.name}`} onClick={() => setPliki((l) => l.filter((_, j) => j !== i))}>
+                <button type="button" aria-label={`Usuń ${p.name}`} disabled={trwa} onClick={() => setPliki((l) => l.filter((_, j) => j !== i))}>
                   <X size={11} aria-hidden="true" />
                 </button>
               </li>
