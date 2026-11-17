@@ -10,6 +10,8 @@ export interface WpisKalendarza {
   location: string | null
   deckId: string | null
   deckSemestr: string | null
+  /** Wpis z gośćmi albo zaproszenie od kogoś innego - D.E.C.K. go nigdy nie przejmuje. */
+  spotkanie?: boolean
 }
 
 export interface PlanKalendarza {
@@ -18,8 +20,11 @@ export interface PlanKalendarza {
   dodaj: WydarzenieGoogle[]
   zmien: { wpisId: string; wydarzenie: WydarzenieGoogle }[]
   usun: WpisKalendarza[]
-  /** Więcej niż jeden pasujący ręczny wpis - D.E.C.K. nie zgaduje i nic nie dodaje. */
-  doSprawdzenia: { wydarzenie: WydarzenieGoogle; kandydaci: number }[]
+  /**
+   * Więcej niż jeden pasujący ręczny wpis albo pasujące spotkanie z gośćmi - D.E.C.K.
+   * nie zgaduje i nic nie dodaje (przejęcie przesunęłoby spotkanie wszystkim gościom).
+   */
+  doSprawdzenia: { wydarzenie: WydarzenieGoogle; kandydaci: number; spotkanie: boolean }[]
 }
 
 /** Termin jako tekst do porównań; przesunięcie strefy z odpowiedzi Google odcięte. */
@@ -75,8 +80,9 @@ export function porownaj(wydarzenia: Wydarzenie[], wpisy: WpisKalendarza[], seme
     const tytul = tytulDoDopasowania(g.summary)
     const dzien = dzienStartu(g.start)
     const kandydaci = reczne.filter((r) => tytulDoDopasowania(r.summary) === tytul && dzienStartu(r.start) === dzien)
-    if (kandydaci.length > 1) {
-      plan.doSprawdzenia.push({ wydarzenie: g, kandydaci: kandydaci.length })
+    const spotkanie = kandydaci.some((k) => k.spotkanie === true)
+    if (kandydaci.length > 1 || spotkanie) {
+      plan.doSprawdzenia.push({ wydarzenie: g, kandydaci: kandydaci.length, spotkanie })
       continue
     }
     const jedyny = kandydaci[0]

@@ -149,10 +149,13 @@ function Tresc({ stan, onWyslij }: { stan: Stan; onWyslij: (p: PlanKalendarza) =
       {plan.doSprawdzenia.length > 0 && (
         <section aria-label="Do sprawdzenia ręcznie" className="space-y-1 rounded-md border border-deck-danger-border bg-deck-danger-bg p-3">
           <h3 className="font-mono text-[10px] uppercase tracking-[0.16em] text-deck-danger">Do sprawdzenia ręcznie</h3>
-          <p className="text-deck-muted">Kilka ręcznych wpisów pasuje do jednego wydarzenia - D.E.C.K. nie zgaduje i nic nie dodaje. Usuń zbędny wpis w kalendarzu i wyślij ponownie.</p>
+          <p className="text-deck-muted">D.E.C.K. nie zgaduje i nic tu nie dodaje. Usuń albo przemianuj zbędny wpis w kalendarzu i wyślij ponownie; spotkań z gośćmi D.E.C.K. nigdy nie przejmuje.</p>
           <ul className="space-y-0.5">
             {plan.doSprawdzenia.map((d, i) => (
-              <li key={i}>{dzienMiesiac(d.wydarzenie.start)} {d.wydarzenie.summary} - {wpisow(d.kandydaci)} w kalendarzu</li>
+              <li key={i}>
+                {dzienMiesiac(d.wydarzenie.start)} {d.wydarzenie.summary} -{' '}
+                {d.spotkanie ? 'w kalendarzu jest spotkanie z gośćmi albo zaproszenie o tym tytule' : `${wpisow(d.kandydaci)} w kalendarzu`}
+              </li>
             ))}
           </ul>
         </section>

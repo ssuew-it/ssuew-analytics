@@ -73,10 +73,17 @@ describe('WyslijDoKalendarza', () => {
   })
 
   it('do sprawdzenia ręcznie widoczne', async () => {
-    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: { ...pusty, doSprawdzenia: [{ wydarzenie: g('Komisja Dydaktyczna', 21), kandydaci: 2 }] } }))
+    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: { ...pusty, doSprawdzenia: [{ wydarzenie: g('Komisja Dydaktyczna', 21), kandydaci: 2, spotkanie: false }] } }))
     const okno = await otworz()
     const sekcja = within(okno).getByRole('region', { name: 'Do sprawdzenia ręcznie' })
     expect(sekcja).toHaveTextContent('21.11 Komisja Dydaktyczna - 2 pasujące wpisy w kalendarzu')
+  })
+
+  it('do sprawdzenia: pasujące spotkanie z gośćmi opisane wprost', async () => {
+    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: { ...pusty, doSprawdzenia: [{ wydarzenie: g('Komisja Dydaktyczna', 21), kandydaci: 1, spotkanie: true }] } }))
+    const okno = await otworz()
+    expect(within(okno).getByRole('region', { name: 'Do sprawdzenia ręcznie' }))
+      .toHaveTextContent('21.11 Komisja Dydaktyczna - w kalendarzu jest spotkanie z gośćmi albo zaproszenie o tym tytule')
   })
 
   it('błąd 409 - komunikat z odnośnikiem do Ustawień', async () => {

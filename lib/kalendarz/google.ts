@@ -25,12 +25,15 @@ interface ZdarzenieApi {
   start?: { date?: string; dateTime?: string }
   end?: { date?: string; dateTime?: string }
   extendedProperties?: { private?: Record<string, string> }
+  organizer?: { self?: boolean }
+  attendees?: unknown[]
 }
 
 function rodzajBledu(status: number, tresc: string): RodzajBleduKalendarza {
   if (/accessNotConfigured|SERVICE_DISABLED/.test(tresc)) return 'api-wylaczone'
   if (status === 429 || /rateLimitExceeded|userRateLimitExceeded|quotaExceeded|RESOURCE_EXHAUSTED/.test(tresc)) return 'limit'
-  if (status === 401 || /insufficientPermissions|ACCESS_TOKEN_SCOPE_INSUFFICIENT|PERMISSION_DENIED/.test(tresc)) return 'brak-zgody'
+  // Samo PERMISSION_DENIED Google dokleja do każdego 403 - brak zgody to tylko brak zakresu.
+  if (status === 401 || /insufficientPermissions|ACCESS_TOKEN_SCOPE_INSUFFICIENT/.test(tresc)) return 'brak-zgody'
   return 'google'
 }
 
@@ -66,6 +69,7 @@ function naWpis(z: ZdarzenieApi): WpisKalendarza {
     location: z.location || null,
     deckId: nasz ? p!.deckId : null,
     deckSemestr: nasz ? p!.deckSemestr ?? null : null,
+    spotkanie: z.organizer?.self !== true || (z.attendees?.length ?? 0) > 0,
   }
 }
 
@@ -99,8 +103,13 @@ export async function wpisyKalendarza(dostep: string, semestrId: string, od: str
   return [...poId.values()]
 }
 
-/** PATCH podmienia też miejsce: puste `location` czyści salę, której w Planerze już nie ma. */
-const cialoZmiany = (g: WydarzenieGoogle) => ({ ...g, location: g.location ?? '' })
+/**
+ * PATCH scala zagnieżdżone pola, więc przejście całodniowe ↔ godzinowe musi
+ * jawnie wyczyścić stare pole terminu (null), inaczej Google odrzuca zmianę.
+ * Puste `location` czyści salę, której w Planerze już nie ma.
+ */
+const terminZmiany = (t: Termin) => ('date' in t ? { date: t.date, dateTime: null, timeZone: null } : { date: null, ...t })
+const cialoZmiany = (g: WydarzenieGoogle) => ({ ...g, start: terminZmiany(g.start), end: terminZmiany(g.end), location: g.location ?? '' })
 
 function powod(e: unknown): string {
   if (e instanceof BladKalendarza) {

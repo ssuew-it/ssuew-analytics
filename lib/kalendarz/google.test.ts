@@ -68,6 +68,25 @@ describe('wpisyKalendarza', () => {
     await expect(wpisyKalendarza('D', '2026Z', 'a', 'b')).rejects.toBeInstanceOf(BladKalendarza)
   })
 
+  it('inny 403 (np. cudze spotkanie) to nie brak zgody', async () => {
+    fetchMock.mockImplementation(async () => odp(403, { error: { code: 403, status: 'PERMISSION_DENIED', errors: [{ reason: 'forbiddenForNonOrganizer' }] } }))
+    await expect(wpisyKalendarza('D', '2026Z', 'a', 'b')).rejects.toMatchObject({ rodzaj: 'google' })
+  })
+
+  it('organizator i goście: wpis z gośćmi albo cudze zaproszenie to spotkanie', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (new URL(url).searchParams.get('privateExtendedProperty')) return odp(200, { items: [] })
+      return odp(200, { items: [
+        zdarzenieApi('wlasny', { organizer: { self: true } }),
+        zdarzenieApi('goscie', { organizer: { self: true }, attendees: [{ email: 'ktos@ue.wroc.pl' }] }),
+        zdarzenieApi('zaproszenie', { organizer: { email: 'dziekanat@ue.wroc.pl' } }),
+      ] })
+    })
+    const wpisy = await wpisyKalendarza('D', '2026Z', 'a', 'b')
+    const spotkanie = (id: string) => wpisy.find((w) => w.id === id)!.spotkanie
+    expect([spotkanie('wlasny'), spotkanie('goscie'), spotkanie('zaproszenie')]).toEqual([false, true, true])
+  })
+
   it('brak zgody na kalendarz (401, 403 insufficientPermissions) - brak-zgody', async () => {
     fetchMock.mockImplementation(async () => odp(401, { error: { code: 401 } }))
     await expect(wpisyKalendarza('D', '2026Z', 'a', 'b')).rejects.toMatchObject({ rodzaj: 'brak-zgody' })
@@ -88,7 +107,7 @@ describe('wykonajPlan', () => {
       dodaj: [g2],
       zmien: [{ wpisId: 'g2', wydarzenie: g2 }],
       usun: [stary],
-      doSprawdzenia: [{ wydarzenie: g1, kandydaci: 2 }],
+      doSprawdzenia: [{ wydarzenie: g1, kandydaci: 2, spotkanie: false }],
     }
     expect(await wykonajPlan('DOSTEP', plan)).toEqual({ udane: 4, nieudane: [] })
 
@@ -98,9 +117,26 @@ describe('wykonajPlan', () => {
     const metody = wywolania.map(({ u, o }) => `${o.method} ${u.pathname.slice(u.pathname.indexOf('/events'))}`).sort()
     expect(metody).toEqual(['DELETE /events/g%2F9', 'PATCH /events/g2', 'PATCH /events/r1', 'POST /events'])
     const przejecie = wywolania.find(({ u }) => u.pathname.endsWith('/r1'))!
-    expect(JSON.parse(przejecie.o.body as string)).toEqual({ ...g1, location: '' })
+    expect(JSON.parse(przejecie.o.body as string)).toEqual({
+      ...g1,
+      start: { ...g1.start, date: null },
+      end: { ...g1.end, date: null },
+      location: '',
+    })
     const dodanie = wywolania.find(({ o }) => o.method === 'POST')!
     expect(JSON.parse(dodanie.o.body as string)).toEqual(g2)
+  })
+
+  it('PATCH zamienia całodniowe na godzinowe i odwrotnie - stare pole terminu wyczyszczone', async () => {
+    fetchMock.mockImplementation(async () => odp(200, { id: 'x' }))
+    const godzinowe = naWydarzenieGoogle(W(), '2026Z')
+    const calodniowe = naWydarzenieGoogle(W({ godzina: null, godzinaDo: null }), '2026Z')
+    await wykonajPlan('D', { przejmij: [], dodaj: [], zmien: [{ wpisId: 'a', wydarzenie: godzinowe }, { wpisId: 'b', wydarzenie: calodniowe }], usun: [], doSprawdzenia: [] })
+    const cialo = (id: string) => JSON.parse(fetchMock.mock.calls.find(([u]) => new URL(u as string).pathname.endsWith(`/${id}`))![1].body)
+    expect(cialo('a').start).toEqual({ date: null, dateTime: '2026-11-21T18:00:00', timeZone: 'Europe/Warsaw' })
+    expect(cialo('a').end).toEqual({ date: null, dateTime: '2026-11-21T20:00:00', timeZone: 'Europe/Warsaw' })
+    expect(cialo('b').start).toEqual({ date: '2026-11-21', dateTime: null, timeZone: null })
+    expect(cialo('b').end).toEqual({ date: '2026-11-22', dateTime: null, timeZone: null })
   })
 
   it('częściowa porażka - reszta idzie dalej', async () => {

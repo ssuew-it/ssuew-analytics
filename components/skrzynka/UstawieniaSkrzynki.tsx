@@ -143,7 +143,10 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
           Planer wysyła do głównego kalendarza kontakt@ wydarzenia z kategorii Komisje, SSUEW, Projekty i Wydarzenia UE. Zebrania, Aplikacje i Inne zostają tylko w Planerze. Ręczne wpisy z tym samym tytułem i dniem D.E.C.K. przejmuje zamiast dublować.
         </p>
         {kalendarz ? (
-          <p className="text-deck-text">Połączony - wysyłkę uruchamia przycisk w Planerze.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-deck-text">Połączony - wysyłkę uruchamia przycisk w Planerze.</p>
+            <a href="/api/skrzynka/kalendarz" className={`${przycisk} inline-flex`}>Połącz ponownie</a>
+          </div>
         ) : (
           <a href="/api/skrzynka/kalendarz" className={`${przycisk} inline-flex`}>Połącz kalendarz</a>
         )}

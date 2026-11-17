@@ -80,5 +80,6 @@ describe('UstawieniaSkrzynki', () => {
     const polaczony = screen.getByRole('region', { name: 'Kalendarz Samorządowicza' })
     expect(polaczony).toHaveTextContent('Połączony')
     expect(within(polaczony).queryByRole('link', { name: 'Połącz kalendarz' })).toBeNull()
+    expect(within(polaczony).getByRole('link', { name: 'Połącz ponownie' })).toHaveAttribute('href', '/api/skrzynka/kalendarz')
   })
 })

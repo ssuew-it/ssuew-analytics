@@ -82,7 +82,7 @@ describe('porownaj', () => {
   it('dwa pasujące ręczne wpisy - do sprawdzenia, nic nie dodane', () => {
     const g = naWydarzenieGoogle(W(), S)
     const plan = porownaj([W()], [wpis(g, 'r1', false), wpis(g, 'r2', false)], S)
-    expect(plan.doSprawdzenia).toEqual([{ wydarzenie: g, kandydaci: 2 }])
+    expect(plan.doSprawdzenia).toEqual([{ wydarzenie: g, kandydaci: 2, spotkanie: false }])
     expect(plan.dodaj).toEqual([])
     expect(plan.przejmij).toEqual([])
   })
@@ -93,6 +93,14 @@ describe('porownaj', () => {
     const plan = porownaj([a, b], [wpis(naWydarzenieGoogle(a, S), 'r1', false)], S)
     expect(plan.przejmij).toHaveLength(1)
     expect(plan.dodaj).toHaveLength(1)
+  })
+
+  it('pasujący wpis z gośćmi albo cudze zaproszenie - do sprawdzenia, nie przejęty i nic nie dodane', () => {
+    const g = naWydarzenieGoogle(W(), S)
+    const plan = porownaj([W()], [{ ...wpis(g, 'r1', false), spotkanie: true }], S)
+    expect(plan.przejmij).toEqual([])
+    expect(plan.dodaj).toEqual([])
+    expect(plan.doSprawdzenia).toEqual([{ wydarzenie: g, kandydaci: 1, spotkanie: true }])
   })
 
   it('ręczny wpis bez pary w Planerze - nietknięty', () => {
