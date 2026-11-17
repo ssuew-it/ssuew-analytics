@@ -85,6 +85,8 @@ Panel `/skrzynka`: zakładki statusów z liczbami, wyszukiwarka (składnia Gmail
 
 Odpowiedź z widoku sprawy idzie z kontakt@ jako „Samorząd Studentów UEW” w tym samym wątku - do Reply-To albo nadawcy ostatniej ich wiadomości (okno pokazuje adresata) - ze stopką z Ustawień; załączniki łącznie do 4 MB (limit żądania funkcji Vercela to 4,5 MB). Zgoda Google bez uprawnienia do wysyłki jest odrzucana przy połączeniu. Zakładki Kontakty i Organizacje: karta osoby albo organizacji z jej sprawami; nazwę i typ organizacji zmienia się na karcie, synchronizacja tego nie nadpisuje. Ustawienia: stopka, listy „zawsze pomijaj” (domeny skrzynek prywatnych i studentów odrzucane) i „Rozłącz” - odwołuje dostęp w Google, opcjonalnie usuwa sprawy, kontakty i organizacje (koniec kadencji). Po „Rozłącz” bez usuwania ponowne połączenie robi import od nowa.
 
+Asystent: odprawa i czat widzą skrzynkę - liczby spraw, sprawy po terminie (temat, organizacja, dni czekania) i organizacje z ruchem w 7 dni. Bez treści maili i pól z adresami; tematy idą tak, jak są w Gmailu. Bez połączenia albo przy błędzie odczytu sekcji skrzynki nie ma. Odprawa ma obszar „Skrzynka” z odnośnikiem do `/skrzynka`. W widoku sprawy „Streść” i „Szkic odpowiedzi” wysyłają do Gemini temat, notatki i treść jednego wątku (bez cytowanych linii „>” z wersji tekstowej, do 20 000 znaków od końca) - dopiero po kliknięciu, bez zapisu. Szkic tylko wpisuje się do okna odpowiedzi; miejsca „[do uzupełnienia]” (także pisane wielkimi literami, bez ogonków albo z podpowiedzią po dwukropku) blokują wysyłkę.
+
 ## Uruchomienie
 
 ```bash
