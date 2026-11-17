@@ -99,7 +99,8 @@ describe('DeckHub', () => {
 
   it('właściciel widzi odprawę, nie panel faktów', async () => {
     await hub()
-    expect(await screen.findByText(/retencja słabnie/)).toBeInTheDocument()
+    // Odprawa jest domyślnie zwinięta - widać jej nagłówek, treść po „rozwiń”.
+    expect(await screen.findByRole('heading', { name: 'Odprawa D.E.C.K.' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Na teraz' })).toBeNull()
   })
 

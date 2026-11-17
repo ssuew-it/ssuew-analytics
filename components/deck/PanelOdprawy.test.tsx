@@ -29,9 +29,27 @@ async function panel(odprawa: ZapisanaOdprawa | null, fakty: Fakt[] = []) {
 
 afterEach(() => vi.unstubAllGlobals())
 
+const rozwin = () => fireEvent.click(screen.getByRole('button', { name: /rozwiń/ }))
+
 describe('PanelOdprawy', () => {
+  it('domyślnie zwinięta: nagłówek, godzina i liczba zagrożeń - treść dopiero po „rozwiń”', async () => {
+    await panel({
+      ...ZAPIS,
+      odprawa: { ...ZAPIS.odprawa, zagrozenia: [...ZAPIS.odprawa.zagrozenia, { obszar: 'kpi', waga: 'srednia', tytul: 'KPI', uzasadnienie: 'x' }] },
+    })
+    expect(screen.getByText(/02\.10\.2026 · 14:32/)).toBeInTheDocument()
+    expect(screen.getByText('2 zagrożenia · 1 wysokie')).toBeInTheDocument()
+    expect(screen.queryByText(/retencja słabnie/)).not.toBeInTheDocument()
+    const przycisk = screen.getByRole('button', { name: /rozwiń/ })
+    expect(przycisk).toHaveAttribute('aria-expanded', 'false')
+    rozwin()
+    expect(screen.getByText(/retencja słabnie/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /zwiń/ })).toHaveAttribute('aria-expanded', 'true')
+  })
+
   it('podsumowanie, zagrożenie z wagą i odnośnikiem, punkty na dziś, godzina', async () => {
     await panel(ZAPIS)
+    rozwin()
     expect(screen.getByText(/retencja słabnie/)).toBeInTheDocument()
     const z = screen.getByRole('link', { name: /W'25 odpływa/ })
     expect(z).toHaveAttribute('href', '/analytics/retencja')
@@ -40,7 +58,7 @@ describe('PanelOdprawy', () => {
     expect(screen.getByText(/02\.10\.2026 · 14:32/)).toBeInTheDocument()
   })
 
-  it('„Odśwież” podmienia odprawę na nową', async () => {
+  it('„Odśwież” podmienia odprawę na nową i ją rozwija', async () => {
     const nowa = { ...ZAPIS, odprawa: { ...ZAPIS.odprawa, podsumowanie: 'Nowe podsumowanie.' } }
     const f = vi.fn(async () => new Response(JSON.stringify(nowa), { status: 200 }))
     vi.stubGlobal('fetch', f)
@@ -55,6 +73,7 @@ describe('PanelOdprawy', () => {
       JSON.stringify({ error: 'Darmowy limit Gemini na tę chwilę wyczerpany - spróbuj za minutę.' }), { status: 429 },
     )))
     await panel(ZAPIS)
+    rozwin()
     fireEvent.click(screen.getByRole('button', { name: /Odśwież/ }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/limit Gemini/)
     expect(screen.getByText(/retencja słabnie/)).toBeInTheDocument()

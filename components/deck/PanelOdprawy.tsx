@@ -54,6 +54,8 @@ export function PanelOdprawy({ odprawa, fakty }: { odprawa: Promise<ZapisanaOdpr
   const [biezaca, setBiezaca] = useState(zapisana)
   const [odswieza, setOdswieza] = useState(false)
   const [blad, setBlad] = useState<string | null>(null)
+  // Zwinięta domyślnie - kokpit zaczyna od modułów, odprawa otwiera się na życzenie.
+  const [rozwinieta, setRozwinieta] = useState(false)
 
   async function odswiez() {
     setOdswieza(true)
@@ -61,8 +63,11 @@ export function PanelOdprawy({ odprawa, fakty }: { odprawa: Promise<ZapisanaOdpr
     try {
       const res = await fetch('/api/asystent/odprawa', { method: 'POST' })
       const dane = await res.json().catch(() => ({}))
-      if (res.ok) setBiezaca(dane as ZapisanaOdprawa)
-      else setBlad(dane.error ?? 'Nie udało się odświeżyć odprawy.')
+      if (res.ok) {
+        setBiezaca(dane as ZapisanaOdprawa)
+        // Ktoś poprosił o nową odprawę - chce ją zobaczyć.
+        setRozwinieta(true)
+      } else setBlad(dane.error ?? 'Nie udało się odświeżyć odprawy.')
     } catch {
       setBlad('Brak połączenia - spróbuj ponownie.')
     } finally {
@@ -94,7 +99,18 @@ export function PanelOdprawy({ odprawa, fakty }: { odprawa: Promise<ZapisanaOdpr
       )}
 
       {biezaca ? (
-        <TrescOdprawy odprawa={biezaca.odprawa} />
+        <>
+          <button
+            type="button"
+            onClick={() => setRozwinieta((r) => !r)}
+            aria-expanded={rozwinieta}
+            className="mt-3 flex w-full items-center gap-2 rounded-md border border-white/8 px-3 py-2 text-left text-[12px] text-deck-muted transition hover:border-deck-accent/30 hover:text-deck-text"
+          >
+            <span>{opisZagrozen(biezaca.odprawa)}</span>
+            <span className="ml-auto font-mono text-[10px]">{rozwinieta ? 'zwiń' : 'rozwiń'}</span>
+          </button>
+          {rozwinieta && <TrescOdprawy odprawa={biezaca.odprawa} />}
+        </>
       ) : (
         <>
           <p className="mt-3 text-[12.5px] leading-relaxed text-deck-muted">
@@ -107,6 +123,22 @@ export function PanelOdprawy({ odprawa, fakty }: { odprawa: Promise<ZapisanaOdpr
       )}
     </section>
   )
+}
+
+/** „1 zagrożenie”, „2 zagrożenia”, „5 zagrożeń”, „12 zagrożeń”. */
+function zagrozen(n: number): string {
+  if (n === 1) return '1 zagrożenie'
+  const d = n % 10
+  const s = n % 100
+  return `${n} ${d >= 2 && d <= 4 && (s < 12 || s > 14) ? 'zagrożenia' : 'zagrożeń'}`
+}
+
+/** Linia zwiniętej odprawy - ile zagrożeń i ile wysokich, żeby wiedzieć, czy rozwinąć. */
+function opisZagrozen(odprawa: Odprawa): string {
+  const n = odprawa.zagrozenia.length
+  if (n === 0) return 'Bez zagrożeń'
+  const wysokie = odprawa.zagrozenia.filter((z) => z.waga === 'wysoka').length
+  return wysokie ? `${zagrozen(n)} · ${wysokie} wysokie` : zagrozen(n)
 }
 
 function TrescOdprawy({ odprawa }: { odprawa: Odprawa }) {
