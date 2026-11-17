@@ -68,6 +68,24 @@ describe('odczytajWatekPelny', () => {
     expect(m.zalaczniki).toEqual([])
   })
 
+  it('treść już w UTF-8 mimo nagłówka ISO-8859-2 albo Windows-1250 - bez krzaczków', () => {
+    // Tak przychodziły maile z UEW, UWr i lot.pl: „DzieĹ dobry”, „paĹşdziernik”.
+    const [m] = odczytajWatekPelny({
+      id: 't1',
+      messages: [
+        wiadomosc('m1', 1, 'jan@x.pl', {
+          mimeType: 'multipart/alternative',
+          parts: [
+            { mimeType: 'text/plain', headers: [{ name: 'Content-Type', value: 'text/plain; charset="iso-8859-2"' }], body: { data: utf('Dzień dobry, wykłady w październiku') } },
+            { mimeType: 'text/html', headers: [{ name: 'Content-Type', value: 'text/html; charset=windows-1250' }], body: { data: utf('<p>Przewodniczący Zespołu</p>') } },
+          ],
+        }),
+      ],
+    })
+    expect(m.tekst).toBe('Dzień dobry, wykłady w październiku')
+    expect(m.html).toBe('<p>Przewodniczący Zespołu</p>')
+  })
+
   it('pomija szkice, spam i kosz; od najstarszej', () => {
     const w = odczytajWatekPelny({
       id: 't1',

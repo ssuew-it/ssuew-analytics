@@ -26,9 +26,20 @@ export function dekodujBase64Url(dane: string): Uint8Array<ArrayBuffer> {
 const naglowek = (c: CzescApi, nazwa: string) =>
   c.headers?.find((h) => h.name.toLowerCase() === nazwa.toLowerCase())?.value ?? ''
 
-/** Bajty części w jej własnym kodowaniu (`charset`); nieznane kodowanie - UTF-8. */
+/**
+ * Tekst części. Najpierw ścisły UTF-8: Gmail potrafi oddać treść już w UTF-8,
+ * choć nagłówek dalej mówi `iso-8859-2` albo `windows-1250` - dekodowanie wg
+ * nagłówka dawało wtedy „DzieĹ dobry”. Gdy bajty nie są poprawnym UTF-8
+ * (prawdziwy ISO-8859-2 czy Windows-1250 - polskie litery to tam pojedyncze
+ * bajty > 0x7F), dekodujemy wg `charset`; nieznany - UTF-8 z zamiennikami.
+ */
 function tekstCzesci(c: CzescApi): string {
   const bajty = dekodujBase64Url(c.body?.data ?? '')
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bajty)
+  } catch {
+    // Nie UTF-8 - zostaje kodowanie z nagłówka.
+  }
   const zestaw = naglowek(c, 'Content-Type').match(/charset="?([^";\s]+)"?/i)?.[1]?.toLowerCase() ?? 'utf-8'
   try {
     return new TextDecoder(zestaw).decode(bajty)
