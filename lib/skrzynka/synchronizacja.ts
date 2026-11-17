@@ -1,4 +1,4 @@
-import { BladSkrzynki, ZAKRES_WYSYLKI, gmail as utworzGmail, odwolajToken, wymienKod, type Gmail } from './google'
+import { BladSkrzynki, ZAKRES_KALENDARZA, ZAKRES_WYSYLKI, gmail as utworzGmail, odwolajToken, wymienKod, type Gmail } from './google'
 import { odszyfruj, zaszyfruj } from './szyfr'
 import {
   czytajSprawe, czytajSprawy, czytajStan, czytajUstawienia, pomijane, rozlaczStan, usunDaneSkrzynki, wezDzierzawe, zapiszStan, zapiszWynik,
@@ -213,6 +213,8 @@ export async function polaczSkrzynke(kod: string): Promise<'ok' | 'inne-konto' |
     email: profil.emailAddress,
     token: zaszyfruj(refreshToken),
     polaczona: true,
+    // Nowa zgoda samej skrzynki daje token bez kalendarza - flaga musi to powiedzieć.
+    kalendarz: zakresy.includes(ZAKRES_KALENDARZA),
     historyId: poprzedni?.historyId ?? w.historyId,
     watchWygasa: Number(w.expiration),
     dzierzawaDo: 0,

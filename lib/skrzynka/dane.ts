@@ -43,6 +43,8 @@ export interface StanSkrzynki {
   dzierzawaDo: number
   doPowtorki: boolean
   polaczona: boolean
+  /** Token obejmuje też `calendar.events` - Planer może wysyłać do Kalendarza Samorządowicza. */
+  kalendarz?: boolean
   import: PostepImportu
   /** 1 - sprawy bez pola `klucz` (przed częścią 2a); 2 - klucze uzupełnione. */
   wersjaDanych: number
@@ -62,6 +64,7 @@ export async function czytajStan(): Promise<StanSkrzynki | null> {
     dzierzawaDo: liczba(d.dzierzawaDo),
     doPowtorki: d.doPowtorki === true,
     polaczona: d.polaczona === true,
+    kalendarz: d.kalendarz === true,
     wersjaDanych: liczba(d.wersjaDanych) || 1,
     import: {
       trwa: d.import?.trwa === true,

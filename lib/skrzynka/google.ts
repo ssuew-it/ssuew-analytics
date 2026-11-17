@@ -71,6 +71,26 @@ export function adresZgody(stan: string, email: string): string {
   return `https://accounts.google.com/o/oauth2/v2/auth?${p}`
 }
 
+/**
+ * Zgoda na sam kalendarz, dołożona do zgody skrzynki: `include_granted_scopes`
+ * sprawia, że nowy refresh token obejmuje też Gmaila. Ten sam adres powrotu co skrzynka.
+ */
+export function adresZgodyKalendarza(stan: string, email: string): string {
+  const k = konfiguracja()
+  const p = new URLSearchParams({
+    client_id: k.id,
+    redirect_uri: k.przekierowanie,
+    response_type: 'code',
+    scope: ZAKRES_KALENDARZA,
+    include_granted_scopes: 'true',
+    access_type: 'offline',
+    prompt: 'consent',
+    login_hint: email,
+    state: stan,
+  })
+  return `https://accounts.google.com/o/oauth2/v2/auth?${p}`
+}
+
 async function token(cialo: Record<string, string>): Promise<{ access_token: string; refresh_token?: string; expires_in: number; scope?: string }> {
   const res = await fetch(TOKEN_URL, {
     method: 'POST',

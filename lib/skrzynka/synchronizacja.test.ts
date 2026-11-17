@@ -248,6 +248,15 @@ describe('polaczSkrzynke', () => {
     await polaczSkrzynke('KOD')
     expect(dane.zapiszStan).toHaveBeenCalledWith(expect.objectContaining({ historyId: '120', import: { trwa: false, zrobione: 900, razem: 900, strona: null } }))
   })
+
+  it('ponowne połączenie samej skrzynki - kalendarz zaznaczony tylko, gdy nowy token go obejmuje', async () => {
+    g.profil.mockResolvedValue({ emailAddress: NASZ, historyId: '1' })
+    await polaczSkrzynke('KOD')
+    expect(dane.zapiszStan).toHaveBeenLastCalledWith(expect.objectContaining({ kalendarz: false }))
+    wymienKod.mockResolvedValue({ refreshToken: 'r', dostep: 'd', zakresy: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/calendar.events'] })
+    await polaczSkrzynke('KOD')
+    expect(dane.zapiszStan).toHaveBeenLastCalledWith(expect.objectContaining({ kalendarz: true }))
+  })
 })
 
 describe('odnowObserwacje', () => {

@@ -5,20 +5,26 @@ import { POST as importuj } from '@/app/api/skrzynka/import/route'
 import { POST as push } from '@/app/api/skrzynka/push/route'
 import { GET as cron } from '@/app/api/skrzynka/cron/route'
 import { POST as dociagnij } from '@/app/api/skrzynka/synchronizuj/route'
+import { GET as zgodaKalendarza } from '@/app/api/skrzynka/kalendarz/route'
 import { BladSkrzynki } from '@/lib/skrzynka/google'
 
-const { ktoPyta, s, zweryfikujPush, sprawdzStan } = vi.hoisted(() => ({
+const { ktoPyta, s, zweryfikujPush, celStanu, polaczKalendarz } = vi.hoisted(() => ({
   ktoPyta: vi.fn(),
   s: { polaczSkrzynke: vi.fn(), importujStrone: vi.fn(), synchronizuj: vi.fn(), odnowObserwacje: vi.fn() },
   zweryfikujPush: vi.fn(),
-  sprawdzStan: vi.fn(),
+  celStanu: vi.fn(),
+  polaczKalendarz: vi.fn(),
 }))
 
 vi.mock('next/server', async (oryginal) => ({ ...(await oryginal<typeof import('next/server')>()), after: (f: () => unknown) => f() }))
 vi.mock('@/lib/auth/guard', () => ({ ktoPyta: (...a: unknown[]) => ktoPyta(...a) }))
 vi.mock('@/lib/skrzynka/synchronizacja', () => s)
 vi.mock('@/lib/skrzynka/push', () => ({ zweryfikujPush: (...a: unknown[]) => zweryfikujPush(...a) }))
-vi.mock('@/lib/skrzynka/stanOauth', () => ({ podpiszStan: async (uid: string) => `stan-${uid}`, sprawdzStan: (...a: unknown[]) => sprawdzStan(...a) }))
+vi.mock('@/lib/skrzynka/stanOauth', () => ({
+  podpiszStan: async (uid: string, cel = 'skrzynka') => `stan-${uid}-${cel}`,
+  celStanu: (...a: unknown[]) => celStanu(...a),
+}))
+vi.mock('@/lib/kalendarz/polaczenie', () => ({ polaczKalendarz: (...a: unknown[]) => polaczKalendarz(...a) }))
 
 const BAZA = 'https://ssuew-analytics.vercel.app'
 const zadanie = (sciezka: string, o: { body?: unknown; naglowki?: Record<string, string> } = {}) =>
@@ -28,7 +34,8 @@ beforeEach(() => {
   ktoPyta.mockReset().mockResolvedValue({ uid: 'u1', email: 'kontakt@samorzad.ue.wroc.pl', rola: 'owner' })
   Object.values(s).forEach((f) => f.mockReset())
   zweryfikujPush.mockReset()
-  sprawdzStan.mockReset().mockResolvedValue(true)
+  celStanu.mockReset().mockResolvedValue('skrzynka')
+  polaczKalendarz.mockReset()
   vi.stubEnv('SKRZYNKA_CLIENT_ID', 'klient')
   vi.stubEnv('SKRZYNKA_CLIENT_SECRET', 'sekret')
   vi.stubEnv('SKRZYNKA_ADRES', BAZA)
@@ -44,6 +51,7 @@ describe('dostęp', () => {
     ktoPyta.mockResolvedValue({ uid: 'kod:1', email: 'Jula', rola: 'board' })
     for (const r of [
       await polacz(zadanie('/api/skrzynka/polacz')),
+      await zgodaKalendarza(zadanie('/api/skrzynka/kalendarz')),
       await oauth(zadanie('/api/skrzynka/oauth?code=k&state=s')),
       await importuj(zadanie('/api/skrzynka/import', { body: {} })),
       await dociagnij(zadanie('/api/skrzynka/synchronizuj')),
@@ -60,7 +68,7 @@ describe('połączenie', () => {
     const r = await polacz(zadanie('/api/skrzynka/polacz'))
     const u = new URL(r.headers.get('location')!)
     expect(u.host).toBe('accounts.google.com')
-    expect(u.searchParams.get('state')).toBe('stan-u1')
+    expect(u.searchParams.get('state')).toBe('stan-u1-skrzynka')
   })
 
   it('bez konfiguracji - wraca do panelu z błędem', async () => {
@@ -72,7 +80,7 @@ describe('połączenie', () => {
   it('powrót: odmowa, zły state, inne konto, zgoda bez wysyłki, błąd, sukces', async () => {
     const gdzie = async (q: string) => (await oauth(zadanie(`/api/skrzynka/oauth${q}`))).headers.get('location')
     expect(await gdzie('?error=access_denied')).toBe(`${BAZA}/skrzynka?blad=odmowa`)
-    sprawdzStan.mockResolvedValueOnce(false)
+    celStanu.mockResolvedValueOnce(null)
     expect(await gdzie('?code=k&state=zly')).toBe(`${BAZA}/skrzynka?blad=stan`)
     expect(await gdzie('?state=s')).toBe(`${BAZA}/skrzynka?blad=stan`)
     s.polaczSkrzynke.mockResolvedValueOnce('inne-konto')
@@ -83,8 +91,37 @@ describe('połączenie', () => {
     expect(await gdzie('?code=k&state=s')).toBe(`${BAZA}/skrzynka?blad=polaczenie`)
     s.polaczSkrzynke.mockResolvedValueOnce('ok')
     expect(await gdzie('?code=k&state=s')).toBe(`${BAZA}/skrzynka`)
-    expect(sprawdzStan).toHaveBeenLastCalledWith('s', 'u1')
+    expect(celStanu).toHaveBeenLastCalledWith('s', 'u1')
     expect(s.polaczSkrzynke).toHaveBeenLastCalledWith('k')
+    expect(polaczKalendarz).not.toHaveBeenCalled()
+  })
+
+  it('zgoda na kalendarz: zarząd 403; właściciel - przekierowanie z include_granted_scopes i calendar.events', async () => {
+    const r = await zgodaKalendarza(zadanie('/api/skrzynka/kalendarz'))
+    const u = new URL(r.headers.get('location')!)
+    expect(u.host).toBe('accounts.google.com')
+    expect(Object.fromEntries(u.searchParams)).toMatchObject({
+      scope: 'https://www.googleapis.com/auth/calendar.events',
+      include_granted_scopes: 'true',
+      access_type: 'offline',
+      prompt: 'consent',
+      redirect_uri: `${BAZA}/api/skrzynka/oauth`,
+      login_hint: 'kontakt@samorzad.ue.wroc.pl',
+      state: 'stan-u1-kalendarz',
+    })
+  })
+
+  it('state kalendarza idzie do polaczKalendarz, nie do polaczSkrzynke', async () => {
+    const gdzie = async () => (await oauth(zadanie('/api/skrzynka/oauth?code=k&state=s'))).headers.get('location')
+    celStanu.mockResolvedValue('kalendarz')
+    polaczKalendarz.mockResolvedValueOnce('ok')
+    expect(await gdzie()).toBe(`${BAZA}/skrzynka?kalendarz=ok`)
+    expect(polaczKalendarz).toHaveBeenCalledWith('k')
+    polaczKalendarz.mockResolvedValueOnce('niepelna-zgoda')
+    expect(await gdzie()).toBe(`${BAZA}/skrzynka?blad=niepelna-zgoda`)
+    polaczKalendarz.mockRejectedValueOnce(new Error('sieć'))
+    expect(await gdzie()).toBe(`${BAZA}/skrzynka?blad=polaczenie`)
+    expect(s.polaczSkrzynke).not.toHaveBeenCalled()
   })
 })
 
