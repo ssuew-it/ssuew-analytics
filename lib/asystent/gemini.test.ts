@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { zapytajGemini, BladAsystenta, komunikatBledu, bezDlugichMyslnikow, MODELE_DOMYSLNE } from '@/lib/asystent/gemini'
+import { zapytajGemini, BladAsystenta, komunikatBledu, bezDlugichMyslnikow, CZAS_MODELU_MS, MODELE_DOMYSLNE } from '@/lib/asystent/gemini'
 
 function odpowiedz(status: number, body: unknown) {
   const f = vi.fn(async () => new Response(JSON.stringify(body), { status }))
@@ -102,13 +102,42 @@ describe('zapytajGemini - modele zapasowe', () => {
     expect((await zapytajGemini(PYTANIE)).model).toBe('model-b')
   })
 
-  it('domyślnie trzy modele, a gdy wszystkie przeciążone - błąd sieci', async () => {
+  it('domyślnie z zapasowymi modelami, a gdy wszystkie przeciążone - przeciążenie, nie „nie odpowiedział”', async () => {
     vi.stubEnv('GEMINI_API_KEY', 'klucz')
     vi.stubEnv('GEMINI_MODEL', '')
-    const f = kolejno(503, 503, 503)
-    await expect(zapytajGemini(PYTANIE)).rejects.toMatchObject({ kod: 'siec' })
-    expect(MODELE_DOMYSLNE).toHaveLength(3)
+    const f = kolejno(...MODELE_DOMYSLNE.map(() => 503))
+    await expect(zapytajGemini(PYTANIE)).rejects.toMatchObject({ kod: 'przeciazenie' })
+    // 17.11.2026 trzy dotychczasowe modele dawały 503 naraz, te odpowiadały ze schematem odprawy.
+    expect(MODELE_DOMYSLNE).toEqual(expect.arrayContaining(['gemini-3.5-flash-lite', 'gemini-2.5-flash']))
     MODELE_DOMYSLNE.forEach((m, i) => expect(modelZ(f, i)).toContain(`models/${m}:`))
+  })
+
+  it('model wycofany (404) - próbuje kolejnego zamiast przerywać', async () => {
+    vi.stubEnv('GEMINI_API_KEY', 'klucz')
+    vi.stubEnv('GEMINI_MODEL', 'model-a,model-b')
+    kolejno(404, 200)
+    expect((await zapytajGemini(PYTANIE)).model).toBe('model-b')
+  })
+
+  it('model, który długo milczy, oddaje kolejkę następnemu', async () => {
+    vi.useFakeTimers()
+    vi.stubEnv('GEMINI_API_KEY', 'klucz')
+    vi.stubEnv('GEMINI_MODEL', 'model-a,model-b')
+    let wywolanie = 0
+    const f = vi.fn((_adres: string, init: RequestInit) => {
+      wywolanie++
+      if (wywolanie === 1) {
+        return new Promise<Response>((_, odrzuc) =>
+          init.signal?.addEventListener('abort', () => odrzuc(Object.assign(new Error('przerwane'), { name: 'AbortError' }))),
+        )
+      }
+      return Promise.resolve(new Response(JSON.stringify(OK), { status: 200 }))
+    })
+    vi.stubGlobal('fetch', f)
+    const p = zapytajGemini(PYTANIE)
+    await vi.advanceTimersByTimeAsync(CZAS_MODELU_MS)
+    expect((await p).model).toBe('model-b')
+    vi.useRealTimers()
   })
 
   it('wszystkie na limicie - limit', async () => {
@@ -130,6 +159,7 @@ describe('zapytajGemini - modele zapasowe', () => {
 describe('komunikatBledu i myślniki', () => {
   it('mapuje kody na status i polski komunikat', () => {
     expect(komunikatBledu(new BladAsystenta('limit', 'x'))).toMatchObject({ status: 429 })
+    expect(komunikatBledu(new BladAsystenta('przeciazenie', 'x'))).toMatchObject({ status: 503, error: expect.stringMatching(/przeciążony/) })
     expect(komunikatBledu(new BladAsystenta('brak-klucza', 'x')).error).toMatch(/GEMINI_API_KEY/)
     expect(komunikatBledu(new Error('?'))).toMatchObject({ status: 500 })
   })

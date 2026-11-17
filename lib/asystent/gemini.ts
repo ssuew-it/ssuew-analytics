@@ -7,14 +7,24 @@
  * Kolejność prób. Darmowy poziom bywa przeciążony (503) albo wyczerpany (429)
  * na pojedynczym modelu - wtedy pytamy następny, zamiast gasić odprawę.
  */
-export const MODELE_DOMYSLNE = ['gemini-3.8-flash', 'gemini-3-flash-preview', 'gemini-flash-lite-latest']
+export const MODELE_DOMYSLNE = [
+  'gemini-3.8-flash',
+  // 17.11.2026 trzy dawne modele (3.8-flash, 3-flash-preview, flash-lite-latest)
+  // dawały naraz 503 „high demand” i odprawa stała 9 dni; te odpowiadały.
+  'gemini-3.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-lite-latest',
+]
 const ADRES = 'https://generativelanguage.googleapis.com/v1beta/models'
 /** Na wszystkie próby razem - trasy mają 60 s, a strona nie może czekać w nieskończoność. */
 const LIMIT_CZASU_MS = 25_000
-/** Statusy, przy których warto spróbować innego modelu. */
-const PRZEJSCIOWE = new Set([429, 500, 503, 504])
+/** Na jeden model - przeciążony potrafi milczeć kilkanaście sekund, zanim odmówi. */
+export const CZAS_MODELU_MS = 8_000
+/** Statusy, przy których warto spróbować innego modelu (404 - model wycofany przez Google). */
+const PRZEJSCIOWE = new Set([404, 429, 500, 503, 504])
 
-export type KodBledu = 'brak-klucza' | 'limit' | 'odmowa' | 'siec' | 'format'
+export type KodBledu = 'brak-klucza' | 'limit' | 'przeciazenie' | 'odmowa' | 'siec' | 'format'
 
 export class BladAsystenta extends Error {
   readonly kod: KodBledu
@@ -70,23 +80,35 @@ export async function zapytajGemini(o: {
   let wyczerpany = false
   try {
     for (const model of modeleGemini()) {
+      if (przerwij.signal.aborted) break
+      // Milczący model dostaje własny limit, żeby nie zjadł czasu kolejnym.
+      const modelowy = new AbortController()
+      const zegarModelu = setTimeout(() => modelowy.abort(), CZAS_MODELU_MS)
       let res: Response
+      let dane: { error?: { message?: string } } & Parameters<typeof odczytaj>[0]
       try {
         res = await fetch(`${ADRES}/${model}:generateContent`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': klucz },
           body: tresc,
-          signal: przerwij.signal,
+          signal: AbortSignal.any([przerwij.signal, modelowy.signal]),
         })
+        dane = await res.json().catch(() => null)
       } catch (e) {
         const przerwane = e instanceof Error && e.name === 'AbortError'
+        if (przerwane && !przerwij.signal.aborted) {
+          ostatni = new BladAsystenta('przeciazenie', `Gemini (${model}) milczał ponad ${CZAS_MODELU_MS / 1000} s`)
+          continue
+        }
         throw new BladAsystenta('siec', przerwane ? 'Gemini nie odpowiedział w 25 s' : 'Nie udało się połączyć z Gemini')
+      } finally {
+        clearTimeout(zegarModelu)
       }
 
-      const dane = await res.json().catch(() => null)
       if (PRZEJSCIOWE.has(res.status)) {
         if (res.status === 429) wyczerpany = true
-        ostatni = new BladAsystenta('siec', dane?.error?.message ?? `Gemini (${model}) odpowiedział ${res.status}`)
+        const kod = res.status === 404 ? 'siec' : 'przeciazenie'
+        ostatni = new BladAsystenta(kod, dane?.error?.message ?? `Gemini (${model}) odpowiedział ${res.status}`)
         continue
       }
       if (!res.ok) throw new BladAsystenta('siec', dane?.error?.message ?? `Gemini odpowiedział ${res.status}`)
@@ -116,11 +138,12 @@ function odczytaj(dane: {
   return bezDlugichMyslnikow(tekst)
 }
 
-const STATUS: Record<KodBledu, number> = { 'brak-klucza': 503, limit: 429, odmowa: 422, siec: 502, format: 502 }
+const STATUS: Record<KodBledu, number> = { 'brak-klucza': 503, limit: 429, przeciazenie: 503, odmowa: 422, siec: 502, format: 502 }
 const KOMUNIKAT: Record<KodBledu, string> = {
   'brak-klucza': 'Brak klucza Gemini - dodaj GEMINI_API_KEY w zmiennych Vercela.',
   limit: 'Darmowy limit Gemini na tę chwilę wyczerpany - spróbuj za minutę.',
   odmowa: 'Gemini odmówił odpowiedzi na te dane.',
+  przeciazenie: 'Gemini jest teraz przeciążony - spróbuj za kilka minut.',
   siec: 'Gemini nie odpowiedział - spróbuj ponownie.',
   format: 'Gemini odpowiedział w nieoczekiwanym formacie - spróbuj ponownie.',
 }
