@@ -1,11 +1,14 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { OknoOdpowiedzi } from '@/components/skrzynka/OknoOdpowiedzi'
 import { MAKS_ZALACZNIKOW } from '@/lib/skrzynka/typy'
 
-const klient = { odpowiedz: vi.fn() }
+const klient = { odpowiedz: vi.fn(), asystent: vi.fn() }
 vi.mock('@/lib/skrzynka/klient', () => ({
-  klientSkrzynki: { odpowiedz: (...a: unknown[]) => klient.odpowiedz(...a) },
+  klientSkrzynki: {
+    odpowiedz: (...a: unknown[]) => klient.odpowiedz(...a),
+    asystent: (...a: unknown[]) => klient.asystent(...a),
+  },
 }))
 
 const plik = (nazwa: string, bajty: number) => new File([new Uint8Array(bajty)], nazwa, { type: 'application/pdf' })
@@ -21,7 +24,8 @@ const wyslij = () =>
     fireEvent.click(screen.getByRole('button', { name: 'Wyślij' }))
   })
 
-beforeEach(() => klient.odpowiedz.mockReset())
+beforeEach(() => Object.values(klient).forEach((f) => f.mockReset()))
+afterEach(() => vi.restoreAllMocks())
 
 describe('OknoOdpowiedzi', () => {
   it('adresat i podgląd stopki; pusta treść nie wysyła', () => {
@@ -84,6 +88,37 @@ describe('OknoOdpowiedzi', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Usuń b.pdf' }))
     expect(screen.queryByText(/za dużo/)).toBeNull()
     expect(screen.getByRole('button', { name: 'Wyślij' })).toBeEnabled()
+  })
+
+  it('szkic od D.E.C.K. trafia do okna; miejsca do uzupełnienia blokują wysyłkę, dopóki zostały', async () => {
+    // Model nie zawsze trzyma się zapisu z instrukcji - luka z podpowiedzią i wielką literą też blokuje.
+    klient.asystent.mockResolvedValueOnce({ tekst: 'Dzień dobry,\nstoisko kosztuje [Do uzupełnienia: kwota].' })
+    okno()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Szkic odpowiedzi' }))
+    })
+    expect(klient.asystent).toHaveBeenCalledWith('t1', 'szkic')
+    expect(screen.getByLabelText('Treść odpowiedzi')).toHaveValue('Dzień dobry,\nstoisko kosztuje [Do uzupełnienia: kwota].')
+    expect(screen.getByText(/Uzupełnij miejsca \[do uzupełnienia\]/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Wyślij' })).toBeDisabled()
+    wpisz('Dzień dobry,\nstoisko kosztuje 500 zł.')
+    expect(screen.getByRole('button', { name: 'Wyślij' })).toBeEnabled()
+  })
+
+  it('szkic zastępuje wpisany tekst tylko po potwierdzeniu; błąd szkicu widoczny, tekst zostaje', async () => {
+    okno()
+    wpisz('Mój tekst')
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Szkic odpowiedzi' }))
+    })
+    expect(klient.asystent).not.toHaveBeenCalled()
+    klient.asystent.mockRejectedValueOnce(new Error('Darmowy limit Gemini na tę chwilę wyczerpany - spróbuj za minutę.'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Szkic odpowiedzi' }))
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('limit Gemini')
+    expect(screen.getByLabelText('Treść odpowiedzi')).toHaveValue('Mój tekst')
   })
 
   it('bez adresata - komunikat zamiast okna', () => {

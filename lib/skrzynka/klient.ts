@@ -1,5 +1,6 @@
 'use client'
 import { json, wywolaj } from '@/lib/asystent/klient'
+import type { TrybAsystenta } from './asystent'
 import type {
   KartaKontaktu, KartaOrganizacji, Organizacja, Sprawa, Status, StronaKontaktow, StronaSpraw, SzczegolySprawy, TypOrganizacji,
   UstawieniaSkrzynki, WynikSynchronizacji, ZmianaSprawy,
@@ -30,4 +31,6 @@ export const klientSkrzynki = {
   organizacja: (domena: string) => wywolaj<KartaOrganizacji>(`/api/skrzynka/organizacje?${new URLSearchParams({ domena })}`),
   zmienOrganizacje: (domena: string, z: { nazwa?: string; typ?: TypOrganizacji }) =>
     wywolaj<Organizacja>('/api/skrzynka/organizacje', json('PATCH', { domena, ...z })),
+  asystent: (id: string, tryb: TrybAsystenta) =>
+    wywolaj<{ tekst: string }>(`/api/skrzynka/sprawy/${encodeURIComponent(id)}/asystent`, json('POST', { tryb })),
 }

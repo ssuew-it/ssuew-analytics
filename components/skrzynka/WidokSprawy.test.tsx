@@ -3,12 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { WidokSprawy } from '@/components/skrzynka/WidokSprawy'
 import type { Sprawa, SzczegolySprawy } from '@/lib/skrzynka/typy'
 
-const klient = { sprawa: vi.fn(), zmien: vi.fn(), odpowiedz: vi.fn() }
+const klient = { sprawa: vi.fn(), zmien: vi.fn(), odpowiedz: vi.fn(), asystent: vi.fn() }
 vi.mock('@/lib/skrzynka/klient', () => ({
   klientSkrzynki: {
     sprawa: (...a: unknown[]) => klient.sprawa(...a),
     zmien: (...a: unknown[]) => klient.zmien(...a),
     odpowiedz: (...a: unknown[]) => klient.odpowiedz(...a),
+    asystent: (...a: unknown[]) => klient.asystent(...a),
   },
 }))
 
@@ -127,6 +128,22 @@ describe('WidokSprawy', () => {
   it('wątek usunięty w Gmailu - bez okna odpowiedzi', async () => {
     await widok({ ...D(), wiadomosci: [], adresat: null })
     expect(screen.queryByRole('region', { name: 'Odpowiedź' })).toBeNull()
+  })
+
+  it('Streść: streszczenie D.E.C.K. nad wątkiem dopiero po kliknięciu; błąd widoczny', async () => {
+    await widok()
+    expect(klient.asystent).not.toHaveBeenCalled()
+    klient.asystent.mockResolvedValueOnce({ tekst: '- Firma proponuje sponsoring.\n- Czekają na odpowiedź do piątku.' })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Streść' }))
+    })
+    expect(klient.asystent).toHaveBeenCalledWith('t1', 'strescz')
+    expect(screen.getByRole('region', { name: 'Streszczenie D.E.C.K.' })).toHaveTextContent('Czekają na odpowiedź do piątku.')
+    klient.asystent.mockRejectedValueOnce(new Error('Gemini nie odpowiedział - spróbuj ponownie.'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Streść' }))
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('Gemini nie odpowiedział')
   })
 
   it('przypisana osoba spoza Składu dalej widoczna w wyborze', async () => {

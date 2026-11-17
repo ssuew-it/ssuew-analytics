@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { ExternalLink, Paperclip } from 'lucide-react'
+import { ExternalLink, Paperclip, Sparkles } from 'lucide-react'
+import { TekstAsystenta } from '@/components/deck/TekstAsystenta'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import { ETYKIETY_STATUSOW, adresZalacznika, linkGmail, pelnaData, rozmiar } from '@/lib/skrzynka/widok'
 import { MAKS_POBRANIA, type Sprawa, type Status, type SzczegolySprawy, type ZmianaSprawy } from '@/lib/skrzynka/typy'
@@ -20,6 +21,8 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
   const [dane, setDane] = useState<SzczegolySprawy | null>(null)
   const [blad, setBlad] = useState<string | null>(null)
   const [trwa, setTrwa] = useState(false)
+  const [streszczenie, setStreszczenie] = useState<string | null>(null)
+  const [mysli, setMysli] = useState(false)
 
   useEffect(() => {
     let aktywny = true
@@ -54,6 +57,19 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
   function pominZawsze(rodzaj: 'adres' | 'domena', kogo: string) {
     if (!window.confirm(`Nowe wątki od ${kogo} będą od razu trafiać do Pominiętych. Na razie nie da się tego cofnąć w D.E.C.K. Pominąć?`)) return
     void zmien({ pomin: rodzaj })
+  }
+
+  /** Treść wątku idzie do Gemini dopiero po tym kliknięciu (spec §9). */
+  async function strescz() {
+    setMysli(true)
+    setBlad(null)
+    try {
+      setStreszczenie((await klientSkrzynki.asystent(id, 'strescz')).tekst)
+    } catch (e) {
+      setBlad((e as Error).message)
+    } finally {
+      setMysli(false)
+    }
   }
 
   async function poWyslaniu(s: Sprawa) {
@@ -96,10 +112,18 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
             {s.organizacja ? ` · ${s.organizacja}` : ''} · {ETYKIETY_STATUSOW[s.status]}
           </p>
         </div>
-        <a href={linkGmail(email, s.id)} target="_blank" rel="noopener noreferrer" className={`${przycisk} inline-flex items-center gap-1`}>
-          <ExternalLink size={12} aria-hidden="true" />
-          Otwórz w Gmailu
-        </a>
+        <div className="flex flex-wrap gap-1.5">
+          {dane.wiadomosci.length > 0 && (
+            <button type="button" onClick={strescz} disabled={mysli} className={`${przycisk} inline-flex items-center gap-1`}>
+              <Sparkles size={12} aria-hidden="true" />
+              {mysli ? 'Streszczam…' : 'Streść'}
+            </button>
+          )}
+          <a href={linkGmail(email, s.id)} target="_blank" rel="noopener noreferrer" className={`${przycisk} inline-flex items-center gap-1`}>
+            <ExternalLink size={12} aria-hidden="true" />
+            Otwórz w Gmailu
+          </a>
+        </div>
       </header>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -146,6 +170,12 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
         </span>
       </div>
       {blad && <p role="alert" className="text-deck-danger">{blad}</p>}
+      {streszczenie && (
+        <section aria-label="Streszczenie D.E.C.K." className="space-y-1 rounded-md border border-deck-accent/30 bg-deck-accent/5 p-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-deck-muted">Streszczenie D.E.C.K.</p>
+          <TekstAsystenta tekst={streszczenie} />
+        </section>
+      )}
 
       {dane.wiadomosci.length === 0 && (
         <p className="text-deck-muted">Tego wątku nie ma już w Gmailu - sprawę można zamknąć albo pominąć.</p>
