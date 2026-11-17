@@ -1,6 +1,8 @@
 import type { DocumentData } from 'firebase-admin/firestore'
 import { kontaktyRef, organizacjeRef, skrzynkaStanRef, skrzynkaUstawieniaRef, sprawyRef, ustawieniaRef } from '@/lib/firebase/admin'
 import { naSklad } from '@/lib/planer/stan'
+import { dzisWarszawa, polnocWarszawa } from '@/lib/czas'
+import { przesunDate } from '@/lib/planer/trwanie'
 import { progAlarmu } from './statusy'
 import {
   STATUSY, TYPY_ORGANIZACJI, type KartaKontaktu, type KartaOrganizacji, type Kontakt, type LicznikiSkrzynki, type Organizacja,
@@ -420,7 +422,9 @@ export async function liczniki(teraz: number): Promise<LicznikiSkrzynki> {
 const MAKS_PO_TERMINIE = 10
 const MAKS_ORGANIZACJI = 10
 const DZIEN_MS = 86_400_000
-const OKNO_RUCHU_MS = 7 * DZIEN_MS
+const DNI_RUCHU = 7
+/** Północ (Warszawa) dnia, w którym wypada chwila `ms`. */
+const polnocDnia = (ms: number) => polnocWarszawa(dzisWarszawa(new Date(ms)))
 /**
  * Przy obecnym ruchu (ok. 4 sprawy tygodniowo) 100 najświeższych spraw z 7 dni
  * to całe okno; przy ponad 100 tygodniowo limit je skraca (plan, ryzyko 2).
@@ -433,14 +437,19 @@ const POZA_RUCHEM = new Set<unknown>(['do-przejrzenia', 'pominieta'])
  * Obraz skrzynki dla asystenta: liczby (te same co na kafelku), najdłużej
  * czekające sprawy po terminie i organizacje z ruchem w 7 dni. `null` -
  * skrzynka niepołączona albo liczniki zawiodły: sekcja jest wtedy `null`.
+ * Dni czekania i okno ruchu liczone w dniach kalendarzowych (Warszawa): sam
+ * upływ godzin w ciągu dnia nie zmienia obrazu, więc nie zmienia też śladu
+ * odprawy (`sladKontekstu`) i nie wywołuje nowej odprawy bez nowej poczty.
  */
 export async function obrazSkrzynki(teraz: number, l: LicznikiSkrzynki | null): Promise<ObrazSkrzynki | null> {
   if (!l || l.stan !== 'polaczona') return null
   const s = sprawyRef()
+  const dzis = dzisWarszawa(new Date(teraz))
+  const polnoc = polnocWarszawa(dzis)
   const [poTerminie, ruch] = await Promise.all([
     // Niezmiennik: `oczekujeOd` mają tylko sprawy Do odpowiedzi.
     s.where('oczekujeOd', '<', progAlarmu(teraz)).orderBy('oczekujeOd').limit(MAKS_PO_TERMINIE).get(),
-    s.where('ostatnia.kiedy', '>=', teraz - OKNO_RUCHU_MS).orderBy('ostatnia.kiedy', 'desc').limit(MAKS_RUCHU).get(),
+    s.where('ostatnia.kiedy', '>=', polnocWarszawa(przesunDate(dzis, -DNI_RUCHU))).orderBy('ostatnia.kiedy', 'desc').limit(MAKS_RUCHU).get(),
   ])
   const ile = new Map<string, number>()
   for (const d of ruch.docs) {
@@ -455,7 +464,8 @@ export async function obrazSkrzynki(teraz: number, l: LicznikiSkrzynki | null): 
     liczby: { doOdpowiedzi: l.doOdpowiedzi, poTerminie: l.poTerminie, doPrzejrzenia: l.doPrzejrzenia, czekaNaNich: l.czekaNaNich, wToku: l.wToku },
     poTerminie: poTerminie.docs.map((d) => {
       const x = naSprawe(d.id, d.data())
-      return { temat: x.temat, organizacja: x.organizacja, dniCzekania: Math.floor((teraz - (x.oczekujeOd ?? teraz)) / DZIEN_MS) }
+      // Zaokrąglenie: dzień zmiany czasu ma 23 albo 25 godzin.
+      return { temat: x.temat, organizacja: x.organizacja, dniCzekania: Math.round((polnoc - polnocDnia(x.oczekujeOd ?? teraz)) / DZIEN_MS) }
     }),
     aktywneOrganizacje: domeny.map((d, i) => ({ nazwa: naOrganizacje(d, nazwy[i]?.data() ?? {}).nazwa, domena: d, sprawy: ile.get(d) ?? 0 })),
   }

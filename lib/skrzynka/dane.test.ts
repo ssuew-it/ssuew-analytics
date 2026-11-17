@@ -420,4 +420,22 @@ describe('obraz skrzynki dla asystenta', () => {
     })
     expect(JSON.stringify(o)).not.toMatch(/TAJNA|@/)
   })
+
+  it('w ciągu jednego dnia obraz się nie zmienia - sam upływ godzin nie unieważnia odprawy', async () => {
+    const GODZINA = 3_600_000
+    await zapiszWynik({
+      sprawy: [
+        // Czeka od 14.10, 15:00 - liczone w milisekundach byłoby 5 dni rano i 6 wieczorem.
+        sprawa('a', { temat: 'Sala', oczekujeOd: TERAZ - 6 * DZIEN + 5 * GODZINA, ...kiedy(TERAZ - 6 * DZIEN + 5 * GODZINA) }),
+        // Ruch 13.10, 15:00 - okno liczone od chwili wypadłoby wieczorem z 7 dni.
+        sprawa('b', { status: 'w-toku', oczekujeOd: null, organizacja: 'ue.wroc.pl', ...kiedy(TERAZ - 7 * DZIEN + 5 * GODZINA) }),
+      ],
+      kontakty: [],
+      organizacje: [],
+    })
+    const rano = await obrazSkrzynki(TERAZ, L)
+    expect(rano?.poTerminie).toEqual([{ temat: 'Sala', organizacja: 'firma.pl', dniCzekania: 6 }])
+    expect(rano?.aktywneOrganizacje.map((x) => x.domena)).toContain('ue.wroc.pl')
+    expect(await obrazSkrzynki(TERAZ + 10 * GODZINA, L)).toEqual(rano)
+  })
 })
