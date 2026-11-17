@@ -128,4 +128,16 @@ describe('push i cron', () => {
     vi.stubEnv('CRON_SECRET', '')
     expect((await cron(zadanie('/api/skrzynka/cron', { naglowki: { authorization: 'Bearer ' } }))).status).toBe(401)
   })
+
+  it('cron: nieudane odnowienie obserwacji nie blokuje synchronizacji, ale kończy się błędem w logach', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    s.odnowObserwacje.mockRejectedValueOnce(new BladSkrzynki('inny', 'watch padł'))
+    s.synchronizuj.mockResolvedValueOnce({ stan: 'ok', zmian: 2 })
+    const r = await cron(zadanie('/api/skrzynka/cron', { naglowki: { authorization: 'Bearer cron-sekret' } }))
+    expect(s.synchronizuj).toHaveBeenCalled()
+    expect(r.status).toBe(500)
+    expect(await r.json()).toMatchObject({ synchronizacja: { stan: 'ok', zmian: 2 }, obserwacja: expect.any(String) })
+    expect(log).toHaveBeenCalledWith('[skrzynka] cron - odnowienie obserwacji:', expect.anything())
+    log.mockRestore()
+  })
 })
