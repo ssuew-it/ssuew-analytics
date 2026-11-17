@@ -114,3 +114,9 @@ Użytkownik wybrał **B**; aktualizacja na przycisk z podsumowaniem (nie automat
 - Sama godzina startu bez końca: domyślna długość (np. 1 h) albo inny sposób.
 - Porównanie i zapis: pobranie wydarzeń ze znacznikiem przez `privateExtendedProperty`, równoległość i partie w limicie 60 s.
 - Testy: czyste przepisanie wydarzenia Planera na wydarzenie Google (wszystkie przypadki terminu), porównanie (dodaj/zmień/usuń/pomiń, ręczne nietknięte), trasa (401/403, brak połączenia, brak zakresu, błąd Google), okno podsumowania.
+
+## Zmiana 2026-11-17: miesiąc i zaznaczanie (zaakceptowane)
+
+- Okno ma wybór miesiąca z bieżącego semestru, domyślnie następny (gdy go nie ma w semestrze - bieżący, potem pierwszy). Wysyłka dotyczy tylko wybranego miesiąca: wydarzenia Planera startujące w nim, wpisy D.E.C.K. startujące w nim i ręczne wpisy z jego okna. Para (wydarzenie, wpis ze znacznikiem) wchodzi do planu, gdy którekolwiek z nich startuje w wybranym miesiącu - przeniesienie grudzień → styczeń to „zmienię” istniejącego wpisu, nie nowy wpis.
+- Każda pozycja ≈ + ~ - ma pole wyboru, domyślnie zaznaczone; odznaczona jest pomijana tylko w tej wysyłce. „Do sprawdzenia ręcznie” bez pól. Trwałe wyłączenie = zmiana kategorii w Planerze na Inne.
+- POST wysyła `{ miesiac, wybrane }`; serwer liczy plan od nowa i wykonuje tylko pozycje zarówno zaznaczone, jak i nadal obecne w planie (klucze `przejmij:<deckId>`, `dodaj:<deckId>`, `zmien:<deckId>`, `usun:<id wpisu>`).

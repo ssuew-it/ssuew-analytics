@@ -14,6 +14,9 @@ const g = (summary: string, dzien: number, czas = true): WydarzenieGoogle => ({
   extendedProperties: { private: { deck: '1', deckId: summary, deckSemestr: '2026Z' } },
 })
 const pusty: PlanKalendarza = { przejmij: [], dodaj: [], zmien: [], usun: [], doSprawdzenia: [] }
+const MIESIACE = ['2026-10', '2026-11', '2026-12', '2027-01', '2027-02']
+const podsumowanie = (plan: PlanKalendarza, miesiac = '2026-11') => odp(200, { semestr: '2026Z', miesiace: MIESIACE, miesiac, plan })
+const WSZYSTKIE = ['przejmij:Komisja Dydaktyczna', 'dodaj:Gala SSUEW', 'zmien:Projekt Juwenalia', 'usun:g3']
 const PLAN: PlanKalendarza = {
   przejmij: [{ wpisId: 'r1', wydarzenie: g('Komisja Dydaktyczna', 21) }],
   dodaj: [g('Gala SSUEW', 25, false)],
@@ -38,7 +41,7 @@ const otworz = async () => {
 
 describe('WyslijDoKalendarza', () => {
   it('podsumowanie z przejęciem, dodaniem, zmianą i usunięciem; Wyślij wysyła POST i pokazuje wynik', async () => {
-    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: PLAN }))
+    fetchMock.mockResolvedValueOnce(podsumowanie(PLAN))
     const okno = await otworz()
     expect(fetchMock).toHaveBeenCalledWith('/api/planer/kalendarz', expect.objectContaining({ cache: 'no-store' }))
     expect(within(okno).getByText('Przejmę 1 · dodam 1 · zmienię 1 · usunę 1')).toBeInTheDocument()
@@ -48,39 +51,77 @@ describe('WyslijDoKalendarza', () => {
 
     fetchMock.mockResolvedValueOnce(odp(200, { udane: 4, nieudane: [] }))
     await act(async () => {
-      fireEvent.click(within(okno).getByRole('button', { name: 'Wyślij' }))
+      fireEvent.click(within(okno).getByRole('button', { name: 'Wyślij zaznaczone (4)' }))
     })
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/planer/kalendarz', expect.objectContaining({ method: 'POST' }))
+    const [adres, opcje] = fetchMock.mock.calls.at(-1)!
+    expect(adres).toBe('/api/planer/kalendarz')
+    expect(opcje.method).toBe('POST')
+    expect(JSON.parse(opcje.body)).toEqual({ miesiac: '2026-11', wybrane: WSZYSTKIE })
     expect(within(okno).getByRole('status')).toHaveTextContent('Wysłano: 4 zmiany')
   })
 
+  it('odznaczone pozycje nie idą', async () => {
+    fetchMock.mockResolvedValueOnce(podsumowanie(PLAN))
+    const okno = await otworz()
+    fireEvent.click(within(okno).getByRole('checkbox', { name: 'dodam 25.11 Gala SSUEW' }))
+    fireEvent.click(within(okno).getByRole('checkbox', { name: 'usunę 03.11 Stara komisja' }))
+    fetchMock.mockResolvedValueOnce(odp(200, { udane: 2, nieudane: [] }))
+    await act(async () => {
+      fireEvent.click(within(okno).getByRole('button', { name: 'Wyślij zaznaczone (2)' }))
+    })
+    expect(JSON.parse(fetchMock.mock.calls.at(-1)![1].body).wybrane).toEqual(['przejmij:Komisja Dydaktyczna', 'zmien:Projekt Juwenalia'])
+  })
+
+  it('bez zaznaczonych przycisk nieaktywny', async () => {
+    fetchMock.mockResolvedValueOnce(podsumowanie({ ...pusty, dodaj: [g('Gala SSUEW', 25)] }))
+    const okno = await otworz()
+    fireEvent.click(within(okno).getByRole('checkbox', { name: 'dodam 25.11 Gala SSUEW' }))
+    expect(within(okno).getByRole('button', { name: 'Wyślij zaznaczone (0)' })).toBeDisabled()
+  })
+
+  it('domyślny miesiąc z serwera; zmiana miesiąca liczy podsumowanie od nowa', async () => {
+    fetchMock.mockResolvedValueOnce(podsumowanie(pusty, '2026-12'))
+    const okno = await otworz()
+    expect(fetchMock).toHaveBeenCalledWith('/api/planer/kalendarz', expect.anything())
+    const wybor = within(okno).getByRole('combobox', { name: 'Miesiąc' })
+    expect(wybor).toHaveValue('2026-12')
+    expect(within(wybor).getAllByRole('option').map((o) => o.textContent)).toEqual(['Październik 2026', 'Listopad 2026', 'Grudzień 2026', 'Styczeń 2027', 'Luty 2027'])
+    fetchMock.mockResolvedValueOnce(podsumowanie({ ...pusty, dodaj: [g('Gala SSUEW', 25)] }, '2027-01'))
+    await act(async () => {
+      fireEvent.change(wybor, { target: { value: '2027-01' } })
+    })
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/planer/kalendarz?miesiac=2027-01', expect.anything())
+    expect(within(okno).getByRole('combobox', { name: 'Miesiąc' })).toHaveValue('2027-01')
+    expect(within(okno).getByText('Dodam 1')).toBeInTheDocument()
+  })
+
   it('częściowa porażka - lista nieudanych', async () => {
-    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: PLAN }))
+    fetchMock.mockResolvedValueOnce(podsumowanie(PLAN))
     const okno = await otworz()
     fetchMock.mockResolvedValueOnce(odp(200, { udane: 3, nieudane: [{ tytul: 'Gala SSUEW', powod: 'limit Google - kliknij Wyślij ponownie za minutę' }] }))
     await act(async () => {
-      fireEvent.click(within(okno).getByRole('button', { name: 'Wyślij' }))
+      fireEvent.click(within(okno).getByRole('button', { name: 'Wyślij zaznaczone (4)' }))
     })
     expect(within(okno).getByRole('status')).toHaveTextContent('Wysłano: 3 zmiany')
     expect(within(okno).getByRole('alert')).toHaveTextContent('Gala SSUEW - limit Google - kliknij Wyślij ponownie za minutę')
   })
 
   it('bez zmian - Kalendarz jest aktualny, bez przycisku Wyślij', async () => {
-    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: pusty }))
+    fetchMock.mockResolvedValueOnce(podsumowanie(pusty))
     const okno = await otworz()
     expect(within(okno).getByText('Kalendarz jest aktualny')).toBeInTheDocument()
-    expect(within(okno).queryByRole('button', { name: 'Wyślij' })).not.toBeInTheDocument()
+    expect(within(okno).queryByRole('button', { name: /Wyślij zaznaczone/ })).not.toBeInTheDocument()
   })
 
   it('do sprawdzenia ręcznie widoczne', async () => {
-    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: { ...pusty, doSprawdzenia: [{ wydarzenie: g('Komisja Dydaktyczna', 21), kandydaci: 2, spotkanie: false }] } }))
+    fetchMock.mockResolvedValueOnce(podsumowanie({ ...pusty, doSprawdzenia: [{ wydarzenie: g('Komisja Dydaktyczna', 21), kandydaci: 2, spotkanie: false }] }))
     const okno = await otworz()
     const sekcja = within(okno).getByRole('region', { name: 'Do sprawdzenia ręcznie' })
     expect(sekcja).toHaveTextContent('21.11 Komisja Dydaktyczna - 2 pasujące wpisy w kalendarzu')
   })
 
   it('do sprawdzenia: pasujące spotkanie z gośćmi opisane wprost', async () => {
-    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: { ...pusty, doSprawdzenia: [{ wydarzenie: g('Komisja Dydaktyczna', 21), kandydaci: 1, spotkanie: true }] } }))
+    fetchMock.mockResolvedValueOnce(podsumowanie({ ...pusty, doSprawdzenia: [{ wydarzenie: g('Komisja Dydaktyczna', 21), kandydaci: 1, spotkanie: true }] }))
     const okno = await otworz()
     expect(within(okno).getByRole('region', { name: 'Do sprawdzenia ręcznie' }))
       .toHaveTextContent('21.11 Komisja Dydaktyczna - w kalendarzu jest spotkanie z gośćmi albo zaproszenie o tym tytule')
@@ -94,7 +135,7 @@ describe('WyslijDoKalendarza', () => {
   })
 
   it('Zamknij chowa okno', async () => {
-    fetchMock.mockResolvedValueOnce(odp(200, { semestr: '2026Z', plan: pusty }))
+    fetchMock.mockResolvedValueOnce(podsumowanie(pusty))
     const okno = await otworz()
     fireEvent.click(within(okno).getByRole('button', { name: 'Zamknij' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

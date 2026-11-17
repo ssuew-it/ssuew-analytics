@@ -1,4 +1,4 @@
-import type { Wydarzenie } from '@/lib/planer/typy'
+import type { Miesiac, Wydarzenie } from '@/lib/planer/typy'
 import { DO_KALENDARZA, DOPISEK_BEZ_GODZINY, naWydarzenieGoogle, type Termin, type WydarzenieGoogle } from './wydarzenie'
 
 /** Wpis już siedzący w kalendarzu; `deckId` null = wpis ręczny, bez znacznika D.E.C.K. */
@@ -44,12 +44,17 @@ function rozne(w: WpisKalendarza, g: WydarzenieGoogle): boolean {
     || (w.location ?? null) !== (g.location ?? null)
 }
 
+const dwie = (n: number) => String(n).padStart(2, '0')
+
 /**
  * Plan zmian: Planer (tylko kategorie `DO_KALENDARZA`) kontra wpisy kalendarza.
  * Wpisy ze znacznikiem innego semestru i ręczne bez pary nigdy nie trafiają do planu.
+ * Z `miesiac` - tylko to, co startuje w tym miesiącu; para wydarzenie-wpis wchodzi,
+ * gdy którekolwiek z nich w nim startuje (przeniesienie między miesiącami to zmiana, nie nowy wpis).
  */
-export function porownaj(wydarzenia: Wydarzenie[], wpisy: WpisKalendarza[], semestrId: string): PlanKalendarza {
+export function porownaj(wydarzenia: Wydarzenie[], wpisy: WpisKalendarza[], semestrId: string, miesiac?: Miesiac): PlanKalendarza {
   const plan: PlanKalendarza = { przejmij: [], dodaj: [], zmien: [], usun: [], doSprawdzenia: [] }
+  const wMiesiacu = (t: Termin) => !miesiac || klucz(t).slice(0, 7) === `${miesiac.y}-${dwie(miesiac.m)}`
 
   const nasze = new Map<string, WpisKalendarza>()
   const nadmiarowe: WpisKalendarza[] = []
@@ -70,8 +75,10 @@ export function porownaj(wydarzenia: Wydarzenie[], wpisy: WpisKalendarza[], seme
     const istniejacy = nasze.get(w.id)
     if (istniejacy) {
       sparowane.add(w.id)
-      if (rozne(istniejacy, g)) plan.zmien.push({ wpisId: istniejacy.id, wydarzenie: g })
-    } else {
+      if ((wMiesiacu(g.start) || wMiesiacu(istniejacy.start)) && rozne(istniejacy, g)) {
+        plan.zmien.push({ wpisId: istniejacy.id, wydarzenie: g })
+      }
+    } else if (wMiesiacu(g.start)) {
       bezPary.push(g)
     }
   }
@@ -94,7 +101,31 @@ export function porownaj(wydarzenia: Wydarzenie[], wpisy: WpisKalendarza[], seme
     }
   }
 
-  for (const [deckId, w] of nasze) if (!sparowane.has(deckId)) plan.usun.push(w)
-  plan.usun.push(...nadmiarowe)
+  for (const [deckId, w] of nasze) if (!sparowane.has(deckId) && wMiesiacu(w.start)) plan.usun.push(w)
+  plan.usun.push(...nadmiarowe.filter((w) => wMiesiacu(w.start)))
   return plan
+}
+
+const deckId = (g: WydarzenieGoogle) => g.extendedProperties.private.deckId
+
+/** Klucze pozycji planu w kolejności okna - po nich klient mówi, co zaznaczył. */
+export function kluczePlanu(plan: PlanKalendarza): string[] {
+  return [
+    ...plan.przejmij.map((p) => `przejmij:${deckId(p.wydarzenie)}`),
+    ...plan.dodaj.map((g) => `dodaj:${deckId(g)}`),
+    ...plan.zmien.map((z) => `zmien:${deckId(z.wydarzenie)}`),
+    ...plan.usun.map((w) => `usun:${w.id}`),
+  ]
+}
+
+/** Plan okrojony do zaznaczonych pozycji; klucz spoza planu (nieaktualny) nic nie robi. */
+export function wybierz(plan: PlanKalendarza, wybrane: Iterable<string>): PlanKalendarza {
+  const z = new Set(wybrane)
+  return {
+    przejmij: plan.przejmij.filter((p) => z.has(`przejmij:${deckId(p.wydarzenie)}`)),
+    dodaj: plan.dodaj.filter((g) => z.has(`dodaj:${deckId(g)}`)),
+    zmien: plan.zmien.filter((x) => z.has(`zmien:${deckId(x.wydarzenie)}`)),
+    usun: plan.usun.filter((w) => z.has(`usun:${w.id}`)),
+    doSprawdzenia: plan.doSprawdzenia,
+  }
 }

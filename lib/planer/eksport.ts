@@ -74,7 +74,7 @@ export const KOLORY_LISTY = {
 }
 
 const KOLKA = ['①', '②', '③', '④']
-const NAZWY_MIESIECY = [
+export const NAZWY_MIESIECY = [
   'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
   'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień',
 ]

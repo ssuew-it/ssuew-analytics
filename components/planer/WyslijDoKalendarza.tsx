@@ -1,14 +1,21 @@
 'use client'
 import { useState } from 'react'
 import { CalendarCheck, X } from 'lucide-react'
-import type { PlanKalendarza } from '@/lib/kalendarz/porownanie'
+import { kluczePlanu, type PlanKalendarza } from '@/lib/kalendarz/porownanie'
 import type { Termin } from '@/lib/kalendarz/wydarzenie'
+import { NAZWY_MIESIECY } from '@/lib/planer/eksport'
 
 const ADRES = '/api/planer/kalendarz'
 
+interface Podsumowanie {
+  miesiace: string[]
+  miesiac: string
+  plan: PlanKalendarza
+}
+
 type Stan =
   | { etap: 'wczytuje' }
-  | { etap: 'plan'; plan: PlanKalendarza; wysyla: boolean }
+  | { etap: 'plan'; wysyla: boolean }
   | { etap: 'wynik'; udane: number; nieudane: { tytul: string; powod: string }[] }
   | { etap: 'blad'; tekst: string; doUstawien: boolean }
 
@@ -17,6 +24,9 @@ const dzienMiesiac = (t: Termin) => {
   const iso = 'date' in t ? t.date : t.dateTime
   return `${iso.slice(8, 10)}.${iso.slice(5, 7)}`
 }
+
+/** „2026-12” → „Grudzień 2026”. */
+const nazwaMiesiaca = (m: string) => `${NAZWY_MIESIECY[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`
 
 /** 1 zmianę, 2-4 zmiany, 5+ zmian (12-14 też „zmian”). */
 function zmian(n: number): string {
@@ -28,34 +38,62 @@ function zmian(n: number): string {
 
 const wpisow = (n: number) => (n >= 2 && n <= 4 ? `${n} pasujące wpisy` : `${n} pasujących wpisów`)
 
-async function zapytaj(method: 'GET' | 'POST') {
-  const res = await fetch(ADRES, { method, cache: 'no-store' })
+async function zapytaj(adres: string, init: RequestInit) {
+  const res = await fetch(adres, { cache: 'no-store', ...init })
   const d = await res.json().catch(() => ({}))
   if (!res.ok) return { blad: String(d.error ?? 'Nie udało się połączyć z kalendarzem.'), status: res.status }
   return { dane: d }
 }
 
 /**
- * Przycisk Planera: podsumowanie zmian w Kalendarzu Samorządowicza i wysyłka.
- * Nic nie trafia do kalendarza bez obejrzenia podsumowania i kliknięcia „Wyślij”.
+ * Przycisk Planera: podsumowanie zmian w Kalendarzu Samorządowicza dla jednego
+ * miesiąca i wysyłka zaznaczonych pozycji. Nic nie trafia do kalendarza bez
+ * obejrzenia podsumowania i kliknięcia „Wyślij zaznaczone”.
  */
 export function WyslijDoKalendarza() {
   const [otwarte, setOtwarte] = useState(false)
   const [stan, setStan] = useState<Stan>({ etap: 'wczytuje' })
+  const [dane, setDane] = useState<Podsumowanie | null>(null)
+  const [zaznaczone, setZaznaczone] = useState<Set<string>>(new Set())
 
-  async function otworz() {
-    setOtwarte(true)
+  async function wczytaj(miesiac?: string) {
     setStan({ etap: 'wczytuje' })
-    const r = await zapytaj('GET')
-    if ('blad' in r) setStan({ etap: 'blad', tekst: r.blad!, doUstawien: r.status === 409 })
-    else setStan({ etap: 'plan', plan: r.dane.plan as PlanKalendarza, wysyla: false })
+    const r = await zapytaj(miesiac ? `${ADRES}?miesiac=${encodeURIComponent(miesiac)}` : ADRES, { method: 'GET' })
+    if ('blad' in r) {
+      setStan({ etap: 'blad', tekst: r.blad!, doUstawien: r.status === 409 })
+      return
+    }
+    const d = r.dane as Podsumowanie
+    setDane(d)
+    setZaznaczone(new Set(kluczePlanu(d.plan)))
+    setStan({ etap: 'plan', wysyla: false })
   }
 
-  async function wyslij(plan: PlanKalendarza) {
-    setStan({ etap: 'plan', plan, wysyla: true })
-    const r = await zapytaj('POST')
+  function otworz() {
+    setOtwarte(true)
+    void wczytaj()
+  }
+
+  async function wyslij() {
+    if (!dane) return
+    setStan({ etap: 'plan', wysyla: true })
+    const wybrane = kluczePlanu(dane.plan).filter((k) => zaznaczone.has(k))
+    const r = await zapytaj(ADRES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ miesiac: dane.miesiac, wybrane }),
+    })
     if ('blad' in r) setStan({ etap: 'blad', tekst: r.blad!, doUstawien: r.status === 409 })
     else setStan({ etap: 'wynik', udane: r.dane.udane, nieudane: r.dane.nieudane ?? [] })
+  }
+
+  function przelacz(klucz: string) {
+    setZaznaczone((z) => {
+      const n = new Set(z)
+      if (n.has(klucz)) n.delete(klucz)
+      else n.add(klucz)
+      return n
+    })
   }
 
   return (
@@ -76,7 +114,21 @@ export function WyslijDoKalendarza() {
                 <X size={16} aria-hidden="true" />
               </button>
             </div>
-            <Tresc stan={stan} onWyslij={wyslij} />
+            {dane && stan.etap !== 'wynik' && (
+              <label className="flex items-center gap-2 text-deck-muted">
+                Miesiąc
+                <select
+                  aria-label="Miesiąc"
+                  value={dane.miesiac}
+                  disabled={stan.etap === 'wczytuje' || (stan.etap === 'plan' && stan.wysyla)}
+                  onChange={(e) => void wczytaj(e.target.value)}
+                  className="deck-input rounded-md px-2 py-1 text-deck-text"
+                >
+                  {dane.miesiace.map((m) => <option key={m} value={m}>{nazwaMiesiaca(m)}</option>)}
+                </select>
+              </label>
+            )}
+            <Tresc stan={stan} dane={dane} zaznaczone={zaznaczone} onPrzelacz={przelacz} onWyslij={wyslij} />
           </div>
         </div>
       )}
@@ -84,7 +136,13 @@ export function WyslijDoKalendarza() {
   )
 }
 
-function Tresc({ stan, onWyslij }: { stan: Stan; onWyslij: (p: PlanKalendarza) => void }) {
+function Tresc({ stan, dane, zaznaczone, onPrzelacz, onWyslij }: {
+  stan: Stan
+  dane: Podsumowanie | null
+  zaznaczone: Set<string>
+  onPrzelacz: (klucz: string) => void
+  onWyslij: () => void
+}) {
   if (stan.etap === 'wczytuje') return <p className="font-mono text-[11px] text-deck-muted">Porównuję Planer z kalendarzem…</p>
 
   if (stan.etap === 'blad') {
@@ -114,17 +172,20 @@ function Tresc({ stan, onWyslij }: { stan: Stan; onWyslij: (p: PlanKalendarza) =
     )
   }
 
-  const { plan, wysyla } = stan
+  if (!dane) return null
+  const { plan } = dane
+  const klucze = kluczePlanu(plan)
   const wiersze = [
-    ...plan.przejmij.map((p) => ({ znak: '≈', opis: 'przejmę ręczny wpis', termin: p.wydarzenie.start, tytul: p.wydarzenie.summary })),
+    ...plan.przejmij.map((p) => ({ znak: '≈', opis: 'przejmę', termin: p.wydarzenie.start, tytul: p.wydarzenie.summary })),
     ...plan.dodaj.map((g) => ({ znak: '+', opis: 'dodam', termin: g.start, tytul: g.summary })),
     ...plan.zmien.map((z) => ({ znak: '~', opis: 'zmienię', termin: z.wydarzenie.start, tytul: z.wydarzenie.summary })),
     ...plan.usun.map((w) => ({ znak: '-', opis: 'usunę', termin: w.start, tytul: w.summary })),
-  ]
+  ].map((w, i) => ({ ...w, klucz: klucze[i] }))
   const liczby = ([['przejmę', plan.przejmij.length], ['dodam', plan.dodaj.length], ['zmienię', plan.zmien.length], ['usunę', plan.usun.length]] as const)
     .filter(([, n]) => n > 0)
     .map(([s, n]) => `${s} ${n}`)
     .join(' · ')
+  const ileZaznaczonych = wiersze.filter((w) => zaznaczone.has(w.klucz)).length
 
   return (
     <div className="space-y-3">
@@ -134,15 +195,26 @@ function Tresc({ stan, onWyslij }: { stan: Stan; onWyslij: (p: PlanKalendarza) =
         <>
           <p className="text-deck-text">{liczby.charAt(0).toUpperCase() + liczby.slice(1)}</p>
           <ul aria-label="Zmiany w kalendarzu" className="max-h-[40vh] space-y-1 overflow-y-auto">
-            {wiersze.map((w, i) => (
-              <li key={i} className="flex gap-2">
-                <span aria-label={w.opis} title={w.opis} className="w-3 shrink-0 font-mono text-deck-accent">{w.znak}</span>
-                <span className="shrink-0 font-mono text-deck-muted">{dzienMiesiac(w.termin)}</span>
-                <span className="text-deck-text">{w.tytul}</span>
+            {wiersze.map((w) => (
+              <li key={w.klucz}>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    aria-label={`${w.opis} ${dzienMiesiac(w.termin)} ${w.tytul}`}
+                    checked={zaznaczone.has(w.klucz)}
+                    onChange={() => onPrzelacz(w.klucz)}
+                    disabled={stan.wysyla}
+                  />
+                  <span aria-hidden="true" className="w-3 shrink-0 font-mono text-deck-accent">{w.znak}</span>
+                  <span className="shrink-0 font-mono text-deck-muted">{dzienMiesiac(w.termin)}</span>
+                  <span className="text-deck-text">{w.tytul}</span>
+                </label>
               </li>
             ))}
           </ul>
-          <p className="text-[11.5px] text-deck-muted">≈ przejmę ręczny wpis · + dodam · ~ zmienię · - usunę. Google nikogo nie powiadomi.</p>
+          <p className="text-[11.5px] text-deck-muted">
+            ≈ przejmę ręczny wpis · + dodam · ~ zmienię · - usunę. Odznaczone pomijam tylko teraz - wrócą przy następnej wysyłce; żeby coś nigdy nie trafiało do kalendarza, zmień mu kategorię na Inne. Google nikogo nie powiadomi.
+          </p>
         </>
       )}
 
@@ -162,8 +234,8 @@ function Tresc({ stan, onWyslij }: { stan: Stan; onWyslij: (p: PlanKalendarza) =
       )}
 
       {wiersze.length > 0 && (
-        <button type="button" disabled={wysyla} onClick={() => onWyslij(plan)} className="deck-button rounded-md px-4 py-1.5 text-[12px] font-semibold disabled:opacity-50">
-          {wysyla ? 'Wysyłam…' : 'Wyślij'}
+        <button type="button" disabled={stan.wysyla || ileZaznaczonych === 0} onClick={onWyslij} className="deck-button rounded-md px-4 py-1.5 text-[12px] font-semibold disabled:opacity-50">
+          {stan.wysyla ? 'Wysyłam…' : `Wyślij zaznaczone (${ileZaznaczonych})`}
         </button>
       )}
     </div>

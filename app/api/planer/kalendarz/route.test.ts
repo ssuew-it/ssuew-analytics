@@ -30,7 +30,14 @@ import { GET, POST } from './route'
 import { BladKalendarza } from '@/lib/kalendarz/google'
 
 const BAZA = 'https://ssuew-analytics.vercel.app'
-const zadanie = () => ({ url: `${BAZA}/api/planer/kalendarz`, nextUrl: new URL(`${BAZA}/api/planer/kalendarz`), headers: new Headers() }) as never
+const zadanie = (q = '', body?: unknown) =>
+  ({
+    url: `${BAZA}/api/planer/kalendarz${q}`,
+    nextUrl: new URL(`${BAZA}/api/planer/kalendarz${q}`),
+    headers: new Headers(),
+    json: async () => body,
+  }) as never
+const wyslij = (body: unknown = { miesiac: '2026-11', wybrane: ['dodaj:w1', 'dodaj:w2'] }) => POST(zadanie('', body))
 
 const W = (n: Partial<Wydarzenie> = {}): Wydarzenie => ({
   ...POLA_DOMYSLNE,
@@ -59,35 +66,61 @@ describe('/api/planer/kalendarz', () => {
   it('bez sesji 401, zarząd 403', async () => {
     ktoPyta.mockResolvedValue(null)
     expect((await GET(zadanie())).status).toBe(401)
-    expect((await POST(zadanie())).status).toBe(401)
+    expect((await wyslij()).status).toBe(401)
     ktoPyta.mockResolvedValue({ uid: 'kod:1', email: 'Jula', rola: 'board' })
     expect((await GET(zadanie())).status).toBe(403)
-    expect((await POST(zadanie())).status).toBe(403)
+    expect((await wyslij()).status).toBe(403)
     expect(wykonajPlan).not.toHaveBeenCalled()
   })
 
-  it('GET - plan liczony z bieżącego semestru', async () => {
-    const r = await GET(zadanie())
-    expect(r.status).toBe(200)
-    const d = (await r.json()) as { semestr: string; plan: PlanKalendarza }
+  it('GET bez miesiąca - następny miesiąc semestru i lista miesięcy', async () => {
+    const d = await (await GET(zadanie())).json()
     expect(d.semestr).toBe('2026Z')
+    expect(d.miesiac).toBe('2026-12')
+    expect(d.miesiace).toEqual(['2026-10', '2026-11', '2026-12', '2027-01', '2027-02'])
+    expect(d.plan.dodaj).toEqual([])
+    const [, , od, do_] = wpisyKalendarza.mock.calls[0]
+    expect(new Date(od).toISOString()).toBe('2026-11-30T23:00:00.000Z')
+    expect(new Date(do_).toISOString()).toBe('2026-12-31T23:00:00.000Z')
+  })
+
+  it('w lutym (ostatni miesiąc semestru) - domyślnie bieżący', async () => {
+    vi.setSystemTime(new Date(Date.UTC(2027, 1, 10, 12)))
+    expect((await (await GET(zadanie())).json()).miesiac).toBe('2027-02')
+  })
+
+  it('GET - plan wybranego miesiąca z bieżącego semestru', async () => {
+    const r = await GET(zadanie('?miesiac=2026-11'))
+    expect(r.status).toBe(200)
+    const d = (await r.json()) as { semestr: string; miesiac: string; plan: PlanKalendarza }
+    expect(d.miesiac).toBe('2026-11')
     expect(d.plan.dodaj.map((g) => g.summary)).toEqual(['Komisja Dydaktyczna', 'Gala'])
     expect(obrazPlanera).toHaveBeenCalledWith('2026Z')
     expect(odswiezDostep).toHaveBeenCalledWith('refresh')
     const [dostep, semestr, od, do_] = wpisyKalendarza.mock.calls[0]
     expect([dostep, semestr]).toEqual(['dostep', '2026Z'])
-    expect(new Date(od).toISOString()).toBe('2026-09-30T22:00:00.000Z')
-    expect(new Date(do_).toISOString()).toBe('2027-02-28T23:00:00.000Z')
+    expect(new Date(od).toISOString()).toBe('2026-10-31T23:00:00.000Z')
+    expect(new Date(do_).toISOString()).toBe('2026-11-30T23:00:00.000Z')
     expect(wykonajPlan).not.toHaveBeenCalled()
   })
 
-  it('POST liczy plan od nowa i zwraca wynik', async () => {
-    const r = await POST(zadanie())
+  it('miesiąc spoza semestru albo zły zapis - 400', async () => {
+    expect((await GET(zadanie('?miesiac=2027-05'))).status).toBe(400)
+    expect((await GET(zadanie('?miesiac=grudzien'))).status).toBe(400)
+    expect((await wyslij({ miesiac: '2027-05', wybrane: [] })).status).toBe(400)
+    expect((await wyslij({ miesiac: '2026-11', wybrane: 'dodaj:w1' })).status).toBe(400)
+    expect((await wyslij(null)).status).toBe(400)
+    expect(wykonajPlan).not.toHaveBeenCalled()
+  })
+
+  it('POST liczy plan od nowa i wykonuje tylko zaznaczone', async () => {
+    const r = await wyslij({ miesiac: '2026-11', wybrane: ['dodaj:w2', 'usun:nieaktualny'] })
     expect(r.status).toBe(200)
     expect(await r.json()).toEqual({ udane: 2, nieudane: [] })
     const [dostep, plan] = wykonajPlan.mock.calls[0] as [string, PlanKalendarza]
     expect(dostep).toBe('dostep')
-    expect(plan.dodaj).toHaveLength(2)
+    expect(plan.dodaj.map((g) => g.summary)).toEqual(['Gala'])
+    expect(plan.usun).toEqual([])
     expect(wpisyKalendarza).toHaveBeenCalledTimes(1)
   })
 
@@ -98,7 +131,7 @@ describe('/api/planer/kalendarz', () => {
     expect((await r.json()).error).toBe('Kalendarz niepołączony - połącz go w Ustawieniach skrzynki.')
     wpisyKalendarza.mockRejectedValue(new BladKalendarza('brak-zgody', '403'))
     czytajStan.mockResolvedValue({ polaczona: true, kalendarz: true, token: 'enc:r' })
-    expect((await POST(zadanie())).status).toBe(409)
+    expect((await wyslij()).status).toBe(409)
   })
 
   it('Calendar API wyłączone - 503 z instrukcją', async () => {
@@ -114,14 +147,14 @@ describe('/api/planer/kalendarz', () => {
 
   it('częściowa porażka - 200 z listą nieudanych', async () => {
     wykonajPlan.mockResolvedValue({ udane: 1, nieudane: [{ tytul: 'Gala', powod: 'limit Google - kliknij Wyślij ponownie za minutę' }] })
-    const r = await POST(zadanie())
+    const r = await wyslij()
     expect(r.status).toBe(200)
     expect((await r.json()).nieudane).toEqual([{ tytul: 'Gala', powod: 'limit Google - kliknij Wyślij ponownie za minutę' }])
   })
 
   it('drugie wysłanie po częściowej porażce nie dubluje', async () => {
     wpisyKalendarza.mockResolvedValue([naWpis(W(), 'g1')])
-    const d = (await (await GET(zadanie())).json()) as { plan: PlanKalendarza }
+    const d = (await (await GET(zadanie('?miesiac=2026-11'))).json()) as { plan: PlanKalendarza }
     expect(d.plan.dodaj.map((g) => g.summary)).toEqual(['Gala'])
     expect(d.plan.zmien).toEqual([])
   })

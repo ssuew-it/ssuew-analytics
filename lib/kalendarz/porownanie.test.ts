@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { POLA_DOMYSLNE, type Wydarzenie } from '@/lib/planer/typy'
 import { naWydarzenieGoogle, type WydarzenieGoogle } from './wydarzenie'
-import { porownaj, type WpisKalendarza } from './porownanie'
+import { kluczePlanu, porownaj, wybierz, type WpisKalendarza } from './porownanie'
 
 const S = '2026Z'
 
@@ -112,5 +112,48 @@ describe('porownaj', () => {
     const w = W({ godzina: null, godzinaDo: null })
     const reczny = wpis(naWydarzenieGoogle(W(), S), 'r1', false)
     expect(porownaj([w], [reczny], S).przejmij).toHaveLength(1)
+  })
+})
+describe('porownaj w jednym miesiącu', () => {
+  const GRUDZIEN = { m: 12, y: 2026 }
+  const LISTOPADOWE = W({ id: 'lis' })
+  const GRUDNIOWE = W({ id: 'gru', dzien: 10, miesiac: 12 })
+
+  it('tylko wydarzenia i wpisy wybranego miesiąca', () => {
+    const staryWpis = wpis(naWydarzenieGoogle(W({ id: 'usuniete', dzien: 5 }), S), 'g-lis')
+    const plan = porownaj([LISTOPADOWE, GRUDNIOWE], [staryWpis], S, GRUDZIEN)
+    expect(plan.dodaj.map((g) => g.extendedProperties.private.deckId)).toEqual(['gru'])
+    expect(plan.usun).toEqual([])
+    const listopad = porownaj([LISTOPADOWE, GRUDNIOWE], [staryWpis], S, { m: 11, y: 2026 })
+    expect(listopad.dodaj.map((g) => g.extendedProperties.private.deckId)).toEqual(['lis'])
+    expect(listopad.usun).toEqual([staryWpis])
+  })
+
+  it('przeniesione z grudnia na styczeń - zmień istniejący wpis, nie dodawaj drugiego', () => {
+    const wGrudniu = wpis(naWydarzenieGoogle(GRUDNIOWE, S), 'g1')
+    const poPrzeniesieniu = W({ id: 'gru', dzien: 14, miesiac: 1, rok: 2027 })
+    for (const m of [GRUDZIEN, { m: 1, y: 2027 }]) {
+      const plan = porownaj([poPrzeniesieniu], [wGrudniu], S, m)
+      expect(plan.zmien).toEqual([{ wpisId: 'g1', wydarzenie: naWydarzenieGoogle(poPrzeniesieniu, S) }])
+      expect(plan.dodaj).toEqual([])
+      expect(plan.usun).toEqual([])
+    }
+    expect(porownaj([poPrzeniesieniu], [wGrudniu], S, { m: 11, y: 2026 }).zmien).toEqual([])
+  })
+})
+
+describe('wybierz', () => {
+  it('klucze pozycji i wykonanie tylko zaznaczonych', () => {
+    const a = W({ id: 'a' })
+    const b = W({ id: 'b', tytul: 'Gala' })
+    const c = W({ id: 'c', tytul: 'Zmieniana' })
+    const reczny = wpis(naWydarzenieGoogle(a, S), 'r1', false)
+    const zmieniany = wpis(naWydarzenieGoogle(W({ id: 'c', tytul: 'Zmieniana', sala: '010' }), S), 'g-c')
+    const sierota = wpis(naWydarzenieGoogle(W({ id: 'x', tytul: 'Usunięta' }), S), 'g-x')
+    const plan = porownaj([a, b, c], [reczny, zmieniany, sierota], S)
+    expect(kluczePlanu(plan)).toEqual(['przejmij:a', 'dodaj:b', 'zmien:c', 'usun:g-x'])
+    const tylko = wybierz(plan, ['dodaj:b', 'usun:g-x', 'dodaj:nieistnieje'])
+    expect(kluczePlanu(tylko)).toEqual(['dodaj:b', 'usun:g-x'])
+    expect(tylko.doSprawdzenia).toEqual(plan.doSprawdzenia)
   })
 })
