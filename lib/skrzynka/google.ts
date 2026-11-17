@@ -2,7 +2,9 @@ import type { WatekApi } from './naglowki'
 import type { WatekPelnyApi } from './tresc'
 
 export const ZAKRES_WYSYLKI = 'https://www.googleapis.com/auth/gmail.send'
-const ZAKRESY = ['https://www.googleapis.com/auth/gmail.readonly', ZAKRES_WYSYLKI]
+export const ZAKRESY_GMAILA = ['https://www.googleapis.com/auth/gmail.readonly', ZAKRES_WYSYLKI]
+/** Tylko wydarzenia - D.E.C.K. nie może zmienić ustawień ani udostępnienia samego kalendarza. */
+export const ZAKRES_KALENDARZA = 'https://www.googleapis.com/auth/calendar.events'
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me'
 const WYSYLKA = 'https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=multipart'
@@ -59,7 +61,7 @@ export function adresZgody(stan: string, email: string): string {
     client_id: k.id,
     redirect_uri: k.przekierowanie,
     response_type: 'code',
-    scope: ZAKRESY.join(' '),
+    scope: ZAKRESY_GMAILA.join(' '),
     // offline + consent: tylko tak Google za każdym razem oddaje refresh token.
     access_type: 'offline',
     prompt: 'consent',
@@ -89,6 +91,13 @@ export async function wymienKod(kod: string): Promise<{ refreshToken: string; do
   if (!d.refresh_token) throw new BladSkrzynki('inny', 'Google nie zwrócił refresh tokenu')
   // Ekran zgody pozwala odznaczyć część uprawnień - `scope` mówi, co Google naprawdę dał.
   return { refreshToken: d.refresh_token, dostep: d.access_token, zakresy: String(d.scope ?? '').split(' ').filter(Boolean) }
+}
+
+/** Świeży access token z refresh tokenu kontakt@ - dla klientów spoza Gmaila (kalendarz). */
+export async function odswiezDostep(refreshToken: string): Promise<string> {
+  const k = konfiguracja()
+  const d = await token({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: k.id, client_secret: k.sekret })
+  return d.access_token
 }
 
 /** „Rozłącz”: unieważnia refresh token w Google - D.E.C.K. traci dostęp do skrzynki. */

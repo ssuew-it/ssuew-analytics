@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { BladSkrzynki, adresZgody, gmail, komunikatBledu, odwolajToken, wymienKod } from '@/lib/skrzynka/google'
+import { BladSkrzynki, adresZgody, gmail, komunikatBledu, odswiezDostep, odwolajToken, wymienKod } from '@/lib/skrzynka/google'
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const fetchMock = vi.fn()
@@ -55,6 +55,15 @@ describe('zgoda i wymiana kodu', () => {
     expect(Object.fromEntries(cialo)).toMatchObject({ grant_type: 'authorization_code', code: 'KOD', redirect_uri: 'https://ssuew-analytics.vercel.app/api/skrzynka/oauth' })
     fetchMock.mockResolvedValueOnce(odp(200, { access_token: 'a', expires_in: 3600 }))
     await expect(wymienKod('KOD')).rejects.toBeInstanceOf(BladSkrzynki)
+  })
+
+  it('odswiezDostep - access token z refresh tokena', async () => {
+    fetchMock.mockResolvedValueOnce(odp(200, { access_token: 'swiezy', expires_in: 3600 }))
+    expect(await odswiezDostep('REFRESH')).toBe('swiezy')
+    const cialo = Object.fromEntries(new URLSearchParams(fetchMock.mock.calls[0][1].body))
+    expect(cialo).toMatchObject({ grant_type: 'refresh_token', refresh_token: 'REFRESH', client_id: 'klient.apps.googleusercontent.com' })
+    fetchMock.mockResolvedValueOnce(odp(400, { error: 'invalid_grant' }))
+    await expect(odswiezDostep('REFRESH')).rejects.toMatchObject({ rodzaj: 'rozlaczona' })
   })
 })
 
