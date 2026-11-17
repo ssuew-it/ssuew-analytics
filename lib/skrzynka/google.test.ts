@@ -91,7 +91,7 @@ describe('klient Gmaila', () => {
     const u1 = new URL(fetchMock.mock.calls.at(-1)![0])
     expect(u1.pathname).toBe('/gmail/v1/users/me/threads/abc')
     expect(u1.searchParams.get('format')).toBe('metadata')
-    expect(u1.searchParams.getAll('metadataHeaders')).toEqual(['From', 'To', 'Cc', 'Subject', 'List-Unsubscribe', 'Precedence'])
+    expect(u1.searchParams.getAll('metadataHeaders')).toEqual(['From', 'To', 'Cc', 'Subject', 'List-Unsubscribe', 'Precedence', 'Auto-Submitted'])
     await g.listaWatkow('newer_than:365d', 'STRONA')
     const u2 = new URL(fetchMock.mock.calls.at(-1)![0])
     expect(Object.fromEntries(u2.searchParams)).toEqual({ q: 'newer_than:365d', maxResults: '100', pageToken: 'STRONA' })

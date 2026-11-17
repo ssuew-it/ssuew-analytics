@@ -70,6 +70,8 @@ describe('odczytajWatek', () => {
     expect(odczytajWatek(surowy([{ od: 'news@sklep.pl', kiedy: 1, naglowki: { 'List-Unsubscribe': '<mailto:x@sklep.pl>' } }])).wiadomosci[0].masowa).toBe(true)
     expect(odczytajWatek(surowy([{ od: 'news@sklep.pl', kiedy: 1, naglowki: { Precedence: 'Bulk' } }])).wiadomosci[0].masowa).toBe(true)
     expect(odczytajWatek(surowy([{ od: 'anna@firma.pl', kiedy: 1 }])).wiadomosci[0].masowa).toBe(false)
+    expect(odczytajWatek(surowy([{ od: 'bot@firma.pl', kiedy: 1, naglowki: { 'Auto-Submitted': 'auto-generated' } }])).wiadomosci[0].masowa).toBe(true)
+    expect(odczytajWatek(surowy([{ od: 'anna@firma.pl', kiedy: 1, naglowki: { 'Auto-Submitted': 'no' } }])).wiadomosci[0].masowa).toBe(false)
   })
 
   it('wątek bez wiadomości', () => {

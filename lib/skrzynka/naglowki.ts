@@ -14,6 +14,12 @@ export interface WatekApi {
 
 const POMIJANE_ETYKIETY = ['DRAFT', 'SPAM', 'TRASH']
 
+/** `Auto-Submitted` (RFC 3834) z wartością inną niż „no” - wiadomość wysłał automat. */
+const czyAutomat = (wartosc: string) => {
+  const v = wartosc.trim().toLowerCase()
+  return v !== '' && v !== 'no'
+}
+
 /** Słowa zakodowane RFC 2047 (`=?UTF-8?B?…?=`). Gmail zwykle podaje nagłówki już odkodowane - to zabezpieczenie. */
 export function dekodujNaglowek(s: string): string {
   return s
@@ -82,7 +88,7 @@ export function odczytajWatek(w: WatekApi): WatekZGmaila {
         do: [...odczytajAdresy(h('To')), ...odczytajAdresy(h('Cc'))],
         temat: dekodujNaglowek(h('Subject')).trim(),
         etykiety: m.labelIds ?? [],
-        masowa: Boolean(h('List-Unsubscribe')) || precedence === 'bulk' || precedence === 'list',
+        masowa: Boolean(h('List-Unsubscribe')) || precedence === 'bulk' || precedence === 'list' || czyAutomat(h('Auto-Submitted')),
         fragment: dekodujEncje(m.snippet ?? ''),
       }
     })

@@ -7,21 +7,47 @@ export const DNI_ALARMU = 3
 export const ARCHIWUM_MS = 30 * 24 * 3_600_000
 const KATEGORIE_MASOWE = ['CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 'CATEGORY_SOCIAL', 'CATEGORY_FORUMS']
 
-export function kierunek(w: WiadomoscMeta, nasz: string): Kierunek {
-  return w.od?.email.toLowerCase() === nasz.toLowerCase() ? 'my' : 'oni'
+/** Nadawcy-automaty: noreply, powiadomienia, kody systemowe, zwroty. Sprawdzana część przed „@”. */
+const AUTOMATY = /^(no-?reply|nie-?odpowiadaj|do-?not-?reply|donotreply|mailer-daemon|postmaster|bounces?|notifications?|notify|powiadomieni[ae]|system|alerts?)([+._-].*)?@/i
+
+/**
+ * Kierunek każdej wiadomości wątku. Nasze są: kontakt@ i inne adresy domeny
+ * samorządu (zespół odpowiada też ze swoich skrzynek i aliasów, np. dni.adaptacyjne@).
+ * Wyjątek: w wątku bez nikogo z zewnątrz członek zespołu, który go zaczął, pisze
+ * do nas - jak każdy inny nadawca.
+ */
+export function kierunki(ws: WiadomoscMeta[], nasz: string): Kierunek[] {
+  const n = nasz.toLowerCase()
+  const domena = `@${n.split('@')[1]}`
+  const adres = (w: WiadomoscMeta) => w.od?.email.toLowerCase() ?? ''
+  const zespol = (e: string) => e === n || e.endsWith(domena)
+  const autor = adres(ws[0])
+  const wewnetrzny = ws.every((w) => zespol(adres(w)))
+  return ws.map((w) => {
+    const e = adres(w)
+    if (e === n) return 'my'
+    if (!zespol(e)) return 'oni'
+    return wewnetrzny && e === autor ? 'oni' : 'my'
+  })
+}
+
+/** Kierunek jednej wiadomości z kontekstem jej wątku. */
+export function kierunek(w: WiadomoscMeta, nasz: string, watek: WiadomoscMeta[] = [w]): Kierunek {
+  const i = watek.indexOf(w)
+  return kierunki(i >= 0 ? watek : [w], nasz)[i >= 0 ? i : 0]
 }
 
 export function czyMasowa(w: WiadomoscMeta): boolean {
-  return w.masowa || w.etykiety.some((e) => KATEGORIE_MASOWE.includes(e))
+  return w.masowa || w.etykiety.some((e) => KATEGORIE_MASOWE.includes(e)) || AUTOMATY.test(w.od?.email ?? '')
 }
 
 /** Pierwsza ich wiadomość po naszej ostatniej; `null`, gdy ostatnie słowo jest nasze. */
-function poczatekCzekania(wiadomosci: WiadomoscMeta[], nasz: string): number | null {
+function poczatekCzekania(wiadomosci: WiadomoscMeta[], kier: Kierunek[]): number | null {
   let od: number | null = null
-  for (const w of wiadomosci) {
-    if (kierunek(w, nasz) === 'my') od = null
+  wiadomosci.forEach((w, i) => {
+    if (kier[i] === 'my') od = null
     else if (od === null) od = w.kiedy
-  }
+  })
   return od
 }
 
@@ -48,20 +74,23 @@ export function ocenSprawe(
 ): StanSprawy {
   const ws = watek.wiadomosci
   const ostatnia = ws[ws.length - 1]
+  const kier = kierunki(ws, k.nasz)
 
   if (!poprzednia) {
     if (k.pomijana) return { status: 'pominieta', oczekujeOd: null, nowa: false }
     if (k.import && k.teraz - ostatnia.kiedy > ARCHIWUM_MS) return { status: 'zalatwiona', oczekujeOd: null, nowa: false }
-    const pierwszaIch = ws.find((w) => kierunek(w, k.nasz) === 'oni')
+    const pierwszaIch = ws.find((_, i) => kier[i] === 'oni')
     if (pierwszaIch && czyMasowa(pierwszaIch)) return { status: 'do-przejrzenia', oczekujeOd: null, nowa: true }
-    const od = poczatekCzekania(ws, k.nasz)
+    const od = poczatekCzekania(ws, kier)
     return od === null ? { status: 'czeka-na-nich', oczekujeOd: null, nowa: false } : doOdpowiedzi(od)
   }
 
-  const nowe = ws.filter((w) => w.kiedy > poprzednia.ostatniaKiedy)
-  if (!nowe.length) return { status: poprzednia.status, oczekujeOd: poprzednia.oczekujeOd, nowa: poprzednia.nowa }
-  const ichNowe = nowe.some((w) => kierunek(w, k.nasz) === 'oni')
-  const ostatniKierunek = kierunek(nowe[nowe.length - 1], k.nasz)
+  const od = ws.findIndex((w) => w.kiedy > poprzednia.ostatniaKiedy)
+  if (od < 0) return { status: poprzednia.status, oczekujeOd: poprzednia.oczekujeOd, nowa: poprzednia.nowa }
+  const nowe = ws.slice(od)
+  const kierNowych = kier.slice(od)
+  const ichNowe = kierNowych.includes('oni')
+  const ostatniKierunek = kierNowych[kierNowych.length - 1]
 
   switch (poprzednia.status) {
     case 'pominieta':
@@ -70,11 +99,11 @@ export function ocenSprawe(
       return { status: poprzednia.status, oczekujeOd: null, nowa: poprzednia.nowa || ichNowe }
     case 'czeka-na-nich':
     case 'zalatwiona':
-      if (ostatniKierunek === 'oni') return doOdpowiedzi(poczatekCzekania(nowe, k.nasz) ?? ostatnia.kiedy)
+      if (ostatniKierunek === 'oni') return doOdpowiedzi(poczatekCzekania(nowe, kierNowych) ?? ostatnia.kiedy)
       return { status: poprzednia.status, oczekujeOd: null, nowa: poprzednia.nowa }
     case 'do-odpowiedzi':
       if (ostatniKierunek === 'my') return { status: 'czeka-na-nich', oczekujeOd: null, nowa: false }
-      return doOdpowiedzi(poprzednia.oczekujeOd ?? poczatekCzekania(nowe, k.nasz) ?? ostatnia.kiedy)
+      return doOdpowiedzi(poprzednia.oczekujeOd ?? poczatekCzekania(nowe, kierNowych) ?? ostatnia.kiedy)
   }
 }
 

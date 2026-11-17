@@ -4,6 +4,7 @@ import { naSklad } from '@/lib/planer/stan'
 import { dzisWarszawa, polnocWarszawa } from '@/lib/czas'
 import { przesunDate } from '@/lib/planer/trwanie'
 import { progAlarmu } from './statusy'
+import { WERSJA_DANYCH, WERSJA_KLUCZY } from './typy'
 import {
   STATUSY, TYPY_ORGANIZACJI, type KartaKontaktu, type KartaOrganizacji, type Kontakt, type LicznikiSkrzynki, type Organizacja,
   type ObrazSkrzynki, type PostepImportu, type Sprawa, type Status, type StronaKontaktow, type StronaSpraw, type TypOrganizacji,
@@ -13,7 +14,7 @@ import {
 export const DZIERZAWA_MS = 60_000
 /** Limit partii Firestore to 500 zapisów - zostawiamy zapas. */
 const PARTIA = 400
-export const WERSJA_DANYCH = 2
+export { WERSJA_DANYCH, WERSJA_KLUCZY }
 export const NA_STRONE = 50
 const MAKS_DO_ODPOWIEDZI = 300
 /** Znak większy niż każdy w kluczu - górna granica zakresu jednego statusu. */
@@ -177,7 +178,7 @@ export async function uzupelnijKlucze(): Promise<number> {
     for (const d of doPoprawy.slice(i, i + PARTIA)) partia.update(d.ref, { klucz: kluczListy(naSprawe(d.id, d.data())) })
     await partia.commit()
   }
-  await zapiszStan({ wersjaDanych: WERSJA_DANYCH })
+  await zapiszStan({ wersjaDanych: WERSJA_KLUCZY })
   return doPoprawy.length
 }
 

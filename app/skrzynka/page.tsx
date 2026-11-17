@@ -3,8 +3,8 @@ import { after } from 'next/server'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { ktoNaStronie } from '@/lib/auth/naStronie'
-import { WERSJA_DANYCH, czytajStan, liczniki, skladZarzadu, uzupelnijKlucze } from '@/lib/skrzynka/dane'
-import { synchronizuj } from '@/lib/skrzynka/synchronizacja'
+import { WERSJA_DANYCH, WERSJA_KLUCZY, czytajStan, liczniki, skladZarzadu, uzupelnijKlucze } from '@/lib/skrzynka/dane'
+import { przeliczDoOdpowiedzi, synchronizuj } from '@/lib/skrzynka/synchronizacja'
 import { PanelSkrzynki } from '@/components/skrzynka/PanelSkrzynki'
 
 export const maxDuration = 60
@@ -21,7 +21,11 @@ export default async function SkrzynkaPage({ searchParams }: { searchParams: Pro
   const teraz = new Date().getTime()
   const [stan, sklad] = await Promise.all([czytajStan().catch(() => null), skladZarzadu().catch(() => [] as string[])])
   // Raz po wdrożeniu 2a: sprawy zapisane wcześniej nie mają klucza listy i nie pojawiłyby się w zakładkach.
-  if (stan && stan.wersjaDanych < WERSJA_DANYCH) await uzupelnijKlucze().catch((e) => console.error('[skrzynka] klucze:', e))
+  if (stan && stan.wersjaDanych < WERSJA_KLUCZY) await uzupelnijKlucze().catch((e) => console.error('[skrzynka] klucze:', e))
+  // Raz po zmianie zasad statusów: „Do odpowiedzi” liczone od nowa (odpowiedzi zespołu z innych adresów, automaty).
+  if (stan?.polaczona && !stan.import.trwa && stan.wersjaDanych < WERSJA_DANYCH) {
+    after(() => przeliczDoOdpowiedzi().then((n) => console.log(`[skrzynka] przeliczone sprawy: ${n}`)).catch((e) => console.error('[skrzynka] przeliczenie:', e)))
+  }
   const l = await liczniki(teraz).catch(() => null)
   if (stan?.polaczona && !stan.import.trwa && (stan.ostatniaSynchronizacja ?? 0) < teraz - DOCIAGNIJ_PO_MS) {
     after(() => synchronizuj().catch((e) => console.error('[skrzynka] wejście:', e)))

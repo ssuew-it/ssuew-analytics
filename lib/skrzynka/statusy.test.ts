@@ -12,6 +12,49 @@ function m(kto: 'my' | 'oni', kiedy: number, extra: Partial<WiadomoscMeta> = {})
 const w = (...wiadomosci: WiadomoscMeta[]): WatekZGmaila => ({ id: 't1', wiadomosci })
 const k = { nasz: NASZ, pomijana: false, teraz: TERAZ, import: false }
 
+/** Wiadomość od dowolnego adresu - zespół odpowiada też ze swoich skrzynek i aliasów domeny samorządu. */
+const od = (email: string, kiedy: number, extra: Partial<WiadomoscMeta> = {}): WiadomoscMeta => ({ ...m('oni', kiedy, extra), od: { email, imie: '' } })
+const ZESPOL = 'dni.adaptacyjne@samorzad.ue.wroc.pl'
+
+describe('ocenSprawe - odpowiedzi zespołu z innych adresów samorządu', () => {
+  it('odpowiedź z aliasu albo skrzynki członka zespołu liczy się jako nasza', () => {
+    expect(ocenSprawe(null, w(m('oni', 100), od(ZESPOL, 200)), k).status).toBe('czeka-na-nich')
+    expect(ocenSprawe(null, w(m('oni', 100), od('Kuba.Nowak@Samorzad.UE.Wroc.pl', 200)), k).status).toBe('czeka-na-nich')
+  })
+
+  it('członek zespołu pisze do kontakt@ - czeka na odpowiedź; odpowiedź innego członka jest nasza', () => {
+    const jan = 'jan.dobrosz@samorzad.ue.wroc.pl'
+    expect(ocenSprawe(null, w(od(jan, 100)), k)).toEqual({ status: 'do-odpowiedzi', oczekujeOd: 100, nowa: true })
+    expect(ocenSprawe(null, w(od(jan, 100), od(ZESPOL, 200)), k).status).toBe('czeka-na-nich')
+    expect(ocenSprawe(null, w(od(jan, 100), od(ZESPOL, 200), od(jan, 300)), k).oczekujeOd).toBe(300)
+  })
+
+  it('wątek z kimś z zewnątrz zaczęty przez członka zespołu - jego odpowiedź też jest nasza', () => {
+    const czlonek = 'ania@samorzad.ue.wroc.pl'
+    expect(ocenSprawe(null, w(od(czlonek, 100), m('oni', 200)), k).status).toBe('do-odpowiedzi')
+    expect(ocenSprawe(null, w(od(czlonek, 100), m('oni', 200), od(czlonek, 300)), k).status).toBe('czeka-na-nich')
+  })
+
+  it('w trakcie: odpowiedź zespołu w Do odpowiedzi - Czeka na nich', () => {
+    const pop = { status: 'do-odpowiedzi' as Status, oczekujeOd: 100, nowa: true, ostatniaKiedy: 100 }
+    expect(ocenSprawe(pop, w(m('oni', 100), od(ZESPOL, 200)), k)).toEqual({ status: 'czeka-na-nich', oczekujeOd: null, nowa: false })
+  })
+
+  it('domena podobna do naszej nie jest nasza', () => {
+    expect(ocenSprawe(null, w(m('oni', 100), od('ktos@nie-samorzad.ue.wroc.pl', 200)), k).status).toBe('do-odpowiedzi')
+    expect(ocenSprawe(null, w(m('oni', 100), od('ktos@ue.wroc.pl', 200)), k).status).toBe('do-odpowiedzi')
+  })
+})
+
+describe('ocenSprawe - automaty', () => {
+  it('noreply, powiadomienia i kody systemowe - Do przejrzenia', () => {
+    for (const adres of ['nie-odpowiadaj@kurierbtl.pl', 'noreply@firma.pl', 'no-reply@x.pl', 'notifications@vercel.com', 'system@vercel.com', 'mailer-daemon@googlemail.com', 'do-not-reply@bank.pl', 'powiadomienia@usos.pl']) {
+      expect(ocenSprawe(null, w(od(adres, 100)), k).status, adres).toBe('do-przejrzenia')
+    }
+    expect(ocenSprawe(null, w(od('systemy.finansowe@firma.pl', 100)), k).status).toBe('do-odpowiedzi')
+  })
+})
+
 describe('ocenSprawe - nowy wątek', () => {
   it('ich mail - Do odpowiedzi od tej chwili', () => {
     expect(ocenSprawe(null, w(m('oni', 100)), k)).toEqual({ status: 'do-odpowiedzi', oczekujeOd: 100, nowa: true })

@@ -1,14 +1,14 @@
 import { BladSkrzynki, ZAKRES_KALENDARZA, ZAKRES_WYSYLKI, gmail as utworzGmail, odwolajToken, wymienKod, type Gmail } from './google'
 import { odszyfruj, zaszyfruj } from './szyfr'
 import {
-  czytajSprawe, czytajSprawy, czytajStan, czytajUstawienia, pomijane, rozlaczStan, usunDaneSkrzynki, wezDzierzawe, zapiszStan, zapiszWynik,
+  czytajSprawe, czytajSprawy, czytajStan, czytajUstawienia, listaSpraw, pomijane, rozlaczStan, usunDaneSkrzynki, wezDzierzawe, zapiszStan, zapiszWynik,
   zwolnijDzierzawe, type StanSkrzynki,
 } from './dane'
 import { przygotujOdpowiedz, zbudujMail, type PlikWysylki } from './mime'
 import { odczytajWatek } from './naglowki'
 import { domena, drugaStrona, kontaktZAdresu, organizacjaZEmaila } from './kontakty'
 import { kierunek, ocenSprawe } from './statusy'
-import type { Kontakt, Organizacja, Sprawa, WatekZGmaila, WynikSynchronizacji } from './typy'
+import { WERSJA_DANYCH, type Kontakt, type Organizacja, type Sprawa, type WatekZGmaila, type WynikSynchronizacji } from './typy'
 
 export const ZAPYTANIE_IMPORTU = 'newer_than:365d'
 const RUNDY = 3
@@ -54,7 +54,11 @@ export async function klientGmaila(): Promise<Gmail> {
 }
 
 /** Pobiera wątki, przepuszcza przez automat statusów i zapisuje. Zwraca liczbę zapisanych spraw. */
-export async function przetworzWatki(g: Gmail, ids: string[], k: { teraz: number; import: boolean }): Promise<number> {
+export async function przetworzWatki(
+  g: Gmail,
+  ids: string[],
+  k: { teraz: number; import: boolean; /** Status liczony od nowa z całego wątku, nie tylko z nowych wiadomości. */ odNowa?: boolean },
+): Promise<number> {
   const unikalne = [...new Set(ids)]
   if (!unikalne.length) return 0
   const [surowe, poprzednie, pomin] = await Promise.all([
@@ -78,18 +82,20 @@ export async function przetworzWatki(g: Gmail, ids: string[], k: { teraz: number
     const ostatnia = w.wiadomosci[w.wiadomosci.length - 1]
     const druga = drugaStrona(w, my)
     const pomijana = !!druga && (pomin.adresy.includes(druga.email) || pomin.domeny.includes(domena(druga.email)))
-    const stan = ocenSprawe(
-      pop && { status: pop.status, oczekujeOd: pop.oczekujeOd, nowa: pop.nowa, ostatniaKiedy: pop.ostatnia.kiedy },
+    const ocena = ocenSprawe(
+      pop && !k.odNowa ? { status: pop.status, oczekujeOd: pop.oczekujeOd, nowa: pop.nowa, ostatniaKiedy: pop.ostatnia.kiedy } : null,
       w,
       { nasz: my, pomijana, teraz: k.teraz, import: k.import },
     )
+    // Przeliczenie nie zapala znacznika „nowa” na sprawie, którą ktoś już obejrzał.
+    const stan = k.odNowa && pop ? { ...ocena, nowa: ocena.nowa && pop.nowa } : ocena
     return {
       id: w.id,
       temat: w.wiadomosci[0].temat || '(bez tematu)',
       ...stan,
       kontakt: druga?.email ?? null,
       organizacja: druga ? (organizacjaZEmaila(druga.email)?.domena ?? null) : null,
-      ostatnia: { kiedy: ostatnia.kiedy, kierunek: kierunek(ostatnia, my), fragment: ostatnia.fragment.slice(0, 200) },
+      ostatnia: { kiedy: ostatnia.kiedy, kierunek: kierunek(ostatnia, my, w.wiadomosci), fragment: ostatnia.fragment.slice(0, 200) },
       wiadomosci: w.wiadomosci.length,
       przypisana: pop?.przypisana ?? null,
       kategoriaGmail: w.wiadomosci.flatMap((m) => m.etykiety).find((e) => e.startsWith('CATEGORY_')) ?? null,
@@ -222,6 +228,19 @@ export async function polaczSkrzynke(kod: string): Promise<'ok' | 'inne-konto' |
     import: poprzedni ? poprzedni.import : { trwa: true, zrobione: 0, razem: 0, strona: null },
   })
   return 'ok'
+}
+
+/**
+ * Jednorazowo po zmianie zasad statusów (odpowiedzi zespołu z innych adresów
+ * samorządu, nadawcy-automaty): sprawy „Do odpowiedzi” liczone od nowa z całych
+ * wątków. Inne zakładki zostają - mogły być ustawione ręcznie.
+ */
+export async function przeliczDoOdpowiedzi(teraz = Date.now()): Promise<number> {
+  const g = await klientGmaila()
+  const { sprawy } = await listaSpraw('do-odpowiedzi', null)
+  const n = await zRozlaczeniem(() => przetworzWatki(g, sprawy.map((s) => s.id), { teraz, import: false, odNowa: true }))
+  await zapiszStan({ wersjaDanych: WERSJA_DANYCH })
+  return n
 }
 
 /** Obserwacja Gmaila wygasa po 7 dniach - cron odnawia ją codziennie. */

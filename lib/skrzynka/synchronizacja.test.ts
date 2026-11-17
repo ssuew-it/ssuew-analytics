@@ -7,7 +7,7 @@ const { dane, g, wymienKod, utworzonyZ, odwolajToken } = vi.hoisted(() => ({
   dane: {
     czytajStan: vi.fn(), zapiszStan: vi.fn(), wezDzierzawe: vi.fn(), zwolnijDzierzawe: vi.fn(),
     czytajSprawy: vi.fn(), zapiszWynik: vi.fn(), pomijane: vi.fn(),
-    czytajSprawe: vi.fn(), czytajUstawienia: vi.fn(), rozlaczStan: vi.fn(), usunDaneSkrzynki: vi.fn(),
+    czytajSprawe: vi.fn(), czytajUstawienia: vi.fn(), rozlaczStan: vi.fn(), usunDaneSkrzynki: vi.fn(), listaSpraw: vi.fn(),
   },
   g: {
     profil: vi.fn(), watek: vi.fn(), listaWatkow: vi.fn(), historia: vi.fn(), obserwuj: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock('@/lib/skrzynka/google', async (oryginal) => ({
 }))
 
 import {
-  importujStrone, klientGmaila, odnowObserwacje, polaczSkrzynke, przetworzWatki, rozlaczSkrzynke, synchronizuj, wyslijOdpowiedz,
+  importujStrone, klientGmaila, odnowObserwacje, polaczSkrzynke, przeliczDoOdpowiedzi, przetworzWatki, rozlaczSkrzynke, synchronizuj, wyslijOdpowiedz,
 } from '@/lib/skrzynka/synchronizacja'
 import { BladSkrzynki } from '@/lib/skrzynka/google'
 
@@ -207,6 +207,36 @@ describe('importujStrone', () => {
     g.listaWatkow.mockRejectedValue(new BladSkrzynki('rozlaczona', '401'))
     await expect(importujStrone(null, TERAZ)).rejects.toMatchObject({ rodzaj: 'rozlaczona' })
     expect(dane.zapiszStan).toHaveBeenCalledWith({ polaczona: false })
+  })
+})
+
+describe('przeliczDoOdpowiedzi', () => {
+  const czekajaca = (id: string): Sprawa => ({
+    id, temat: 'Dni Adaptacyjne', status: 'do-odpowiedzi', oczekujeOd: 100, nowa: true, kontakt: 'anna@firma.pl', organizacja: 'firma.pl',
+    ostatnia: { kiedy: 200, kierunek: 'oni', fragment: '' }, wiadomosci: 2, przypisana: 'Jula', kategoriaGmail: null, zmieniono: 1,
+  })
+
+  it('sprawy Do odpowiedzi liczone od nowa: odpowiedź zespołu i noreply; przypisanie zostaje; wersja danych 3', async () => {
+    dane.listaSpraw.mockResolvedValue({ sprawy: [czekajaca('t1'), czekajaca('t2'), czekajaca('t3')], nastepna: null })
+    dane.czytajSprawy.mockResolvedValue(new Map(['t1', 't2', 't3'].map((id) => [id, czekajaca(id)])))
+    g.watek.mockImplementation(async (id: string) => {
+      if (id === 't1') return watek(id, [['anna@firma.pl', 100], ['dni.adaptacyjne@samorzad.ue.wroc.pl', 200, 'anna@firma.pl']])
+      if (id === 't2') return watek(id, [['nie-odpowiadaj@kurierbtl.pl', 200]])
+      return watek(id, [['anna@firma.pl', 200]])
+    })
+    expect(await przeliczDoOdpowiedzi(TERAZ)).toBe(3)
+    expect(dane.listaSpraw).toHaveBeenCalledWith('do-odpowiedzi', null)
+    const s = zapisane().sprawy
+    expect(s.find((x) => x.id === 't1')).toMatchObject({ status: 'czeka-na-nich', oczekujeOd: null, przypisana: 'Jula', ostatnia: { kierunek: 'my' } })
+    expect(s.find((x) => x.id === 't2')).toMatchObject({ status: 'do-przejrzenia', oczekujeOd: null })
+    expect(s.find((x) => x.id === 't3')).toMatchObject({ status: 'do-odpowiedzi', oczekujeOd: 200, nowa: true })
+    expect(dane.zapiszStan).toHaveBeenLastCalledWith({ wersjaDanych: 3 })
+  })
+
+  it('niepołączona skrzynka - błąd, wersja danych bez zmian', async () => {
+    dane.czytajStan.mockResolvedValue(stan({ polaczona: false }))
+    await expect(przeliczDoOdpowiedzi(TERAZ)).rejects.toMatchObject({ rodzaj: 'rozlaczona' })
+    expect(dane.zapiszStan).not.toHaveBeenCalled()
   })
 })
 

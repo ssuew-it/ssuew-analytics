@@ -1,5 +1,13 @@
 export const TYLKO_WLASCICIEL = 'Skrzynka jest tylko dla właściciela'
 
+/**
+ * Wersja danych w `skrzynka/stan`: 2 - sprawy mają klucz listy (2a);
+ * 3 - „Do odpowiedzi” przeliczone po uznaniu odpowiedzi zespołu z innych adresów samorządu.
+ */
+export const WERSJA_DANYCH = 3
+/** Od tej wersji sprawy mają klucz listy. */
+export const WERSJA_KLUCZY = 2
+
 /** Vercel tnie odpowiedź funkcji na 4,5 MB - większy załącznik otwiera się w Gmailu. */
 export const MAKS_POBRANIA = 4 * 1024 * 1024
 

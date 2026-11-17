@@ -367,7 +367,7 @@ describe('rozłączenie', () => {
     await polacz()
     await rozlaczStan()
     expect(await czytajStan()).toBeNull()
-    expect(baza.get('skrzynka/stan')).toEqual({ polaczona: false, wersjaDanych: 2 })
+    expect(baza.get('skrzynka/stan')).toEqual({ polaczona: false, wersjaDanych: 3 })
     expect(baza.has('skrzynkaSprawy/t1')).toBe(true)
     expect((await liczniki(0)).stan).toBe('brak')
   })

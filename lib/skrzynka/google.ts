@@ -9,7 +9,7 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me'
 const WYSYLKA = 'https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=multipart'
 const ODWOLANIE = 'https://oauth2.googleapis.com/revoke'
-const NAGLOWKI_META = ['From', 'To', 'Cc', 'Subject', 'List-Unsubscribe', 'Precedence']
+const NAGLOWKI_META = ['From', 'To', 'Cc', 'Subject', 'List-Unsubscribe', 'Precedence', 'Auto-Submitted']
 const NAGLOWKI_ODPOWIEDZI = ['From', 'To', 'Reply-To', 'Subject', 'Message-ID', 'References']
 /** Granica części żądania wysyłki - znaków `_` nie ma w base64, więc nie trafi się w treści maila. */
 const GRANICA_WYSYLKI = 'deck_wysylka_granica'
