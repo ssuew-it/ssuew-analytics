@@ -8,7 +8,7 @@ const PUBLICZNE = ['/login']
  * (lib/auth/guard.ts). Weryfikacja podpisu przy każdym żądaniu o obrazek
  * byłaby kosztem bez pożytku.
  */
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const sciezka = req.nextUrl.pathname
   if (PUBLICZNE.includes(sciezka) || sciezka.startsWith('/api')) return NextResponse.next()
 
