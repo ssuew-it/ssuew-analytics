@@ -26,6 +26,7 @@ import { Skrzynka } from './Skrzynka'
 import { Obecnosc } from './Obecnosc'
 import { Watek } from './Watek'
 import { dniWMiesiacu } from '@/lib/planer/daty'
+import { dzisWarszawa } from '@/lib/czas'
 import { terminyCoTydzien } from '@/lib/planer/powtarzanie'
 import { nachodziNaMiesiac } from '@/lib/planer/trwanie'
 import { SESJA_WYLACZONA } from '@/lib/planer/stan'
@@ -55,9 +56,16 @@ type Props = {
 export function PlanerClient({ semestr, rola, kto, poczatkowy, naZywo }: Props) {
   const wlascicielem = rola === 'owner'
   const [wydarzenia, setWydarzenia] = useState<Wydarzenie[]>(poczatkowy?.wydarzenia ?? [])
+  // Bez tego przed pierwszą odpowiedzią Firestore widać „semestr jest pusty”.
+  const [wczytany, setWczytany] = useState(!naZywo || poczatkowy !== null)
   const [blad, setBlad] = useState<string | null>(null)
   const [widok, setWidok] = useState<Widok>('miesiac')
-  const [indeksMiesiaca, setIndeksMiesiaca] = useState(0)
+  // W trakcie semestru zaczynamy od bieżącego miesiąca (Warszawa), nie od pierwszego.
+  const [indeksMiesiaca, setIndeksMiesiaca] = useState(() => {
+    const dzis = dzisWarszawa(new Date())
+    const i = semestr.miesiace.findIndex((x) => x.m === dzis.miesiac && x.y === dzis.rok)
+    return i >= 0 ? i : 0
+  })
   const [aktywne, setAktywne] = useState<Set<Kategoria>>(new Set(KLUCZE_KATEGORII))
   const [osoba, setOsoba] = useState('')
   const [wybrane, setWybrane] = useState<Wydarzenie | null>(null)
@@ -76,8 +84,16 @@ export function PlanerClient({ semestr, rola, kto, poczatkowy, naZywo }: Props) 
 
   useEffect(() => {
     if (!naZywo) return
-    return subskrybujWydarzenia(semestr.id, setWydarzenia, (e) =>
-      setBlad(`Nie udało się pobrać kalendarza: ${e.message}`),
+    return subskrybujWydarzenia(
+      semestr.id,
+      (w) => {
+        setWydarzenia(w)
+        setWczytany(true)
+      },
+      (e) => {
+        setBlad(`Nie udało się pobrać kalendarza: ${e.message}`)
+        setWczytany(true)
+      },
     )
   }, [semestr.id, naZywo])
 
@@ -317,6 +333,14 @@ export function PlanerClient({ semestr, rola, kto, poczatkowy, naZywo }: Props) 
       {blad}
     </div>
   )
+
+  if (!wczytany) {
+    return (
+      <div role="status" className="deck-card rounded-lg px-4 py-10 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-deck-muted">
+        Wczytuję kalendarz…
+      </div>
+    )
+  }
 
   if (semestrPusty && !panelOtwarty) {
     return (
