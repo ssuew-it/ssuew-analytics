@@ -4,7 +4,8 @@ import { naSklad } from '@/lib/planer/stan'
 import { progAlarmu } from './statusy'
 import {
   STATUSY, TYPY_ORGANIZACJI, type KartaKontaktu, type KartaOrganizacji, type Kontakt, type LicznikiSkrzynki, type Organizacja,
-  type PostepImportu, type Sprawa, type Status, type StronaKontaktow, type StronaSpraw, type TypOrganizacji, type UstawieniaSkrzynki,
+  type ObrazSkrzynki, type PostepImportu, type Sprawa, type Status, type StronaKontaktow, type StronaSpraw, type TypOrganizacji,
+  type UstawieniaSkrzynki,
 } from './typy'
 
 export const DZIERZAWA_MS = 60_000
@@ -413,5 +414,49 @@ export async function liczniki(teraz: number): Promise<LicznikiSkrzynki> {
     stan: stan.polaczona ? 'polaczona' : 'rozlaczona',
     doOdpowiedzi, poTerminie, doPrzejrzenia, czekaNaNich, wToku, zalatwione, pominiete,
     ostatniaSynchronizacja: stan.ostatniaSynchronizacja,
+  }
+}
+
+const MAKS_PO_TERMINIE = 10
+const MAKS_ORGANIZACJI = 10
+const DZIEN_MS = 86_400_000
+const OKNO_RUCHU_MS = 7 * DZIEN_MS
+/**
+ * Przy obecnym ruchu (ok. 4 sprawy tygodniowo) 100 najświeższych spraw z 7 dni
+ * to całe okno; przy ponad 100 tygodniowo limit je skraca (plan, ryzyko 2).
+ */
+const MAKS_RUCHU = 100
+/** Do przejrzenia i Pominięte to głównie reklamy i newslettery - nie ruch z organizacją. */
+const POZA_RUCHEM = new Set<unknown>(['do-przejrzenia', 'pominieta'])
+
+/**
+ * Obraz skrzynki dla asystenta: liczby (te same co na kafelku), najdłużej
+ * czekające sprawy po terminie i organizacje z ruchem w 7 dni. `null` -
+ * skrzynka niepołączona albo liczniki zawiodły: sekcja jest wtedy `null`.
+ */
+export async function obrazSkrzynki(teraz: number, l: LicznikiSkrzynki | null): Promise<ObrazSkrzynki | null> {
+  if (!l || l.stan !== 'polaczona') return null
+  const s = sprawyRef()
+  const [poTerminie, ruch] = await Promise.all([
+    // Niezmiennik: `oczekujeOd` mają tylko sprawy Do odpowiedzi.
+    s.where('oczekujeOd', '<', progAlarmu(teraz)).orderBy('oczekujeOd').limit(MAKS_PO_TERMINIE).get(),
+    s.where('ostatnia.kiedy', '>=', teraz - OKNO_RUCHU_MS).orderBy('ostatnia.kiedy', 'desc').limit(MAKS_RUCHU).get(),
+  ])
+  const ile = new Map<string, number>()
+  for (const d of ruch.docs) {
+    if (POZA_RUCHEM.has(d.get('status'))) continue
+    const o = d.get('organizacja')
+    if (typeof o === 'string') ile.set(o, (ile.get(o) ?? 0) + 1)
+  }
+  const domeny = [...ile].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, MAKS_ORGANIZACJI).map(([d]) => d)
+  const org = organizacjeRef()
+  const nazwy = domeny.length ? await s.firestore.getAll(...domeny.map((d) => org.doc(d))) : []
+  return {
+    liczby: { doOdpowiedzi: l.doOdpowiedzi, poTerminie: l.poTerminie, doPrzejrzenia: l.doPrzejrzenia, czekaNaNich: l.czekaNaNich, wToku: l.wToku },
+    poTerminie: poTerminie.docs.map((d) => {
+      const x = naSprawe(d.id, d.data())
+      return { temat: x.temat, organizacja: x.organizacja, dniCzekania: Math.floor((teraz - (x.oczekujeOd ?? teraz)) / DZIEN_MS) }
+    }),
+    aktywneOrganizacje: domeny.map((d, i) => ({ nazwa: naOrganizacje(d, nazwy[i]?.data() ?? {}).nazwa, domena: d, sprawy: ile.get(d) ?? 0 })),
   }
 }

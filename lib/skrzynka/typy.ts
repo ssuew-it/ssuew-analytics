@@ -164,3 +164,13 @@ export interface KartaOrganizacji {
   kontakty: Kontakt[]
   sprawy: Sprawa[]
 }
+
+/**
+ * Skrzynka w obrazie projektu dla asystenta - same liczby, tematy i domeny.
+ * Bez treści, fragmentów i adresów osób (spec §9).
+ */
+export interface ObrazSkrzynki {
+  liczby: { doOdpowiedzi: number; poTerminie: number; doPrzejrzenia: number; czekaNaNich: number; wToku: number }
+  poTerminie: { temat: string; organizacja: string | null; dniCzekania: number }[]
+  aktywneOrganizacje: { nazwa: string; domena: string; sprawy: number }[]
+}

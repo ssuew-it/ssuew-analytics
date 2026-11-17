@@ -11,7 +11,8 @@ const { baza, admin } = vi.hoisted(() => {
     ref: { sciezka: s },
     exists: baza.has(s),
     data: () => baza.get(s),
-    get: (pole: string) => baza.get(s)?.[pole],
+    // Pole może być ścieżką z kropką (`ostatnia.kiedy`) - jak w Firestore.
+    get: (pole: string) => pole.split('.').reduce<unknown>((o, k) => (o as Dane | undefined)?.[k], baza.get(s)),
   })
   type Migawka = ReturnType<typeof snap>
   const zapisz = (s: string, d: Dane, scal?: boolean) => baza.set(s, scal ? { ...baza.get(s), ...d } : { ...d })
@@ -104,7 +105,7 @@ vi.mock('@/lib/firebase/admin', () => admin)
 
 import {
   DOMYSLNA_STOPKA, czytajSprawe, czytajSprawy, czytajStan, czytajUstawienia, dodajPomijanie, kartaKontaktu, kartaOrganizacji, kluczListy,
-  liczniki, listaKontaktow, listaOrganizacji, listaSpraw, pomijane, rozlaczStan, skladZarzadu, usunDaneSkrzynki, uzupelnijKlucze,
+  liczniki, listaKontaktow, listaOrganizacji, listaSpraw, obrazSkrzynki, pomijane, rozlaczStan, skladZarzadu, usunDaneSkrzynki, uzupelnijKlucze,
   wezDzierzawe, zapiszStan, zapiszUstawienia, zapiszWynik, zmienOrganizacje, zmienSprawe, zwolnijDzierzawe,
 } from '@/lib/skrzynka/dane'
 
@@ -375,5 +376,48 @@ describe('rozłączenie', () => {
     await polacz()
     expect(await usunDaneSkrzynki()).toBe(4)
     expect([...baza.keys()]).toEqual(['skrzynka/ustawienia'])
+  })
+})
+
+describe('obraz skrzynki dla asystenta', () => {
+  const TERAZ = Date.UTC(2026, 9, 20, 8)
+  const DZIEN = 86_400_000
+  const L = { stan: 'polaczona' as const, doOdpowiedzi: 3, poTerminie: 2, doPrzejrzenia: 1, czekaNaNich: 0, wToku: 4, zalatwione: 9, pominiete: 1, ostatniaSynchronizacja: 1 }
+  const kiedy = (k: number) => ({ ostatnia: { kiedy: k, kierunek: 'oni' as const, fragment: 'TAJNA TREŚĆ' } })
+
+  it('niepołączona albo bez liczników - null', async () => {
+    expect(await obrazSkrzynki(TERAZ, null)).toBeNull()
+    expect(await obrazSkrzynki(TERAZ, { ...L, stan: 'rozlaczona' })).toBeNull()
+  })
+
+  it('liczby, po terminie od najdłużej czekającej, organizacje z ruchem w 7 dni bez reklam - bez fragmentów i adresów', async () => {
+    await zapiszWynik({
+      sprawy: [
+        sprawa('a', { temat: 'Sponsoring', organizacja: 'firma.pl', oczekujeOd: TERAZ - 10 * DZIEN, ...kiedy(TERAZ - 10 * DZIEN) }),
+        sprawa('b', { temat: 'Sala', organizacja: null, kontakt: 'ola@gmail.com', oczekujeOd: TERAZ - 6 * DZIEN, ...kiedy(TERAZ - 6 * DZIEN) }),
+        sprawa('c', { temat: 'Świeża', oczekujeOd: TERAZ - DZIEN, ...kiedy(TERAZ - DZIEN) }),
+        sprawa('d', { status: 'w-toku', oczekujeOd: null, organizacja: 'ue.wroc.pl', ...kiedy(TERAZ - 2 * DZIEN) }),
+        sprawa('e', { status: 'zalatwiona', oczekujeOd: null, organizacja: 'ue.wroc.pl', ...kiedy(TERAZ - 3 * DZIEN) }),
+        sprawa('f', { status: 'zalatwiona', oczekujeOd: null, organizacja: 'stara.pl', ...kiedy(TERAZ - 30 * DZIEN) }),
+        // Reklamy i newslettery - bez nich `reklama.pl` byłaby pierwsza (2 sprawy, alfabetycznie przed ue.wroc.pl).
+        sprawa('g', { status: 'pominieta', oczekujeOd: null, organizacja: 'reklama.pl', ...kiedy(TERAZ - DZIEN) }),
+        sprawa('h', { status: 'do-przejrzenia', oczekujeOd: null, organizacja: 'reklama.pl', ...kiedy(TERAZ - DZIEN) }),
+      ],
+      kontakty: [],
+      organizacje: [{ domena: 'ue.wroc.pl', nazwa: 'Uniwersytet Ekonomiczny', typ: 'uczelnia' }],
+    })
+    const o = await obrazSkrzynki(TERAZ, L)
+    expect(o).toEqual({
+      liczby: { doOdpowiedzi: 3, poTerminie: 2, doPrzejrzenia: 1, czekaNaNich: 0, wToku: 4 },
+      poTerminie: [
+        { temat: 'Sponsoring', organizacja: 'firma.pl', dniCzekania: 10 },
+        { temat: 'Sala', organizacja: null, dniCzekania: 6 },
+      ],
+      aktywneOrganizacje: [
+        { nazwa: 'Uniwersytet Ekonomiczny', domena: 'ue.wroc.pl', sprawy: 2 },
+        { nazwa: 'firma.pl', domena: 'firma.pl', sprawy: 1 },
+      ],
+    })
+    expect(JSON.stringify(o)).not.toMatch(/TAJNA|@/)
   })
 })
