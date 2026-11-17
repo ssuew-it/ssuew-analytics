@@ -19,6 +19,9 @@ const BLEDY: Record<string, string> = {
   polaczenie: 'Nie udało się połączyć ze skrzynką - spróbuj ponownie.',
   konfiguracja: 'Skrzynka nie jest skonfigurowana na serwerze (zmienne SKRZYNKA_* na Vercelu).',
   'brak-wysylki': 'Zgoda Google nie obejmuje wysyłki maili - połącz skrzynkę jeszcze raz i zaznacz wszystkie uprawnienia.',
+  niepolaczona: 'Najpierw połącz skrzynkę - kalendarz korzysta z tej samej zgody Google.',
+  'brak-kalendarza': 'Zgoda Google nie obejmuje kalendarza - kliknij „Połącz kalendarz” jeszcze raz i zaznacz uprawnienie do wydarzeń.',
+  'niepelna-zgoda': 'Przy zgodzie na kalendarz zostaw zaznaczone także uprawnienia Gmaila - inaczej skrzynka straciłaby dostęp. Skrzynka działa jak dotąd; spróbuj ponownie.',
 }
 
 /** Zakładki statusów i dwie kartoteki - bez liczb, bo liczenie osób i organizacji to dodatkowe odczyty przy każdym wejściu. */
@@ -41,16 +44,22 @@ const LICZBA: Record<Status, (l: LicznikiSkrzynki) => number> = {
 const kiedy = (ms: number) =>
   new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', dateStyle: 'short', timeStyle: 'short' }).format(ms)
 
-export function PanelSkrzynki({ liczniki, postep, blad, sklad, email }: {
+export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz = false, kalendarzPolaczony = false, otworzUstawienia = false }: {
   liczniki: LicznikiSkrzynki | null
   postep: PostepImportu | null
   blad: string | null
   sklad: string[]
   email: string
+  /** Token obejmuje kalendarz - Ustawienia pokażą „Połączony”. */
+  kalendarz?: boolean
+  /** Powrót ze zgody na kalendarz (`?kalendarz=ok`). */
+  kalendarzPolaczony?: boolean
+  /** `?ustawienia=1` - odnośnik z Planera prowadzi prosto do Ustawień. */
+  otworzUstawienia?: boolean
 }) {
   const router = useRouter()
   const [zakladka, setZakladka] = useState<Zakladka>('do-odpowiedzi')
-  const [ustawienia, setUstawienia] = useState(false)
+  const [ustawienia, setUstawienia] = useState(otworzUstawienia)
   const [wpisane, setWpisane] = useState('')
   const [szukane, setSzukane] = useState('')
   const [wybrana, setWybrana] = useState<string | null>(null)
@@ -90,6 +99,11 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email }: {
   return (
     <div className="space-y-4">
       {komunikat && <p role="alert" className={alert}>{komunikat}</p>}
+      {kalendarzPolaczony && !komunikat && (
+        <p role="status" className="rounded-lg border border-deck-border px-4 py-3 text-[12.5px] text-deck-text">
+          Kalendarz Samorządowicza połączony - wysyłkę uruchomisz przyciskiem w Planerze.
+        </p>
+      )}
 
       {liczniki === null ? (
         <p role="alert" className={alert}>Nie udało się odczytać stanu skrzynki - odśwież stronę za chwilę.</p>
@@ -149,7 +163,7 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email }: {
           </div>
 
           {ustawienia ? (
-            <UstawieniaSkrzynki />
+            <UstawieniaSkrzynki kalendarz={kalendarz} />
           ) : (
             <>
               {szukane ? (

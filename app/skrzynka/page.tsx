@@ -11,13 +11,13 @@ export const maxDuration = 60
 /** Dociągnięcie przy wejściu tylko wtedy, gdy push dawno nic nie przyniósł - tanie zabezpieczenie przed zgubionym powiadomieniem. */
 const DOCIAGNIJ_PO_MS = 15 * 60_000
 
-export default async function SkrzynkaPage({ searchParams }: { searchParams: Promise<{ blad?: string }> }) {
+export default async function SkrzynkaPage({ searchParams }: { searchParams: Promise<{ blad?: string; kalendarz?: string; ustawienia?: string }> }) {
   const kto = await ktoNaStronie()
   if (!kto) redirect('/login')
   // Skrzynka instytucji jest tylko dla właściciela - zarząd wraca do kokpitu.
   if (kto.rola !== 'owner') redirect('/')
 
-  const { blad } = await searchParams
+  const { blad, kalendarz, ustawienia } = await searchParams
   const teraz = new Date().getTime()
   const [stan, sklad] = await Promise.all([czytajStan().catch(() => null), skladZarzadu().catch(() => [] as string[])])
   // Raz po wdrożeniu 2a: sprawy zapisane wcześniej nie mają klucza listy i nie pojawiłyby się w zakładkach.
@@ -40,7 +40,16 @@ export default async function SkrzynkaPage({ searchParams }: { searchParams: Pro
         <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-deck-muted/70">kontakt@samorzad.ue.wroc.pl</p>
       </header>
       {/* Do przeglądarki idą tylko liczby i postęp - nigdy token. */}
-      <PanelSkrzynki liczniki={l} postep={stan?.import ?? null} blad={blad ?? null} sklad={sklad} email={stan?.email ?? ''} />
+      <PanelSkrzynki
+        liczniki={l}
+        postep={stan?.import ?? null}
+        blad={blad ?? null}
+        sklad={sklad}
+        email={stan?.email ?? ''}
+        kalendarz={stan?.kalendarz === true}
+        kalendarzPolaczony={kalendarz === 'ok'}
+        otworzUstawienia={ustawienia === '1'}
+      />
     </main>
   )
 }

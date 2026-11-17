@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { UstawieniaSkrzynki } from '@/components/skrzynka/UstawieniaSkrzynki'
 
@@ -14,9 +14,9 @@ vi.mock('@/lib/skrzynka/klient', () => ({
 }))
 
 const U = { stopka: '-- \nSamorząd', pomijaneAdresy: ['news@sklep.pl'], pomijaneDomeny: ['reklama.pl'] }
-const pokaz = () =>
+const pokaz = (kalendarz = false) =>
   act(async () => {
-    render(<UstawieniaSkrzynki />)
+    render(<UstawieniaSkrzynki kalendarz={kalendarz} />)
   })
 const klik = (nazwa: string) =>
   act(async () => {
@@ -68,5 +68,17 @@ describe('UstawieniaSkrzynki', () => {
     expect(potwierdz).toHaveBeenLastCalledWith(expect.stringContaining('Tego nie da się cofnąć'))
     expect(klient.rozlacz).toHaveBeenCalledWith(true)
     expect(refresh).toHaveBeenCalled()
+  })
+
+  it('kalendarz niepołączony - link Połącz kalendarz; połączony - napis Połączony', async () => {
+    await pokaz(false)
+    const sekcja = screen.getByRole('region', { name: 'Kalendarz Samorządowicza' })
+    expect(within(sekcja).getByRole('link', { name: 'Połącz kalendarz' })).toHaveAttribute('href', '/api/skrzynka/kalendarz')
+    expect(sekcja).toHaveTextContent('Komisje, SSUEW, Projekty i Wydarzenia UE')
+    cleanup()
+    await pokaz(true)
+    const polaczony = screen.getByRole('region', { name: 'Kalendarz Samorządowicza' })
+    expect(polaczony).toHaveTextContent('Połączony')
+    expect(within(polaczony).queryByRole('link', { name: 'Połącz kalendarz' })).toBeNull()
   })
 })

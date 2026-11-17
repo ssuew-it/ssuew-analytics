@@ -87,6 +87,18 @@ Odpowiedź z widoku sprawy idzie z kontakt@ jako „Samorząd Studentów UEW” 
 
 Asystent: odprawa i czat widzą skrzynkę - liczby spraw, sprawy po terminie (temat, organizacja, dni czekania) i organizacje z ruchem w 7 dni. Bez treści maili i pól z adresami; tematy idą tak, jak są w Gmailu. Bez połączenia albo przy błędzie odczytu sekcji skrzynki nie ma. Odprawa ma obszar „Skrzynka” z odnośnikiem do `/skrzynka`. W widoku sprawy „Streść” i „Szkic odpowiedzi” wysyłają do Gemini temat, notatki i treść jednego wątku (bez cytowanych linii „>” z wersji tekstowej, do 20 000 znaków od końca) - dopiero po kliknięciu, bez zapisu. Szkic tylko wpisuje się do okna odpowiedzi; miejsca „[do uzupełnienia]” (także pisane wielkimi literami, bez ogonków albo z podpowiedzią po dwukropku) blokują wysyłkę.
 
+## Planer → Kalendarz Samorządowicza
+
+Przycisk **Wyślij do Kalendarza Samorządowicza** w Planerze (tylko właściciel) przenosi wydarzenia bieżącego semestru z kategorii Komisje, SSUEW, Projekty i Wydarzenia UE do głównego kalendarza kontakt@ (udostępnionego Działaczom jako Kalendarz Samorządowicza). Zebrania, Aplikacje i Inne nigdy tam nie trafiają. Najpierw okno z podsumowaniem (przejmę / dodam / zmienię / usunę), zapis dopiero po „Wyślij”; Google nikogo nie powiadamia (`sendUpdates=none`), bez uczestników i bez osób z Planera.
+
+Wydarzenia D.E.C.K. mają znacznik w `extendedProperties.private` (`deck`, `deckId`, `deckSemestr`) - tylko je D.E.C.K. zmienia i usuwa. Ręczny wpis z tym samym tytułem (bez wielkości liter) i dniem startu D.E.C.K. **przejmuje** (dostaje znacznik) zamiast dublować; gdy pasuje więcej niż jeden ręczny wpis, wydarzenie ląduje w „Do sprawdzenia ręcznie” i nic nie jest dodawane. Godzina nieustalona = wydarzenie całodniowe z dopiskiem „(godzina do ustalenia)”. Ponowne kliknięcie po częściowej porażce dosyła tylko brakujące.
+
+Jednorazowo:
+
+1. `deck-samorzad` → APIs & Services → Library: włącz **Google Calendar API**.
+2. OAuth consent screen: dodaj zakres `calendar.events` (sam kalendarz i jego udostępnienie zostają nietknięte).
+3. D.E.C.K. jako kontakt@ → Skrzynka → Ustawienia → **Połącz kalendarz**. Ten sam adres powrotu co skrzynka; zgoda dokłada kalendarz do zgody Gmaila (`include_granted_scopes`), skrzynka nie łączy się od nowa. Zgoda bez uprawnień Gmaila jest odrzucana, żeby skrzynka nie straciła dostępu.
+
 ## Uruchomienie
 
 ```bash

@@ -33,6 +33,7 @@ import { SESJA_WYLACZONA } from '@/lib/planer/stan'
 import { subskrybujSklad, zapiszSklad } from '@/lib/planer/sklad'
 import { Sklad } from './Sklad'
 import { PobierzMiesiac } from './PobierzMiesiac'
+import { WyslijDoKalendarza } from './WyslijDoKalendarza'
 import { PasekEksportuCra } from './PasekEksportuCra'
 import type { ObrazPlanera } from '@/lib/planer/obraz'
 
@@ -463,6 +464,7 @@ export function PlanerClient({ semestr, rola, kto, poczatkowy, naZywo }: Props) 
               <ListChecks size={14} /> Eksport do CRA
             </button>
             <PobierzMiesiac wydarzenia={wydarzenia} miesiac={miesiac} sklad={sklad} />
+            {wlascicielem && <WyslijDoKalendarza />}
           </div>
           <button
             type="button"

@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { POLA_DOMYSLNE, type Semestr, type Wydarzenie } from '@/lib/planer/typy'
 
@@ -36,8 +36,8 @@ const ZEBRANIE: Wydarzenie = {
   ...POLA_DOMYSLNE,
 }
 
-const planer = () =>
-  render(<PlanerClient semestr={SEMESTR} rola="owner" kto="kontakt@samorzad.ue.wroc.pl" poczatkowy={null} naZywo />)
+const planer = (rola: 'owner' | 'board' = 'owner') =>
+  render(<PlanerClient semestr={SEMESTR} rola={rola} kto="kontakt@samorzad.ue.wroc.pl" poczatkowy={null} naZywo />)
 
 afterEach(() => {
   vi.useRealTimers()
@@ -61,5 +61,15 @@ describe('PlanerClient', () => {
     act(() => firestore.wydarzenia?.([ZEBRANIE]))
     expect(screen.getByText('Listopad 2026')).toBeInTheDocument()
     expect(screen.queryByText('Październik 2026')).not.toBeInTheDocument()
+  })
+
+  it('zarząd nie widzi przycisku wysyłki do kalendarza; właściciel widzi', () => {
+    planer('owner')
+    act(() => firestore.wydarzenia?.([ZEBRANIE]))
+    expect(screen.getByRole('button', { name: 'Wyślij do Kalendarza Samorządowicza' })).toBeInTheDocument()
+    cleanup()
+    planer('board')
+    act(() => firestore.wydarzenia?.([ZEBRANIE]))
+    expect(screen.queryByRole('button', { name: 'Wyślij do Kalendarza Samorządowicza' })).not.toBeInTheDocument()
   })
 })

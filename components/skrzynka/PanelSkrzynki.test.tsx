@@ -20,7 +20,9 @@ vi.mock('@/components/skrzynka/Kontakty', () => ({
   Kontakty: (p: { onWybierz: (id: string) => void }) => <button type="button" onClick={() => p.onWybierz('t9')}>kartoteka kontaktów</button>,
 }))
 vi.mock('@/components/skrzynka/Organizacje', () => ({ Organizacje: () => <p>kartoteka organizacji</p> }))
-vi.mock('@/components/skrzynka/UstawieniaSkrzynki', () => ({ UstawieniaSkrzynki: () => <p>ustawienia skrzynki</p> }))
+vi.mock('@/components/skrzynka/UstawieniaSkrzynki', () => ({
+  UstawieniaSkrzynki: (p: { kalendarz?: boolean }) => <p>ustawienia skrzynki{p.kalendarz ? ' z kalendarzem' : ''}</p>,
+}))
 vi.mock('@/components/skrzynka/WidokSprawy', () => ({
   WidokSprawy: (p: { id: string; onZmiana: (s: object) => void; onZamknij: () => void }) => (
     <div>
@@ -65,6 +67,18 @@ describe('PanelSkrzynki', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/zaznacz wszystkie uprawnienia/)
     panel({ liczniki: null })
     expect(screen.getAllByRole('alert').at(-1)).toHaveTextContent(/Nie udało się odczytać stanu skrzynki/)
+  })
+
+  it('kalendarz: błędy zgody, komunikat po połączeniu, ?ustawienia=1 otwiera Ustawienia', () => {
+    panel({ blad: 'niepelna-zgoda' })
+    expect(screen.getByRole('alert')).toHaveTextContent(/zostaw zaznaczone także uprawnienia Gmaila/)
+    cleanup()
+    panel({ blad: 'brak-kalendarza' })
+    expect(screen.getByRole('alert')).toHaveTextContent(/nie obejmuje kalendarza/)
+    cleanup()
+    panel({ kalendarzPolaczony: true, otworzUstawienia: true, kalendarz: true })
+    expect(screen.getByRole('status')).toHaveTextContent('Kalendarz Samorządowicza połączony')
+    expect(screen.getByText('ustawienia skrzynki z kalendarzem')).toBeInTheDocument()
   })
 
   it('zakładki z liczbami; domyślnie Do odpowiedzi; zmiana zakładki', () => {
