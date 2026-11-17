@@ -8,8 +8,9 @@ vi.mock('@/lib/strony/dane', () => ({ statystykiStron: async () => [] }))
 vi.mock('@/lib/asystent/dane', () => ({
   pobierzArkusz: async () => ({ rekrutacje: [], kohorty: [], punkty: [], projekty: [], czlonkowie: [], czasMs: 1 }),
   pobierzPlaner: async () => ({ wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, ok: true }),
-  daneProjektu: (a: object, p: object) => ({ ...a, ...p, semestr: { id: '2026Z', nazwa: 'Z' } }),
-  zbudujKontekst: () => ({ meta: { data: '02.10.2026', dzienTygodnia: 'piątek' } }),
+  daneProjektu: (a: object, p: object, _s: object, _n: object, _st: object, skrzynka: object) => ({ ...a, ...p, skrzynka, semestr: { id: '2026Z', nazwa: 'Z' } }),
+  zbudujKontekst: (d: { skrzynka: object }) => ({ meta: { data: '02.10.2026', dzienTygodnia: 'piątek' }, skrzynka: d.skrzynka }),
+  pobierzObrazSkrzynki: async () => ({ liczby: { doOdpowiedzi: 2 }, poTerminie: [], aktywneOrganizacje: [] }),
   generujOdprawe: (...a: unknown[]) => generujOdprawe(...a),
 }))
 
@@ -38,6 +39,7 @@ describe('POST /api/asystent/odprawa', () => {
     const res = await POST(zada)
     expect(res.status).toBe(200)
     expect((await res.json()).slad).toBe('s')
+    expect(generujOdprawe.mock.calls[0][0].skrzynka).toEqual({ liczby: { doOdpowiedzi: 2 }, poTerminie: [], aktywneOrganizacje: [] })
   })
 
   it('limit Gemini to 429 z ludzkim komunikatem', async () => {

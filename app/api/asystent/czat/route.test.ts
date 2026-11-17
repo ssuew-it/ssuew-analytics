@@ -15,8 +15,11 @@ vi.mock('@/lib/strony/dane', () => ({ statystykiStron: async () => [] }))
 vi.mock('@/lib/asystent/dane', () => ({
   pobierzArkusz: async () => ({ rekrutacje: [], kohorty: [], punkty: [], projekty: [], czlonkowie: [], czasMs: 1 }),
   pobierzPlaner: async () => ({ wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, ok: true }),
-  daneProjektu: (_a: object, _p: object, _s: object, notatki: string[]) => ({ notatki }),
-  zbudujKontekst: (d: { notatki: string[] }) => ({ meta: { data: '02.10.2026', dzienTygodnia: 'piątek' }, notatki: d.notatki }),
+  daneProjektu: (_a: object, _p: object, _s: object, notatki: string[], _st: object, skrzynka: object) => ({ notatki, skrzynka }),
+  zbudujKontekst: (d: { notatki: string[]; skrzynka: object }) => ({
+    meta: { data: '02.10.2026', dzienTygodnia: 'piątek' }, notatki: d.notatki, skrzynka: d.skrzynka,
+  }),
+  pobierzObrazSkrzynki: async () => ({ liczby: { doOdpowiedzi: 7 }, poTerminie: [{ temat: 'Sponsoring', organizacja: 'firma.pl', dniCzekania: 5 }], aktywneOrganizacje: [] }),
   czytajOdprawe: async () => ({ odprawa: { podsumowanie: 'Retencja słabnie.', zagrozenia: [], dzis: [] } }),
 }))
 vi.mock('@/lib/asystent/pamiecDane', () => ({
@@ -67,6 +70,7 @@ describe('POST /api/asystent/czat', () => {
     expect(schemat).toBeDefined()
     expect(wiadomosci[0].tekst).toContain('Zebrania w środy')
     expect(wiadomosci[0].tekst).toContain('Retencja słabnie.')
+    expect(wiadomosci[0].tekst).toContain('"dniCzekania":5')
   })
 
   it('kolejne pytanie dopisuje się do istniejącego wątku', async () => {

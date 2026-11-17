@@ -12,6 +12,7 @@ import {
   czytajOdprawe,
   odswiezOdpraweWTle,
   pobierzArkusz,
+  pobierzObrazSkrzynki,
   pobierzPlaner,
   type DaneArkusza,
 } from '@/lib/asystent/dane'
@@ -98,6 +99,8 @@ export default async function KokpitPage() {
     })
     after(() => odswiezOdpraweWTle({
       arkusz, planer, zapisana, notatki: tresciNotatek().catch(() => []), strony: wynikiStron.then((w) => w ?? []),
+      // `skrzynka` (wyżej) to obietnica liczników kafelka, ustawiana zawsze w tym bloku właściciela.
+      skrzynka: () => pobierzObrazSkrzynki(teraz.getTime(), skrzynka ?? undefined),
       semestr: { id: semestr.id, nazwa: semestr.nazwa }, teraz,
     }))
   }

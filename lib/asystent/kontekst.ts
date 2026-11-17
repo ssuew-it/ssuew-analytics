@@ -8,6 +8,7 @@ import { dniWydarzenia, poczatek, porownajDaty, przesunDate, type Data } from '@
 import { KATEGORIE, type Miesiac, type Wydarzenie } from '@/lib/planer/typy'
 import type { StanSesjiWspolnej } from '@/lib/planer/stan'
 import type { StatystykiStrony } from '@/lib/strony/model'
+import type { ObrazSkrzynki } from '@/lib/skrzynka/typy'
 import type { Czlonek, Kohorta, KpiMetric, Projekt, Rekrutacja } from '@/types'
 
 /** Surowe dane całego projektu - to, co serwer i tak umie pobrać. */
@@ -26,6 +27,8 @@ export interface DaneProjektu {
   notatki: string[]
   /** Strony z Search Console, które odpowiedziały - błędne pomijamy, asystent nie zgaduje. */
   strony: StatystykiStrony[]
+  /** Skrzynka kontakt@ bez treści maili; `null` - niepołączona albo zawiodła. */
+  skrzynka: ObrazSkrzynki | null
 }
 
 /** Ile dni Planera widzi asystent. */
@@ -164,6 +167,7 @@ export function zbudujKontekst(d: DaneProjektu, dzis: Data) {
       alertSpadku: s.alert,
       topZapytania: s.zapytania.slice(0, 3).map((z) => z.tekst),
     })),
+    skrzynka: d.skrzynka,
     notatki: d.notatki,
   }
 }

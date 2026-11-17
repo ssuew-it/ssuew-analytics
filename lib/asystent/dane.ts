@@ -7,10 +7,12 @@ import type { Wydarzenie } from '@/lib/planer/typy'
 import type { Czlonek, Kohorta, KpiMetric, Projekt, Rekrutacja } from '@/types'
 import type { Rola } from '@/lib/auth/role'
 import type { WynikStrony } from '@/lib/strony/model'
+import { liczniki, obrazSkrzynki } from '@/lib/skrzynka/dane'
+import type { LicznikiSkrzynki, ObrazSkrzynki } from '@/lib/skrzynka/typy'
 import { zbudujKontekst, type DaneProjektu, type KontekstProjektu } from './kontekst'
 import { INSTRUKCJA_ODPRAWY, SCHEMAT_ODPRAWY, sprawdzOdprawe, wiadomoscOdprawy, type ZapisanaOdprawa } from './odprawa'
 import { BladAsystenta, zapytajGemini } from './gemini'
-import { czyOdswiezyc, sladKontekstu } from './odswiezanie'
+import { GODZINA_MS, czyOdswiezyc, sladKontekstu } from './odswiezanie'
 
 export interface DaneArkusza {
   rekrutacje: Rekrutacja[]
@@ -67,12 +69,28 @@ export function daneProjektu(
   semestr: { id: string; nazwa: string },
   notatki: string[],
   strony: WynikStrony[],
+  skrzynka: ObrazSkrzynki | null,
 ): DaneProjektu {
   return {
     rekrutacje: a.rekrutacje, kohorty: a.kohorty, punkty: a.punkty, projekty: a.projekty, czlonkowie: a.czlonkowie,
     semestr, wydarzenia: p.wydarzenia, sesja: p.sesja, sklad: p.sklad, propozycje: p.propozycje, notatki,
     strony: strony.flatMap((w) => (w.ok ? [w.dane] : [])),
+    skrzynka,
   }
+}
+
+/**
+ * Skrzynka do obrazu projektu - nigdy nie rzuca: bez połączenia albo przy
+ * błędzie sekcja jest `null`, a odprawa i czat działają dalej. Kokpit podaje
+ * liczniki, które i tak pobrał dla kafelka.
+ */
+export function pobierzObrazSkrzynki(teraz: number, l?: Promise<LicznikiSkrzynki | null>): Promise<ObrazSkrzynki | null> {
+  return (l ?? liczniki(teraz))
+    .then((x) => obrazSkrzynki(teraz, x))
+    .catch((e) => {
+      console.error('[asystent] skrzynka:', e)
+      return null
+    })
 }
 
 export async function czytajOdprawe(): Promise<ZapisanaOdprawa | null> {
@@ -114,15 +132,26 @@ export async function odswiezOdpraweWTle(w: {
   zapisana: Promise<ZapisanaOdprawa | null>
   notatki: Promise<string[]>
   strony: Promise<WynikStrony[]>
+  /**
+   * Funkcja, nie obietnica: obraz skrzynki to do 120 odczytów. Liczymy go tylko,
+   * gdy odprawy nie ma albo jest starsza niż godzina - także wtedy, gdy nowa
+   * odprawa ostatecznie nie powstanie, bo dane się nie zmieniły.
+   */
+  skrzynka: () => Promise<ObrazSkrzynki | null>
   semestr: { id: string; nazwa: string }
   teraz: Date
 }): Promise<void> {
   if (!process.env.GEMINI_API_KEY) return
   try {
-    const [a, p, zapisana, notatki, strony] = await Promise.all([w.arkusz, w.planer, w.zapisana, w.notatki, w.strony])
+    const zapisana = await w.zapisana
+    // Pierwsza reguła `czyOdswiezyc` (`lib/asystent/odswiezanie.ts`): odprawa młodsza niż godzina zostaje.
+    // Sprawdzona przed obrazem skrzynki, żeby nie czytać spraw na darmo.
+    if (zapisana && w.teraz.getTime() - zapisana.utworzono < GODZINA_MS) return
+    const [a, p, notatki, strony] = await Promise.all([w.arkusz, w.planer, w.notatki, w.strony])
     // Odprawa z pustego arkusza albo bez Planera byłaby o niczym - poczekamy.
     if (a.czasMs === null || !p.ok) return
-    const k = zbudujKontekst(daneProjektu(a, p, w.semestr, notatki, strony), dzisWarszawa(w.teraz))
+    const skrzynka = await w.skrzynka()
+    const k = zbudujKontekst(daneProjektu(a, p, w.semestr, notatki, strony, skrzynka), dzisWarszawa(w.teraz))
     if (!czyOdswiezyc(zapisana, sladKontekstu(k), k.meta.data, w.teraz.getTime())) return
     await generujOdprawe(k, w.teraz.getTime())
   } catch (e) {

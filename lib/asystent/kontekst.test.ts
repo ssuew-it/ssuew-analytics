@@ -16,7 +16,7 @@ function dane(nadpisz: Partial<DaneProjektu> = {}): DaneProjektu {
   return {
     rekrutacje: [], kohorty: [], punkty: [], projekty: [], czlonkowie: [],
     semestr: { id: '2026Z', nazwa: 'Zimowy 2026/2027' },
-    wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, notatki: [], strony: [],
+    wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, notatki: [], strony: [], skrzynka: null,
     ...nadpisz,
   }
 }
@@ -55,6 +55,16 @@ describe('zbudujKontekst', () => {
       ],
     }), DZIS)
     expect(k.kpi[0]).toMatchObject({ nazwa: 'Listopad', wartosc: 30, rokDoRoku: 0.6, kierunek: 'spadek' })
+  })
+
+  it('skrzynka: obraz bez zmian; niepołączona - null', () => {
+    const skrzynka = {
+      liczby: { doOdpowiedzi: 3, poTerminie: 1, doPrzejrzenia: 0, czekaNaNich: 2, wToku: 1 },
+      poTerminie: [{ temat: 'Sponsoring', organizacja: 'firma.pl', dniCzekania: 6 }],
+      aktywneOrganizacje: [{ nazwa: 'Uniwersytet Ekonomiczny', domena: 'ue.wroc.pl', sprawy: 2 }],
+    }
+    expect(zbudujKontekst(dane({ skrzynka }), DZIS).skrzynka).toEqual(skrzynka)
+    expect(zbudujKontekst(dane(), DZIS).skrzynka).toBeNull()
   })
 
   it('notatki trafiają do obrazu jako pewne ustalenia', () => {
