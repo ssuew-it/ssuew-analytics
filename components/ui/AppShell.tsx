@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <h1 className="mt-1 text-sm font-medium text-deck-text">{nazwaZakladki(pathname)}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <div className="deck-chip hidden xl:flex items-center gap-2 rounded-lg px-2 py-1">
               <Filter size={13} className="text-deck-accent" />
               <Suspense fallback={<div className="text-[11px] text-deck-muted">...</div>}>

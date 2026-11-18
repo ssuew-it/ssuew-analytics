@@ -98,7 +98,7 @@ export function ZakladkiMobilne() {
   const pathname = usePathname()
   const pozycje = [{ href: '/', label: 'DECK' }, ...NAV, { href: '/analytics/wpis', label: 'Wpisz dane' }]
   return (
-    <nav aria-label="Moduły analityki" className="-mx-4 flex basis-full gap-1 overflow-x-auto px-4 pb-1 md:hidden">
+    <nav aria-label="Moduły analityki" className="-mx-4 flex basis-full gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
       {pozycje.map((p) => {
         const active = pathname === p.href
         return (

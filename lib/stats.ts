@@ -33,13 +33,13 @@ export function pearson(x: number[], y: number[]): number {
 function approxPval(tStat: number, _df: number): { label: string; significant: boolean } {
   const t = Math.abs(tStat)
   // Przybliżenie p-value dla dwustronnego testu t
-  if (t > 4.5)  return { label: '<0.001', significant: true }
-  if (t > 3.5)  return { label: '<0.005', significant: true }
-  if (t > 2.9)  return { label: '<0.01',  significant: true }
-  if (t > 2.4)  return { label: '<0.05',  significant: true }
-  if (t > 2.0)  return { label: '~0.07',  significant: false }
-  if (t > 1.5)  return { label: '~0.15',  significant: false }
-  return { label: '>0.20', significant: false }
+  if (t > 4.5)  return { label: '<0,001', significant: true }
+  if (t > 3.5)  return { label: '<0,005', significant: true }
+  if (t > 2.9)  return { label: '<0,01',  significant: true }
+  if (t > 2.4)  return { label: '<0,05',  significant: true }
+  if (t > 2.0)  return { label: '~0,07',  significant: false }
+  if (t > 1.5)  return { label: '~0,15',  significant: false }
+  return { label: '>0,20', significant: false }
 }
 
 export function pearsonTest(x: number[], y: number[]): StatResult {

@@ -33,7 +33,7 @@ export function AuthStatus() {
       ) : (
         <UserCircle size={15} className="text-deck-accent" />
       )}
-      <span className="max-w-[150px] truncate text-[10px] text-deck-muted">{kto}</span>
+      <span className="max-w-[110px] truncate text-[10px] text-deck-muted sm:max-w-[150px]">{kto}</span>
       <span className="rounded border border-deck-accent/30 bg-deck-accent/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-deck-accent">
         {rola}
       </span>

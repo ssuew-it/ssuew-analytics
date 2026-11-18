@@ -1,4 +1,5 @@
 'use client'
+import { formatNumber } from '@/lib/format'
 import { useState } from 'react'
 import { ComposedChart, Bar, Line, Area, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useAnalyticsData } from '@/lib/useAnalyticsData'
@@ -103,7 +104,7 @@ export default function RekrutacjeClient() {
         <>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             <KpiTile label={`Przyjęci ${s.sorted[lastIdx].edycja}`} value={s.przyj[lastIdx]} sub={`z ${s.zglos[lastIdx]} zgłoszeń`} />
-            <KpiTile label="Średnia konwersja" value={`${avgCR}%`} sub="wszystkie edycje" accent="accent" />
+            <KpiTile label="Średnia konwersja" value={`${formatNumber(avgCR, 1)}%`} sub="wszystkie edycje" accent="accent" />
             {fc[0] ? (
               <KpiTile label={`Prognoza ${fc[0].edycja}`} value={`~${Math.round(fc[0].yhat)}`} sub={`±${Math.round(fc[0].hi - fc[0].yhat)} · z edycji tego sezonu`} accent="violet" />
             ) : (
@@ -147,7 +148,7 @@ export default function RekrutacjeClient() {
 
             <BentoCard
               title="Sezonowość - test t Welcha"
-              sub={`t = ${s.sezonowosc.tStat.toFixed(2).replace('.', ',')} · df ≈ ${s.sezonowosc.df} · p ${s.sezonowosc.p_approx}`}
+              sub={`t = ${s.sezonowosc.tStat.toFixed(2).replace('.', ',')} · df ≈ ${formatNumber(s.sezonowosc.df, 1)} · p ${s.sezonowosc.p_approx}`}
             >
               <div className="flex gap-3 mb-2">
                 <div className="flex-1 bg-deck-bg border border-deck-border rounded-lg p-2 text-center">
