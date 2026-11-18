@@ -1,6 +1,9 @@
 'use client'
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { ShieldAlert } from 'lucide-react'
+import { useAuth } from '@/lib/auth/useAuth'
+import { linkWpisu } from '@/lib/wpis'
 import { useProjekty } from '@/lib/useProjekty'
 import { edycje as wszystkieEdycje, kondycjaEdycji } from '@/lib/projekty/flagi'
 import { BentoCard } from '@/components/ui/BentoCard'
@@ -10,6 +13,7 @@ import { KartaProjektu } from '@/components/modules/KartaProjektu'
 
 export default function ProjektyClient() {
   const { projekty, loading, blad } = useProjekty()
+  const { rola } = useAuth()
   const [wybrana, setWybrana] = useState<string | null>(null)
 
   const dostepne = useMemo(() => wszystkieEdycje(projekty), [projekty])
@@ -28,10 +32,32 @@ export default function ProjektyClient() {
 
   if (!projekty.length) {
     return (
-      <BentoCard title="Kondycja projektów">
-        <p className="text-[11px] text-deck-muted">
-          Brak danych o projektach. Dodaj pierwszy w module „Wpisz dane” → zakładka „Projekt”.
-        </p>
+      <BentoCard title="Kondycja projektów" sub="jeszcze bez danych">
+        <div className="grid gap-5 md:grid-cols-[1.2fr_1fr]">
+          <div>
+            <p className="text-[12.5px] leading-relaxed text-deck-text">
+              Tu zobaczysz każdy projekt w danej edycji: budżet planowany i wydany, nabór, uczestników i partnerów -
+              z ostrzeżeniem, gdy coś odbiega od normy albo od zeszłego roku.
+            </p>
+            {rola === 'owner' ? (
+              <Link href={linkWpisu('projekt')} className="deck-button mt-4 inline-flex rounded-md px-3 py-1.5 text-[12px] font-semibold">
+                Dodaj pierwszy projekt
+              </Link>
+            ) : (
+              <p className="mt-4 text-[11.5px] text-deck-muted">Projekty dopisuje właściciel kokpitu w „Wpisz dane”.</p>
+            )}
+            <p className="mt-2 text-[11px] text-deck-muted">Wystarczy nazwa i edycja - liczby można dopisać później.</p>
+          </div>
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-deck-muted">Na co zwraca uwagę</div>
+            <ul className="mt-2 space-y-1.5 text-[11.5px] text-deck-muted">
+              <li><span className="text-deck-danger">alarm</span> · budżet przekroczony albo wydatek bez przyznanego budżetu</li>
+              <li><span className="text-deck-warn">uwaga</span> · budżet ledwo ruszony, nabór przedłużany albo bez nadwyżki chętnych</li>
+              <li><span className="text-deck-warn">uwaga</span> · brak partnera finansowego</li>
+              <li><span className="text-deck-warn">uwaga</span> · mniej chętnych lub uczestników niż rok wcześniej</li>
+            </ul>
+          </div>
+        </div>
       </BentoCard>
     )
   }
