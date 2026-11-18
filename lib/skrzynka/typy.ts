@@ -143,6 +143,8 @@ export interface SzczegolySprawy {
   /** Dokąd pójdzie odpowiedź (Reply-To albo nadawca); `null` - nie ma do kogo odpowiedzieć. */
   adresat: string | null
   stopka: string
+  /** Stopka HTML z Ustawień - pusta, gdy nie ustawiona. */
+  stopkaHtml: string
 }
 
 /** Ręczna zmiana sprawy z panelu. `pomin` = Pominięta + nadawca (adres albo domena) na listę „zawsze pomijaj”. */
@@ -157,6 +159,8 @@ export const MAKS_ZALACZNIKOW = 4 * 1024 * 1024
 
 export interface UstawieniaSkrzynki {
   stopka: string
+  /** Stopka HTML (obrazki, formatowanie); pusta - odpowiedzi idą samym tekstem. */
+  stopkaHtml: string
   pomijaneAdresy: string[]
   pomijaneDomeny: string[]
 }

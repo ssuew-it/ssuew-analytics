@@ -295,10 +295,11 @@ describe('zmiany ręczne', () => {
 
 describe('ustawienia', () => {
   it('bez dokumentu - domyślna stopka i puste listy; zapis scala z resztą', async () => {
-    expect(await czytajUstawienia()).toEqual({ stopka: DOMYSLNA_STOPKA, pomijaneAdresy: [], pomijaneDomeny: [] })
+    expect(await czytajUstawienia()).toEqual({ stopka: DOMYSLNA_STOPKA, stopkaHtml: '', pomijaneAdresy: [], pomijaneDomeny: [] })
     await dodajPomijanie('adres', 'a@x.pl')
-    expect(await zapiszUstawienia({ stopka: 'Pozdrawiamy' })).toEqual({ stopka: 'Pozdrawiamy', pomijaneAdresy: ['a@x.pl'], pomijaneDomeny: [] })
-    expect(await zapiszUstawienia({ pomijaneAdresy: [] })).toEqual({ stopka: 'Pozdrawiamy', pomijaneAdresy: [], pomijaneDomeny: [] })
+    expect(await zapiszUstawienia({ stopka: 'Pozdrawiamy' })).toEqual({ stopka: 'Pozdrawiamy', stopkaHtml: '', pomijaneAdresy: ['a@x.pl'], pomijaneDomeny: [] })
+    expect(await zapiszUstawienia({ pomijaneAdresy: [] })).toEqual({ stopka: 'Pozdrawiamy', stopkaHtml: '', pomijaneAdresy: [], pomijaneDomeny: [] })
+    expect((await zapiszUstawienia({ stopkaHtml: '<p>S</p>' })).stopkaHtml).toBe('<p>S</p>')
   })
 })
 

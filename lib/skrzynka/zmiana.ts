@@ -1,3 +1,4 @@
+import { czystyHtml } from './html'
 import { organizacjaZEmaila } from './kontakty'
 import { STATUSY, TYPY_ORGANIZACJI, type Status, type TypOrganizacji, type UstawieniaSkrzynki, type ZmianaSprawy } from './typy'
 
@@ -24,6 +25,8 @@ export function sprawdzZmiane(body: unknown, sklad: string[]): ZmianaSprawy | nu
 const EMAIL = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/
 const DOMENA = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/
 export const MAKS_STOPKI = 1000
+/** Stopka HTML może mieć małe obrazki wklejone jako dane - stąd duży zapas. */
+export const MAKS_STOPKI_HTML = 100_000
 const MAKS_LISTY = 1000
 const MAKS_NAZWY = 120
 
@@ -44,6 +47,12 @@ export function sprawdzUstawienia(body: unknown): { zmiana: Partial<UstawieniaSk
   if (x.stopka !== undefined) {
     if (typeof x.stopka !== 'string' || x.stopka.length > MAKS_STOPKI) return { blad: `Stopka może mieć najwyżej ${MAKS_STOPKI} znaków.` }
     z.stopka = x.stopka
+  }
+  if (x.stopkaHtml !== undefined) {
+    if (typeof x.stopkaHtml !== 'string' || x.stopkaHtml.length > MAKS_STOPKI_HTML) {
+      return { blad: `Stopka HTML może mieć najwyżej ${MAKS_STOPKI_HTML} znaków.` }
+    }
+    z.stopkaHtml = czystyHtml(x.stopkaHtml).trim()
   }
   if (x.pomijaneAdresy !== undefined) {
     const l = lista(x.pomijaneAdresy)

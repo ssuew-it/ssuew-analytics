@@ -214,7 +214,7 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
         ))}
       </ol>
       {dane.wiadomosci.length > 0 && (
-        <OknoOdpowiedzi key={s.id} sprawaId={s.id} adresat={dane.adresat} stopka={dane.stopka} onWyslano={poWyslaniu} />
+        <OknoOdpowiedzi key={s.id} sprawaId={s.id} adresat={dane.adresat} stopka={dane.stopka} stopkaHtml={dane.stopkaHtml} onWyslano={poWyslaniu} />
       )}
     </section>
   )

@@ -26,13 +26,14 @@ export async function GET(req: NextRequest, { params }: Kontekst) {
       if (e instanceof BladSkrzynki && e.rodzaj === 'brak-watku') return null
       throw e
     })
-    const { stopka } = await czytajUstawienia()
+    const { stopka, stopkaHtml } = await czytajUstawienia()
     const sprawa = s.nowa ? ((await zmienSprawe(id, { nowa: false })) ?? s) : s
     return NextResponse.json({
       sprawa,
       wiadomosci: watek ? odczytajWatekPelny(watek) : [],
       adresat: watek ? (przygotujOdpowiedz(watek, nasz())?.do ?? null) : null,
       stopka,
+      stopkaHtml,
     } satisfies SzczegolySprawy)
   } catch (e) {
     const { status, error } = komunikatBledu(e)

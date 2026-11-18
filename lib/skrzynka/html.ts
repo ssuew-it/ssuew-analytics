@@ -24,6 +24,44 @@ function polityka(o: OpcjeRamki): string {
   return `default-src 'none'; img-src ${obrazy}; style-src 'unsafe-inline'; font-src data:`
 }
 
+/** HTML bez skryptów, ramek, formularzy, obsługi zdarzeń i `javascript:` - do ramki maila i do stopki. */
+export function czystyHtml(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<\/?(script|iframe|object|embed|form|link|meta|base)\b[^>]*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '$1=$2#$2')
+}
+
+const ENCJE: Record<string, string> = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
+
+/** Wersja tekstowa HTML (stopki): nowe linie z `<br>` i bloków, bez znaczników, encje rozwinięte. */
+export function htmlNaTekst(html: string): string {
+  return czystyHtml(html)
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li|h[1-6])\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(#\d+|[a-z]+);/gi, (calosc, e: string) =>
+      e.startsWith('#') ? String.fromCodePoint(Number(e.slice(1))) : (ENCJE[e.toLowerCase()] ?? calosc),
+    )
+    .split('\n')
+    .map((l) => l.replace(/[ \t]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** Tekst odpowiedzi do części HTML maila: znaki specjalne zabezpieczone, nowe linie jako `<br>`. */
+export function tekstNaHtml(tekst: string): string {
+  return tekst
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/\r?\n/g, '<br>')
+}
+
 /**
  * HTML maila do `<iframe sandbox srcdoc>`. Sandbox bez `allow-scripts` i tak
  * nie wykona skryptu, a CSP blokuje zewnętrzne obrazki (piksele śledzące) i
@@ -32,11 +70,7 @@ function polityka(o: OpcjeRamki): string {
  * wypadek błędu w pierwszej.
  */
 export function bezpiecznyHtml(html: string, o: OpcjeRamki = {}): string {
-  const czysty = html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<\/?(script|iframe|object|embed|form|link|meta|base)\b[^>]*>/gi, '')
-    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '$1=$2#$2')
+  const czysty = czystyHtml(html)
     .replace(/\bsrc\s*=\s*("|')cid:([^"']+)\1/gi, (calosc, q: string, cid: string) => {
       const adres = o.obrazki?.[cid]
       return adres ? `src=${q}${adres.replace(/["'<>]/g, '')}${q}` : calosc

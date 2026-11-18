@@ -56,6 +56,26 @@ describe('UstawieniaSkrzynki', () => {
     expect(screen.getByLabelText('Domena do pomijania')).toHaveValue('gmail.com')
   })
 
+  it('stopka HTML: wklejenie z formatowaniem daje HTML, podgląd na żywo, zapis i usunięcie', async () => {
+    await pokaz()
+    const pole = screen.getByLabelText('Stopka HTML')
+    fireEvent.paste(pole, { clipboardData: { getData: (t: string) => (t === 'text/html' ? '<html><body><!--StartFragment--><p>Mikołaj</p><!--EndFragment--></body></html>' : 'Mikołaj') } })
+    expect(pole).toHaveValue('<p>Mikołaj</p>')
+    expect(screen.getByTitle('Podgląd stopki HTML').getAttribute('srcdoc')).toContain('<p>Mikołaj</p>')
+    klient.zapiszUstawienia.mockResolvedValue({ ...U, stopkaHtml: '<p>Mikołaj</p>' })
+    await klik('Zapisz stopkę HTML')
+    expect(klient.zapiszUstawienia).toHaveBeenLastCalledWith({ stopkaHtml: '<p>Mikołaj</p>' })
+    klient.zapiszUstawienia.mockResolvedValue({ ...U, stopkaHtml: '' })
+    await klik('Usuń stopkę HTML')
+    expect(klient.zapiszUstawienia).toHaveBeenLastCalledWith({ stopkaHtml: '' })
+  })
+
+  it('stopka HTML z obrazkiem wklejonym jako dane - ostrzeżenie', async () => {
+    await pokaz()
+    fireEvent.change(screen.getByLabelText('Stopka HTML'), { target: { value: '<img src="data:image/png;base64,AAA">' } })
+    expect(screen.getByText(/obrazki wklejone jako dane/i)).toBeInTheDocument()
+  })
+
   it('listy pomijanych podpisane - Adresy i Domeny, także gdy puste', async () => {
     klient.ustawienia.mockResolvedValue({ ...U, pomijaneAdresy: [], pomijaneDomeny: [] })
     await pokaz()

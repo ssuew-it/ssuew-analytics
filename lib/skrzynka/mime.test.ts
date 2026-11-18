@@ -117,6 +117,33 @@ describe('zbudujMail', () => {
     expect(czesci[3]).toContain('Content-Type: application/octet-stream; name="x.bin"')
   })
 
+  it('stopka HTML: tekst i HTML w multipart/alternative; treść bezpiecznie w HTML; obrazki stopki zostają', () => {
+    const raw = zbudujMail({ ...MAIL, tekst: 'Dzień dobry,\n<b>nie pogrubiaj</b>', stopkaHtml: '<p>Mikołaj</p><img src="https://samorzad.ue.wroc.pl/logo.png">' }, 'GRANICA')
+    expect(naglowki(raw)).toContain('Content-Type: multipart/alternative; boundary="GRANICA"')
+    const czesci = raw.split('--GRANICA')
+    expect(czesci).toHaveLength(4)
+    expect(czesci[1]).toContain('Content-Type: text/plain; charset=UTF-8')
+    expect(zBase64(czesci[1].split('\r\n\r\n')[1]).toString('utf8')).toBe('Dzień dobry,\r\n<b>nie pogrubiaj</b>\r\n\r\n-- \r\nSamorząd Studentów UEW')
+    expect(czesci[2]).toContain('Content-Type: text/html; charset=UTF-8')
+    const html = zBase64(czesci[2].split('\r\n\r\n')[1]).toString('utf8')
+    expect(html).toContain('Dzień dobry,<br>&lt;b&gt;nie pogrubiaj&lt;/b&gt;')
+    expect(html).toContain('<p>Mikołaj</p><img src="https://samorzad.ue.wroc.pl/logo.png">')
+  })
+
+  it('stopka HTML bez tekstowej - wersja tekstowa z HTML stopki', () => {
+    const raw = zbudujMail({ ...MAIL, stopka: '', stopkaHtml: '<div>Mikołaj Radliński<br>Samorząd&nbsp;UEW</div>' }, 'GRANICA')
+    const tekst = zBase64(raw.split('--GRANICA')[1].split('\r\n\r\n')[1]).toString('utf8')
+    expect(tekst).toBe('Dzień dobry,\r\ndziękujemy za ofertę.\r\n\r\nMikołaj Radliński\r\nSamorząd UEW')
+  })
+
+  it('stopka HTML i załączniki: multipart/mixed z alternative w środku', () => {
+    const raw = zbudujMail({ ...MAIL, stopkaHtml: '<p>S</p>', pliki: [{ nazwa: 'a.pdf', typ: 'application/pdf', dane: Uint8Array.from([1]) }] }, 'GRANICA')
+    expect(naglowki(raw)).toContain('Content-Type: multipart/mixed; boundary="GRANICA"')
+    expect(raw).toContain('Content-Type: multipart/alternative; boundary="GRANICA-alt"')
+    expect(raw.split('--GRANICA-alt')).toHaveLength(4)
+    expect(raw).toContain('Content-Disposition: attachment; filename="a.pdf"')
+  })
+
   it('czysty ASCII bez kodowania; długi polski temat w kilku słowach po 75 znaków', () => {
     expect(slowoNaglowka('Re: Spotkanie')).toBe('Re: Spotkanie')
     const s = slowoNaglowka('Zażółć gęślą jaźń 🎉 '.repeat(5))

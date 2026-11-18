@@ -342,6 +342,16 @@ describe('wyslijOdpowiedz', () => {
     expect(zapisane().sprawy[0]).toMatchObject({ id: 't1', status: 'czeka-na-nich' })
   })
 
+  it('stopka HTML z Ustawień - mail z wersją HTML', async () => {
+    dane.czytajUstawienia.mockResolvedValue({ stopka: 'Stopka', stopkaHtml: '<p>Mikołaj</p>', pomijaneAdresy: [], pomijaneDomeny: [] })
+    dane.czytajSprawe.mockResolvedValueOnce(S).mockResolvedValueOnce({ ...S, status: 'czeka-na-nich' })
+    g.watek.mockResolvedValue(watek('t1', [['anna@firma.pl', 1], [NASZ, 2]]))
+    await wyslijOdpowiedz('t1', 'Dziękujemy', [], TERAZ)
+    const [mime] = g.wyslij.mock.calls[0]
+    expect(mime).toContain('Content-Type: multipart/alternative')
+    expect(mime).toContain('Content-Type: text/html; charset=UTF-8')
+  })
+
   it('nie ma sprawy - null; nie ma do kogo - błąd; nic nie wysłane', async () => {
     dane.czytajSprawe.mockResolvedValueOnce(null)
     expect(await wyslijOdpowiedz('brak', 'x', [])).toBeNull()

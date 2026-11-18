@@ -2,8 +2,16 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
+import { bezpiecznyHtml } from '@/lib/skrzynka/html'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import type { UstawieniaSkrzynki as Ustawienia } from '@/lib/skrzynka/typy'
+
+/** Ze schowka: sam wycinek między znacznikami Fragment (Windows, Chrome), bez `<html>` i `<body>`. */
+function wycinekSchowka(html: string): string {
+  const fragment = /<!--StartFragment-->([\s\S]*?)<!--EndFragment-->/i.exec(html)?.[1]
+  const tresc = fragment ?? /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html)?.[1] ?? html
+  return tresc.trim()
+}
 
 /**
  * Stopka odpowiedzi, listy „zawsze pomijaj” i „Rozłącz”. Każda zmiana listy
@@ -13,6 +21,7 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
   const router = useRouter()
   const [u, setU] = useState<Ustawienia | null>(null)
   const [stopka, setStopka] = useState('')
+  const [stopkaHtml, setStopkaHtml] = useState('')
   const [adres, setAdres] = useState('')
   const [domena, setDomena] = useState('')
   const [usunDane, setUsunDane] = useState(false)
@@ -28,6 +37,7 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
         if (!aktywny) return
         setU(x)
         setStopka(x.stopka)
+        setStopkaHtml(x.stopkaHtml ?? '')
       })
       .catch((e: Error) => {
         if (aktywny) setBlad(e.message)
@@ -45,6 +55,7 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
       const n = await klientSkrzynki.zapiszUstawienia(z)
       setU(n)
       setStopka(n.stopka)
+      setStopkaHtml(n.stopkaHtml ?? '')
       setInfo('Zapisano.')
       potem?.()
     } catch (e) {
@@ -104,6 +115,48 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
         <button type="button" disabled={trwa || stopka === u.stopka} onClick={() => zapisz({ stopka })} className={przycisk}>
           Zapisz stopkę
         </button>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className={naglowek}>Stopka HTML (z obrazkami)</h3>
+        <p className="text-deck-muted">
+          Skopiuj gotową stopkę (np. z podpisu w Gmailu albo z generatora stopek) i wklej tutaj - D.E.C.K. zachowa formatowanie i obrazki. Albo wpisz HTML ręcznie. Gdy jest ustawiona, odpowiedzi idą jako HTML, a tekstowa stopka wyżej trafia do wersji tekstowej.
+        </p>
+        <textarea
+          aria-label="Stopka HTML"
+          value={stopkaHtml}
+          onChange={(e) => setStopkaHtml(e.target.value)}
+          onPaste={(e) => {
+            const html = e.clipboardData.getData('text/html')
+            if (!html) return
+            e.preventDefault()
+            setStopkaHtml(wycinekSchowka(html))
+          }}
+          rows={5}
+          spellCheck={false}
+          className="deck-input w-full rounded-md px-2.5 py-2 font-mono text-[11.5px]"
+        />
+        {/data:image\//i.test(stopkaHtml) && (
+          <p className="text-deck-warn">Obrazki wklejone jako dane mogą się u odbiorcy nie wyświetlić (Gmail i Outlook je blokują) - lepiej obrazek z adresu https, np. logo ze strony samorządu.</p>
+        )}
+        {stopkaHtml.trim() && (
+          <iframe
+            title="Podgląd stopki HTML"
+            sandbox=""
+            srcDoc={bezpiecznyHtml(stopkaHtml, { zSieci: true })}
+            className="h-[160px] w-full rounded-md border border-white/10 bg-white"
+          />
+        )}
+        <div className="flex flex-wrap gap-1.5">
+          <button type="button" disabled={trwa || stopkaHtml === (u.stopkaHtml ?? '')} onClick={() => zapisz({ stopkaHtml })} className={przycisk}>
+            Zapisz stopkę HTML
+          </button>
+          {(u.stopkaHtml ?? '') !== '' && (
+            <button type="button" disabled={trwa} onClick={() => zapisz({ stopkaHtml: '' })} className={przycisk}>
+              Usuń stopkę HTML
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">

@@ -35,6 +35,14 @@ describe('OknoOdpowiedzi', () => {
     expect(screen.getByRole('button', { name: 'Wyślij' })).toBeDisabled()
   })
 
+  it('stopka HTML - podgląd w ramce zamiast tekstowej', () => {
+    render(<OknoOdpowiedzi sprawaId="t1" adresat="anna@firma.pl" stopka="-- tekst" stopkaHtml='<p>Mikołaj</p><img src="https://a.pl/l.png">' onWyslano={vi.fn()} />)
+    const ramka = screen.getByTitle('Podgląd stopki')
+    expect(ramka.getAttribute('srcdoc')).toContain('<p>Mikołaj</p>')
+    expect(ramka.getAttribute('sandbox')).not.toContain('allow-scripts')
+    expect(screen.queryByText('-- tekst')).not.toBeInTheDocument()
+  })
+
   it('wysyłka z załącznikiem; po sukcesie okno puste, rodzic dostaje sprawę', async () => {
     klient.odpowiedz.mockResolvedValue({ id: 't1', status: 'czeka-na-nich' })
     const onWyslano = okno()

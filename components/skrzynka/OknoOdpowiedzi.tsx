@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import { Paperclip, Send, Sparkles, X } from 'lucide-react'
 import { LUKA, maLuki } from '@/lib/skrzynka/asystent'
+import { bezpiecznyHtml } from '@/lib/skrzynka/html'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import { rozmiar } from '@/lib/skrzynka/widok'
 import { MAKS_ZALACZNIKOW, type Sprawa } from '@/lib/skrzynka/typy'
@@ -12,10 +13,12 @@ import { MAKS_ZALACZNIKOW, type Sprawa } from '@/lib/skrzynka/typy'
  * Szkic od D.E.C.K. tylko wpisuje tekst do okna; miejsca do uzupełnienia
  * blokują wysyłkę, dopóki ich nie zastąpisz.
  */
-export function OknoOdpowiedzi({ sprawaId, adresat, stopka, onWyslano }: {
+export function OknoOdpowiedzi({ sprawaId, adresat, stopka, stopkaHtml = '', onWyslano }: {
   sprawaId: string
   adresat: string | null
   stopka: string
+  /** Stopka HTML z Ustawień - ma pierwszeństwo w podglądzie (mail idzie wtedy też jako HTML). */
+  stopkaHtml?: string
   onWyslano: (s: Sprawa) => void
 }) {
   const [tekst, setTekst] = useState('')
@@ -108,10 +111,19 @@ export function OknoOdpowiedzi({ sprawaId, adresat, stopka, onWyslano }: {
           </p>
         </>
       )}
-      {stopka && (
-        <pre aria-label="Stopka" className="whitespace-pre-wrap font-sans text-[11.5px] text-deck-muted">
-          {stopka}
-        </pre>
+      {stopkaHtml ? (
+        <iframe
+          title="Podgląd stopki"
+          sandbox=""
+          srcDoc={bezpiecznyHtml(stopkaHtml, { zSieci: true })}
+          className="h-[140px] w-full rounded-md border border-white/10 bg-white"
+        />
+      ) : (
+        stopka && (
+          <pre aria-label="Stopka" className="whitespace-pre-wrap font-sans text-[11.5px] text-deck-muted">
+            {stopka}
+          </pre>
+        )
       )}
       {luki && <p className="text-deck-danger">Uzupełnij miejsca {LUKA} przed wysłaniem.</p>}
       {blad && <p role="alert" className="text-deck-danger">{blad}</p>}

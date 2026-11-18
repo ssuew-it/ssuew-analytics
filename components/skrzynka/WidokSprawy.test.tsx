@@ -30,6 +30,7 @@ const D = (n: Partial<Sprawa> = {}): SzczegolySprawy => ({
   ],
   adresat: 'anna@firma.pl',
   stopka: '-- \nSamorząd Studentów UEW',
+  stopkaHtml: '',
 })
 
 async function widok(d: SzczegolySprawy = D()) {

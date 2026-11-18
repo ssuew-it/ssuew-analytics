@@ -268,8 +268,8 @@ export async function wyslijOdpowiedz(id: string, tekst: string, pliki: PlikWysy
   return zRozlaczeniem(async () => {
     const odp = przygotujOdpowiedz(await g.watekDoOdpowiedzi(id), nasz())
     if (!odp) throw new BladSkrzynki('brak-adresata', `Wątek ${id} bez adresata`)
-    const { stopka } = await czytajUstawienia()
-    await g.wyslij(zbudujMail({ od: nasz(), nazwaOd: NADAWCA, ...odp, tekst, stopka, pliki }), id)
+    const { stopka, stopkaHtml } = await czytajUstawienia()
+    await g.wyslij(zbudujMail({ od: nasz(), nazwaOd: NADAWCA, ...odp, tekst, stopka, stopkaHtml, pliki }), id)
     // Mail już poszedł - błąd odtąd nie może wyglądać jak nieudana wysyłka, bo
     // ponowne „Wyślij” byłoby drugim mailem. Status poprawi push albo synchronizacja.
     try {

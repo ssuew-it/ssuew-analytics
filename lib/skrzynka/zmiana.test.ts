@@ -40,6 +40,16 @@ describe('sprawdzUstawienia', () => {
   })
 })
 
+describe('sprawdzUstawienia - stopka HTML', () => {
+  it('czyszczona ze skryptów i zdarzeń; pusta usuwa stopkę; limit długości', () => {
+    expect(sprawdzUstawienia({ stopkaHtml: '<p onclick="x()">Mikołaj</p><script>alert(1)</script><img src="https://a.pl/l.png">' }))
+      .toEqual({ zmiana: { stopkaHtml: '<p>Mikołaj</p><img src="https://a.pl/l.png">' } })
+    expect(sprawdzUstawienia({ stopkaHtml: '   ' })).toEqual({ zmiana: { stopkaHtml: '' } })
+    expect(sprawdzUstawienia({ stopkaHtml: 'x'.repeat(100_001) })).toEqual({ blad: 'Stopka HTML może mieć najwyżej 100000 znaków.' })
+    expect(sprawdzUstawienia({ stopkaHtml: 5 })).toEqual({ blad: 'Stopka HTML może mieć najwyżej 100000 znaków.' })
+  })
+})
+
 describe('sprawdzOrganizacje', () => {
   it('nazwa bez spacji na brzegach i typ z listy', () => {
     expect(sprawdzOrganizacje({ domena: 'firma.pl', nazwa: '  Firma S.A. ', typ: 'sponsor' })).toEqual({ domena: 'firma.pl', zmiana: { nazwa: 'Firma S.A.', typ: 'sponsor' } })

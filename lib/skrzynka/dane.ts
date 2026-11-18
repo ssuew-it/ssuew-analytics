@@ -282,6 +282,7 @@ export async function czytajUstawienia(): Promise<UstawieniaSkrzynki> {
   const d = (await skrzynkaUstawieniaRef().get()).data()
   return {
     stopka: typeof d?.stopka === 'string' ? d.stopka : DOMYSLNA_STOPKA,
+    stopkaHtml: typeof d?.stopkaHtml === 'string' ? d.stopkaHtml : '',
     pomijaneAdresy: listaTekstow(d?.pomijaneAdresy),
     pomijaneDomeny: listaTekstow(d?.pomijaneDomeny),
   }

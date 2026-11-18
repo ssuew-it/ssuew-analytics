@@ -1,3 +1,4 @@
+import { htmlNaTekst, tekstNaHtml } from './html'
 import { dekodujNaglowek, odczytajAdresy, type WatekApi } from './naglowki'
 
 /** Do kogo i z jakimi nagłówkami idzie odpowiedź w wątku. */
@@ -21,6 +22,8 @@ export interface MailWysylany {
   temat: string
   tekst: string
   stopka: string
+  /** Stopka HTML z Ustawień - wtedy mail ma też wersję HTML. */
+  stopkaHtml?: string
   inReplyTo: string | null
   references: string | null
   pliki: PlikWysylki[]
@@ -86,10 +89,34 @@ export function slowoNaglowka(s: string): string {
   return kawalki.map((k) => `=?UTF-8?B?${base64(utf8(k))}?=`).join(`${CRLF} `)
 }
 
-/** Mail do `messages.send`: tekst UTF-8 ze stopką, załączniki w `multipart/mixed`, wszystko base64. */
+const czesc = (typ: string, tresc: string) => [`Content-Type: ${typ}; charset=UTF-8`, 'Content-Transfer-Encoding: base64', '', linie76(base64(utf8(tresc)))]
+
+/**
+ * Mail do `messages.send`: tekst UTF-8 ze stopką, a ze stopką HTML także wersja
+ * HTML (`multipart/alternative`); załączniki w `multipart/mixed`, wszystko base64.
+ */
 export function zbudujMail(m: MailWysylany, granica = `deck-${crypto.randomUUID()}`): string {
-  const tekst = (m.stopka ? `${m.tekst.trimEnd()}\n\n${m.stopka}` : m.tekst).replace(/\r?\n/g, CRLF)
-  const czescTekstu = ['Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', linie76(base64(utf8(tekst)))]
+  const stopkaHtml = m.stopkaHtml?.trim() ?? ''
+  const stopkaTekst = m.stopka || (stopkaHtml ? htmlNaTekst(stopkaHtml) : '')
+  const tekst = (stopkaTekst ? `${m.tekst.trimEnd()}\n\n${stopkaTekst}` : m.tekst).replace(/\r?\n/g, CRLF)
+  const alt = m.pliki.length ? `${granica}-alt` : granica
+  const czescTekstu = stopkaHtml
+    ? [
+        `Content-Type: multipart/alternative; boundary="${alt}"`,
+        '',
+        `--${alt}`,
+        ...czesc('text/plain', tekst),
+        `--${alt}`,
+        ...czesc(
+          'text/html',
+          '<!doctype html><html><head><meta charset="utf-8"></head><body>' +
+            `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px">${tekstNaHtml(m.tekst.trimEnd())}</div><br>${stopkaHtml}` +
+            '</body></html>',
+        ),
+        `--${alt}--`,
+        '',
+      ]
+    : czesc('text/plain', tekst)
   const naglowki = [
     `From: ${slowoNaglowka(bezLinii(m.nazwaOd))} <${bezLinii(m.od)}>`,
     `To: ${bezLinii(m.do)}`,
