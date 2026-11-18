@@ -30,10 +30,21 @@ describe('/api/rekrutacje', () => {
     odswiezAnalytics.mockReset()
   })
 
+  it('GET bez ważnej sesji - 401, arkusz nietknięty', async () => {
+    // Proxy sprawdza tylko, czy ciasteczko istnieje - wygasły albo zmyślony
+    // token przechodził i dostawał dane.
+    ktoPyta.mockResolvedValue(null)
+    const { GET } = await import('@/app/api/rekrutacje/route')
+    const res = await GET(zada(null))
+    expect(res.status).toBe(401)
+    expect(gasList).not.toHaveBeenCalled()
+  })
+
   it('GET zwraca wiersze z arkusza', async () => {
+    ktoPyta.mockResolvedValue({ uid: 'u', rola: 'czlonek' })
     gasList.mockResolvedValue([{ id: '1', edycja: "J'25" }])
     const { GET } = await import('@/app/api/rekrutacje/route')
-    const res = await GET()
+    const res = await GET(zada(null))
     expect(await res.json()).toEqual([{ id: '1', edycja: "J'25" }])
     expect(gasList).toHaveBeenCalledWith('rekrutacje')
   })

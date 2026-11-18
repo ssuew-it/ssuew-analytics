@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import type { Czlonek } from '@/types'
+import { fetchZSesja } from '@/lib/auth/odnow'
 
 type Stan = { czlonkowie: Czlonek[]; usingDemo: boolean; loading: boolean }
 
 async function pobierzCzlonkow(): Promise<Omit<Stan, 'loading'>> {
   try {
-    const res = await fetch('/api/czlonkowie')
+    const res = await fetchZSesja('/api/czlonkowie')
     // Podłączony arkusz + pusta zakładka = pusta siatka (dodajesz prawdziwych
     // członków), a NIE zaślepione demo. Demo pokazujemy tylko wtedy, gdy arkusza
     // w ogóle nie ma - a to trasa sygnalizuje kodem 503, bo przeglądarka nie widzi
@@ -40,7 +41,7 @@ export function useCzlonkowie() {
   }, [])
 
   const addCzlonek = async (payload: Omit<Czlonek, 'id' | 'created_at'>) => {
-    const res = await fetch('/api/czlonkowie', {
+    const res = await fetchZSesja('/api/czlonkowie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -51,7 +52,7 @@ export function useCzlonkowie() {
 
   // Autosave pojedynczej zmiany (status/aktywność) - bez pełnego refetchu (płynność edycji).
   const updateCzlonek = async (id: string, patch: Partial<Pick<Czlonek, 'status' | 'aktywnosc' | 'imie_nazwisko'>>) => {
-    const res = await fetch('/api/czlonkowie', {
+    const res = await fetchZSesja('/api/czlonkowie', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ...patch }),

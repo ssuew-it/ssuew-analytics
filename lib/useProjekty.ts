@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import type { Projekt } from '@/types'
+import { fetchZSesja } from '@/lib/auth/odnow'
 
 type Stan = { projekty: Projekt[]; loading: boolean; blad: string | null }
 
 async function pobierzProjekty(): Promise<Omit<Stan, 'loading'>> {
   try {
-    const res = await fetch('/api/projekty')
+    const res = await fetchZSesja('/api/projekty')
     // Pusta zakładka to pusty moduł, a nie dane demo. Kondycji projektów nie
     // da się pokazać na wymyślonych liczbach - cała jej wartość polega na tym,
     // że mówi o prawdziwych projektach, a zmyślony alarm byłby gorszy niż brak.
@@ -37,7 +38,7 @@ export function useProjekty() {
   }, [])
 
   const dodajProjekt = async (payload: Omit<Projekt, 'id' | 'created_at'>) => {
-    const res = await fetch('/api/projekty', {
+    const res = await fetchZSesja('/api/projekty', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

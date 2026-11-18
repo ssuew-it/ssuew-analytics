@@ -2,6 +2,7 @@
 import { createContext, useState, useEffect, useCallback, useContext, useMemo } from 'react'
 import type { Rekrutacja, Kohorta, KpiMetric } from '@/types'
 import { serieZWierszy } from '@/lib/kpi/serie'
+import { fetchZSesja } from '@/lib/auth/odnow'
 
 export type ZrodloDanych = 'live' | 'demo'
 export type Zbior = 'rekrutacje' | 'kpi' | 'kohorty'
@@ -25,7 +26,7 @@ type Pobrany<T> = { dane: T[]; zrodlo: ZrodloDanych; blad: string | null }
  */
 async function pobierz<T>(zbior: Zbior, demo: T[]): Promise<Pobrany<T>> {
   try {
-    const res = await fetch(`/api/${zbior}`)
+    const res = await fetchZSesja(`/api/${zbior}`)
     if (!res.ok) {
       const tresc = await res.json().catch(() => null)
       throw new Error(tresc?.error ?? `HTTP ${res.status}`)
@@ -93,7 +94,7 @@ export function useAnalyticsZrodlo() {
   const error = bledy.length ? bledy.join(' · ') : null
 
   const addRekrutacja = async (payload: Omit<Rekrutacja, 'id' | 'created_at'>) => {
-    const res = await fetch('/api/rekrutacje', {
+    const res = await fetchZSesja('/api/rekrutacje', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -103,7 +104,7 @@ export function useAnalyticsZrodlo() {
   }
 
   const addKpiMetric = async (payload: Omit<KpiMetric, 'id' | 'created_at'>) => {
-    const res = await fetch('/api/kpi', {
+    const res = await fetchZSesja('/api/kpi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -113,7 +114,7 @@ export function useAnalyticsZrodlo() {
   }
 
   const addKohorta = async (payload: Omit<Kohorta, 'id' | 'created_at' | 'survival'>) => {
-    const res = await fetch('/api/kohorty', {
+    const res = await fetchZSesja('/api/kohorty', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -124,7 +125,7 @@ export function useAnalyticsZrodlo() {
 
   // Wsadowy zapis metryk KPI (cały nowy rocznik naraz).
   const addKpiMetricsBulk = async (payloads: Omit<KpiMetric, 'id' | 'created_at'>[]) => {
-    const res = await fetch('/api/kpi', {
+    const res = await fetchZSesja('/api/kpi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payloads),
@@ -135,7 +136,7 @@ export function useAnalyticsZrodlo() {
 
   // Edycja inline metryki KPI po id (autosave).
   const updateKpiMetric = async (id: string, patch: Partial<Omit<KpiMetric, 'id' | 'created_at'>>) => {
-    const res = await fetch('/api/kpi', {
+    const res = await fetchZSesja('/api/kpi', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ...patch }),

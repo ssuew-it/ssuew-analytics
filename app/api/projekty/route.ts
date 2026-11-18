@@ -48,7 +48,9 @@ function blad(e: unknown) {
   return NextResponse.json({ error: (e as Error).message }, { status: e instanceof GasError ? e.kod : 500 })
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Proxy wpuszcza każdego z ciasteczkiem, także wygasłym - tu sprawdzamy token.
+  if (!(await ktoPyta(req))) return NextResponse.json({ error: 'Wymagane logowanie' }, { status: 401 })
   try {
     return NextResponse.json(await gasList('projekty'))
   } catch (e) {

@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { firebaseSkonfigurowany } from './firebase'
 import type { Rola } from './role'
+import { odnowSesje } from './odnow'
 
 export interface StanSesji {
   /** Adres e-mail przy koncie z hasłem; etykieta kodu przy wejściu na kod. */
@@ -82,11 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let zywy = true
-    void ktoJestem().then((kim) => {
+    void (async () => {
+      let kim = await ktoJestem()
+      // Wygasły token (godzina bez odnowienia) to nie wylogowanie - Firebase
+      // pamięta konto, więc odnawiamy ciasteczko i pytamy jeszcze raz.
+      if (!kim.rola && (await odnowSesje())) kim = await ktoJestem()
       if (!zywy) return
       setStan({ ...kim, laduje: false, blad: null })
       if (kim.sposob === 'haslo') void pilnujTokenu()
-    })
+    })()
     return () => {
       zywy = false
       odpiecie.current?.()
