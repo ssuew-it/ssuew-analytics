@@ -112,7 +112,7 @@ export default function OverviewClient() {
         <KpiTile
           label="KPI rosnące r/r"
           value={`${summary.up}/${summary.up + summary.down}`}
-          sub={`średni ratio ${Math.round(summary.avgRatio * 100)}%`}
+          sub={`średnia zmiana ${Math.round(summary.avgRatio * 100)}% r/r`}
           accent="accent"
         />
       </div>

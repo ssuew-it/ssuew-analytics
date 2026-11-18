@@ -704,7 +704,7 @@ export function buildStrategicKpis(
     {
       id: 'recruitment-quality',
       title: 'Jakość rekrutacji',
-      value: `${Math.round(avgCr)}% średnia konwersja`,
+      value: `${Math.round(avgCr)}% konwersji`,
       score: recruitmentQuality,
       trend: scoreTrend(recruitmentQuality),
       detail: `Łączy średnią konwersję edycji i konwersję całej historii (${Math.round(totalCr)}%).`,
