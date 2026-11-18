@@ -73,8 +73,9 @@ export default function OverviewClient() {
             <div className="grid h-full place-items-center">
               <div className="relative grid h-44 w-44 place-items-center rounded-full border border-deck-accent/30 bg-deck-accent/8">
                 <div className="absolute inset-4 rounded-full border border-white/10" />
-                <Gauge size={42} className="absolute top-8 text-deck-accent" />
                 <div className="text-center">
+                  {/* Ikona w przepływie, nie absolute - wcześniej leżała na napisie „Kondycja”. */}
+                  <Gauge size={26} className="mx-auto mb-1 text-deck-accent" />
                   <div className="text-[10px] uppercase tracking-[0.18em] text-deck-muted">Kondycja</div>
                   <div className="mt-2 text-5xl font-semibold tabular-nums text-deck-accent">{health.value}</div>
                   <div className="mt-1 text-[10px] text-deck-muted">

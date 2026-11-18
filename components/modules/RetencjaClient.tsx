@@ -60,15 +60,15 @@ export default function RetencjaClient() {
 
   return (
     <div className="space-y-3">
-      <BentoCard title="Kohorty" sub={editable ? 'kliknij wartość, by edytować · dodaj kohortę poniżej (autosave)' : 'tryb demo - read-only'} span={4}>
+      <BentoCard title="Kohorty" sub={editable ? 'kliknij wartość, by edytować · dodaj kohortę poniżej - zapisuje się samo' : 'dane pokazowe - tylko do odczytu'} span={4}>
         <div className="overflow-x-auto">
         <table className="w-full text-[11px] border-collapse">
           <thead>
             <tr className="text-deck-muted text-left">
               <th className="p-1 font-medium">Edycja</th>
               <th className="p-1 text-right font-medium">Liczebność</th>
-              <th className="p-1 text-right font-medium">Avg ret.</th>
-              <th className="p-1 text-right font-medium">Max</th>
+              <th className="p-1 text-right font-medium" title="średnia liczba semestrów aktywności">Średnio sem.</th>
+              <th className="p-1 text-right font-medium" title="najdłuższa aktywność w kohorcie">Najdłużej</th>
               <th className="p-1 text-center font-medium">w toku</th>
             </tr>
           </thead>

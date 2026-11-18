@@ -233,7 +233,7 @@ export function analyzeRekrutacje(data: Rekrutacja[]) {
   return { sorted, zglos, przyj, cr, corZglosAccepted, sezonowosc, forecast }
 }
 
-// ─── Analiza retention ────────────────────────────────────────────────────────
+// ─── Analiza retencji ────────────────────────────────────────────────────────
 
 export function analyzeRetention(kohort: Kohorta[]): RegressionResult {
   const complete = kohort.filter(k => !k.in_progress)
@@ -262,20 +262,20 @@ export function analyzeRetention(kohort: Kohorta[]): RegressionResult {
       name: 'Nr edycji (trend czasowy)',
       beta: betas[0],
       interpretation: betas[0] < 0
-        ? `Każda kolejna edycja to ${Math.abs(betas[0]).toFixed(2).replace('.', ',')} sem. mniej retention - trend spadkowy wymaga interwencji.`
+        ? `Każda kolejna edycja to ${Math.abs(betas[0]).toFixed(2).replace('.', ',')} sem. krótszej retencji - trend spadkowy wymaga interwencji.`
         : `Trend rosnący: +${betas[0].toFixed(2).replace('.', ',')} sem. na edycję - poprawa jakości rekrutacji lub środowiska organizacyjnego.`
     },
     {
       name: 'Sezon (1=jesień, 0=wiosna)',
       beta: betas[1],
-      interpretation: `Edycje ${betas[1] > 0 ? 'jesienne mają wyższy' : 'wiosenne mają wyższy'} retention o ${Math.abs(betas[1]).toFixed(2).replace('.', ',')} sem. po uwzględnieniu pozostałych zmiennych.`
+      interpretation: `Edycje ${betas[1] > 0 ? 'jesienne mają wyższą' : 'wiosenne mają wyższą'} retencję o ${Math.abs(betas[1]).toFixed(2).replace('.', ',')} sem. po uwzględnieniu pozostałych zmiennych.`
     },
     {
       name: 'Liczba przyjętych',
       beta: betas[2],
       interpretation: Math.abs(betas[2]) < 0.05
         ? `Efekt minimalny (β=${betas[2].toFixed(3).replace('.', ',')}) - liczba przyjętych nie wyjaśnia retencji. Liczy się jakość, nie wolumen.`
-        : `Każda dodatkowa przyjęta osoba zmienia retention o ${betas[2].toFixed(3).replace('.', ',')} sem.`
+        : `Każda dodatkowa przyjęta osoba zmienia retencję o ${betas[2].toFixed(3).replace('.', ',')} sem.`
     },
   ]
 
@@ -290,7 +290,7 @@ export function analyzeRetention(kohort: Kohorta[]): RegressionResult {
     coefficients: varDefs,
     prediction: Math.max(0, prediction),
     warning: r2 < 0.4
-      ? `R²=${(r2 * 100).toFixed(0)}% - model słabo dopasowany. Kluczowe zmienne (jakość onboardingu, obciążenie sesją) nie są jeszcze mierzone.`
+      ? `R²=${(r2 * 100).toFixed(0)}% - model słabo dopasowany. Kluczowe zmienne (jakość wdrażania nowych osób, obciążenie sesją) nie są jeszcze mierzone.`
       : null
   }
 }
@@ -633,7 +633,7 @@ export function buildAlerts(
     const first = completed[0]
     const last = completed[completed.length - 1]
     if (last.avg_retention_sem < first.avg_retention_sem) {
-      alerts.push({ id: 'ret-decline', severity: 'warning', title: 'Spadkowy trend retencji', detail: `Z ${first.avg_retention_sem.toFixed(1).replace('.', ',')} (${first.edycja}) do ${last.avg_retention_sem.toFixed(1).replace('.', ',')} sem. (${last.edycja}).`, recommendation: 'Sprawdź onboarding i obciążenie sesją.', href: '/analytics/retencja' })
+      alerts.push({ id: 'ret-decline', severity: 'warning', title: 'Spadkowy trend retencji', detail: `Z ${first.avg_retention_sem.toFixed(1).replace('.', ',')} (${first.edycja}) do ${last.avg_retention_sem.toFixed(1).replace('.', ',')} sem. (${last.edycja}).`, recommendation: 'Sprawdź wdrażanie nowych osób i obciążenie sesją.', href: '/analytics/retencja' })
     }
   }
 

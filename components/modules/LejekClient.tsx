@@ -49,7 +49,7 @@ export default function LejekClient() {
             onClick={() => setPerEdycja(true)}
             className={`text-[11px] px-3 py-1 rounded-md border ${perEdycja ? 'bg-deck-accent/10 text-deck-accent border-deck-accent/40' : 'text-deck-muted border-deck-border'}`}
           >
-            Per edycja
+            Jedna edycja
           </button>
         </div>
         {perEdycja && (

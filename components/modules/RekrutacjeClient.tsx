@@ -45,7 +45,7 @@ export default function RekrutacjeClient() {
   const fc = s ? prognozaPrzyjetych(rekr, 2) : []
   const avgCR = s ? Math.round(mean(s.cr) * 10) / 10 : 0
   const lastIdx = s ? s.przyj.length - 1 : 0
-  const trendData = s ? s.sorted.map((r, i) => ({ edycja: r.edycja, zgłoszenia: s.zglos[i], przyjęci: s.przyj[i], 'CR%': s.cr[i] })) : []
+  const trendData = s ? s.sorted.map((r, i) => ({ edycja: r.edycja, zgłoszenia: s.zglos[i], przyjęci: s.przyj[i], 'konwersja %': s.cr[i] })) : []
   const scatterData = s ? s.sorted.map((r, i) => ({ x: s.zglos[i], y: s.przyj[i], label: r.edycja })) : []
   const fcData: Record<string, number | string | number[]>[] = s
     ? [
@@ -56,7 +56,7 @@ export default function RekrutacjeClient() {
 
   return (
     <div className="space-y-3">
-      <BentoCard title="Edycje rekrutacji" sub={editable ? 'kliknij wartość, by edytować · dodaj edycję poniżej (autosave)' : 'tryb demo - read-only'} span={4}>
+      <BentoCard title="Edycje rekrutacji" sub={editable ? 'kliknij wartość, by edytować · dodaj edycję poniżej - zapisuje się samo' : 'dane pokazowe - tylko do odczytu'} span={4}>
         <div className="overflow-x-auto">
         <table className="w-full text-[11px] border-collapse">
           <thead>
@@ -64,7 +64,7 @@ export default function RekrutacjeClient() {
               <th className="p-1 font-medium">Edycja</th>
               <th className="p-1 text-right font-medium">Zgłoszenia</th>
               <th className="p-1 text-right font-medium">Przyjęci</th>
-              <th className="p-1 text-right font-medium">CR%</th>
+              <th className="p-1 text-right font-medium">Konwersja</th>
             </tr>
           </thead>
           <tbody className="text-deck-text">
@@ -110,10 +110,10 @@ export default function RekrutacjeClient() {
             ) : (
               <KpiTile label="Prognoza następnej" value="-" sub="za mało edycji w sezonie" accent="violet" />
             )}
-            <KpiTile label="Korelacja r" value={s.corZglosAccepted.r.toFixed(3).replace('.', ',')} sub={`R²=${(s.corZglosAccepted.r2 * 100).toFixed(0)}%`} />
+            <KpiTile label="Zgłoszenia a przyjęci" value={s.corZglosAccepted.r.toFixed(3).replace('.', ',')} sub={`korelacja r · R² = ${(s.corZglosAccepted.r2 * 100).toFixed(0)}%`} />
           </div>
 
-          <BentoCard title="Zgłoszenia, przyjęci i konwersja (CR%)" sub="trend w kolejnych edycjach" span={4}>
+          <BentoCard title="Zgłoszenia, przyjęci i konwersja" sub="trend w kolejnych edycjach" span={4}>
             <ResponsiveContainer width="100%" height={220}>
               <ComposedChart data={trendData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
@@ -124,7 +124,7 @@ export default function RekrutacjeClient() {
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar yAxisId="l" dataKey="zgłoszenia" fill={chartTheme.series[2]} radius={[3, 3, 0, 0]} />
                 <Bar yAxisId="l" dataKey="przyjęci" fill={chartTheme.accent} radius={[3, 3, 0, 0]} />
-                <Line yAxisId="r" dataKey="CR%" stroke={chartTheme.violet} strokeWidth={2} dot={{ r: 3 }} />
+                <Line yAxisId="r" dataKey="konwersja %" stroke={chartTheme.violet} strokeWidth={2} dot={{ r: 3 }} />
               </ComposedChart>
             </ResponsiveContainer>
           </BentoCard>

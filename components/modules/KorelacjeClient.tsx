@@ -10,7 +10,7 @@ import { BentoCard } from '@/components/ui/BentoCard'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
 import { Heatmap } from '@/components/ui/Heatmap'
 
-const MAIN_VARS = ['zgłoszenia', 'przyjęci', 'CR%', 'liczebność', 'avg retencja', 'max retencja']
+const MAIN_VARS = ['zgłoszenia', 'przyjęci', 'konwersja %', 'liczebność', 'średnia retencja', 'najdłuższa retencja']
 
 export default function KorelacjeClient() {
   const { rekrutacje, kohorty, loading } = useAnalyticsData()
@@ -27,10 +27,10 @@ export default function KorelacjeClient() {
     return {
       'zgłoszenia': r.zgloszenia,
       'przyjęci': r.przyjeci,
-      'CR%': r.zgloszenia > 0 ? (r.przyjeci / r.zgloszenia) * 100 : null,
+      'konwersja %': r.zgloszenia > 0 ? (r.przyjeci / r.zgloszenia) * 100 : null,
       'liczebność': k?.n_czlonkow ?? null,
-      'avg retencja': k?.avg_retention_sem ?? null,
-      'max retencja': k?.max_retention_sem ?? null,
+      'średnia retencja': k?.avg_retention_sem ?? null,
+      'najdłuższa retencja': k?.max_retention_sem ?? null,
     }
   })
   const mainCells = correlationMatrix(mainRows, MAIN_VARS)

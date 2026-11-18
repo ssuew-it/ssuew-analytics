@@ -106,11 +106,11 @@ export default function KpiClient() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-lg border border-deck-accent/30 bg-deck-accent/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-deck-accent">
               <Sparkles size={13} />
-              KPI intelligence
+              Wskaźniki KPI
             </div>
             <h1 className="mt-4 text-3xl font-semibold text-deck-text">Metryki rok-do-roku, ale z pulsem.</h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-deck-muted">
-              Każdy wskaźnik pokazuje przebieg przez lata. {editable ? 'Kliknij ostatnią liczbę, aby ją poprawić.' : 'Tryb demo jest read-only.'}
+              Każdy wskaźnik pokazuje przebieg przez lata. {editable ? 'Kliknij ostatnią liczbę, aby ją poprawić.' : 'Dane pokazowe - tylko do odczytu.'}
             </p>
           </div>
           <div className="relative grid h-32 w-32 place-items-center rounded-full border border-deck-accent/25 bg-deck-accent/8">

@@ -115,7 +115,7 @@ export default function CzlonkowieClient() {
           ))}
         </select>
         <span className="text-[11px] text-deck-muted">{rows.length} członków</span>
-        {usingDemo && <span className="text-[10px] text-deck-warn">demo zaślepione - siatka read-only</span>}
+        {usingDemo && <span className="text-[10px] text-deck-warn">dane pokazowe - siatka tylko do odczytu</span>}
         {!usingDemo && rola !== 'owner' && <span className="text-[10px] text-deck-warn">podglad - edycja tylko dla wlasciciela</span>}
         {statusMsg && <span className="text-[10px] text-deck-muted">{statusMsg}</span>}
       </div>
