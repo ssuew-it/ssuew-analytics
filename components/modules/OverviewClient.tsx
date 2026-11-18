@@ -68,9 +68,9 @@ export default function OverviewClient() {
               ))}
             </div>
           </div>
-          <div className="relative border-l border-white/10 bg-deck-bg-deep/55 p-6">
+          <div className="relative flex flex-col gap-5 border-t border-white/10 bg-deck-bg-deep/55 p-6 md:border-l md:border-t-0">
             <div className="absolute inset-x-6 top-6 h-px bg-gradient-to-r from-transparent via-deck-accent/70 to-transparent" />
-            <div className="grid h-full place-items-center">
+            <div className="grid flex-1 place-items-center pt-4">
               <div className="relative grid h-44 w-44 place-items-center rounded-full border border-deck-accent/30 bg-deck-accent/8">
                 <div className="absolute inset-4 rounded-full border border-white/10" />
                 <div className="text-center">
@@ -79,12 +79,19 @@ export default function OverviewClient() {
                   <div className="text-[10px] uppercase tracking-[0.18em] text-deck-muted">Kondycja</div>
                   <div className="mt-2 text-5xl font-semibold tabular-nums text-deck-accent">{health.value}</div>
                   <div className="mt-1 text-[10px] text-deck-muted">
-                    {health.trend === 'up' ? 'stabilny wzrost' : health.trend === 'down' ? 'ryzyko spadku' : 'do obserwacji'}
+                    {/* Poziom wyniku, nie trend - „stabilny wzrost” przy 74/100 nic nie mówił o wzroście. */}
+                    {health.trend === 'up' ? 'dobra kondycja' : health.trend === 'down' ? 'słaba kondycja' : 'przeciętna kondycja'}
                   </div>
                 </div>
               </div>
             </div>
-            <p className="absolute inset-x-6 bottom-6 text-[11px] leading-5 text-deck-muted">{health.recommendation}</p>
+            <div className="space-y-1.5 text-[11px] leading-5">
+              <p className="text-deck-muted">{health.recommendation}</p>
+              {/* Bez tego kondycja „dobra” obok odprawy z zagrożeniami wyglądała na sprzeczność. */}
+              <p className="text-deck-muted/70">
+                Liczona z rekrutacji, retencji i KPI rok do roku. Odprawa w kokpicie patrzy szerzej - także na Planer, Skrzynkę i Strony.
+              </p>
+            </div>
           </div>
         </div>
       </BentoCard>

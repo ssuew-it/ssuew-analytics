@@ -83,7 +83,7 @@ describe('DeckHub', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'D.E.C.K.' })).toBeInTheDocument()
     expect(screen.getByText('Diagnostic Evaluation of Change & KPIs')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Odprawa D.E.C.K.' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /SSUEW Analytics/ })).toHaveAttribute('href', '/analytics')
+    expect(screen.getByRole('link', { name: /Analityka/ })).toHaveAttribute('href', '/analytics')
     expect(screen.getByRole('link', { name: /Sesja Operacyjna/ })).toHaveAttribute('href', '/planer')
     expect(screen.getByRole('button', { name: /wyloguj/i })).toBeInTheDocument()
     expect(screen.getAllByText('łączę…').length).toBeGreaterThan(0)

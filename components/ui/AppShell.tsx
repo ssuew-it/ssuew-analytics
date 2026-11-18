@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-deck-muted">
               <ShieldCheck size={13} className="text-deck-accent" />
-              SSUEW Analytics
+              D.E.C.K. · Analityka
             </div>
             <h1 className="mt-1 text-sm font-medium text-deck-text">{nazwaZakladki(pathname)}</h1>
           </div>

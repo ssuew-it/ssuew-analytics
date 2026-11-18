@@ -3,7 +3,7 @@ import { serieZWierszy } from '@/lib/kpi/serie'
 import { computeOverview } from '@/lib/overview'
 import { buildAlerts, kpiSummary } from '@/lib/stats'
 
-/** Liczby kafelka „SSUEW Analytics” w kokpicie. */
+/** Liczby kafelka „Analityka” w kokpicie. */
 export interface DaneAnalityki {
   /** Konwersja OSTATNIEJ edycji (przyjęci / zgłoszenia) - Analityka pokazuje też średnią wszystkich edycji. */
   konwersja: number

@@ -35,21 +35,22 @@ export function Sidebar() {
   const pathname = usePathname()
   return (
     <aside className="sticky top-0 hidden h-screen w-[224px] shrink-0 border-r border-white/10 bg-deck-bg-deep/70 p-3 flex-col gap-2 backdrop-blur-2xl md:flex">
-      <div className="deck-card rounded-lg p-3 mb-2">
+      {/* Ten sam znak co w kokpicie - Analityka to moduł D.E.C.K., nie osobna aplikacja. */}
+      <Link href="/" aria-label="Kokpit D.E.C.K." className="deck-card mb-2 rounded-lg p-3 transition hover:border-deck-accent/35">
         <div className="flex items-center gap-3">
           <LogoMark />
           <div>
-            <div className="text-sm font-semibold text-deck-text leading-none">SSUEW</div>
-            <div className="text-[10px] text-deck-muted mt-1">Analityka samorządu</div>
+            <div className="text-[15px] font-extrabold leading-none tracking-[0.22em] text-deck-text">D.E.C.K.</div>
+            <div className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-deck-muted">moduł 01 · analityka</div>
           </div>
         </div>
-      </div>
+      </Link>
       <Link
         href="/"
         className="deck-row mb-1 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] text-deck-muted transition hover:text-deck-text"
       >
         <ArrowLeft size={14} />
-        DECK
+        Kokpit
       </Link>
       {NAV.map((item) => {
         const active = pathname === item.href
@@ -96,7 +97,7 @@ export function nazwaZakladki(pathname: string): string {
 /** Zakładki na wąskim ekranie: boczny pasek (224 px) zjadał tam ponad pół ekranu. */
 export function ZakladkiMobilne() {
   const pathname = usePathname()
-  const pozycje = [{ href: '/', label: 'DECK' }, ...NAV, { href: '/analytics/wpis', label: 'Wpisz dane' }]
+  const pozycje = [{ href: '/', label: 'Kokpit' }, ...NAV, { href: '/analytics/wpis', label: 'Wpisz dane' }]
   return (
     <nav aria-label="Moduły analityki" className="-mx-4 flex basis-full gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
       {pozycje.map((p) => {

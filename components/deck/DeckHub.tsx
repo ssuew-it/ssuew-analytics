@@ -212,7 +212,7 @@ function KafelekAnalytics({ dane }: { dane: DaneAnalityki | null }) {
       stan="zywy"
       href="/analytics"
       etykieta="moduł 01 · analityka"
-      tytul="SSUEW Analytics"
+      tytul="Analityka"
       odznaka={dane && dane.alerty > 0 ? odmiana(dane.alerty, ['alert', 'alerty', 'alertów']) : undefined}
       odznakaTon="uwaga"
       span={2}
