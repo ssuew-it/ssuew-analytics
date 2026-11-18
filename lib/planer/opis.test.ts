@@ -15,6 +15,7 @@ describe('opisCzasu', () => {
     expect(opisCzasu(w({ godzina: '18:00', godzinaDo: '20:00' }))).toBe('18:00-20:00')
     expect(opisCzasu(w({ godzina: '18:00', godzinaDo: '04:00' }))).toBe('18:00-04:00 (+1)')
     expect(opisCzasu(w({ godzina: '18:00' }))).toBe('18:00')
+    expect(opisCzasu(w({ godzina: '16:30', godzinaDo: '23:59' }))).toBe('od 16:30')
     expect(opisCzasu(w())).toBeNull()
   })
 })

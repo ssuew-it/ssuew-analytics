@@ -10,6 +10,10 @@ import { KATEGORIE, KLUCZE_KATEGORII, numerRangi, type Miesiac, type Wydarzenie 
 import { KartaWydarzenia } from './KartaWydarzenia'
 import { PasekWielodniowy } from './PasekWielodniowy'
 
+/** Od góry kratki do miejsca pod numerem dnia (padding + wiersz z numerem). */
+const NAGLOWEK_KRATKI = 24
+/** Wiersz jednego paska wielodniowego: pasek 22 px i odstęp. */
+const WYSOKOSC_PASA = 24
 const NAGLOWKI = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie']
 const NAZWA_MIESIACA = [
   'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
@@ -132,7 +136,8 @@ export function WidokMiesiaca({
     if (id) onPrzenies(id, dzien)
   }
 
-  function kratka(dzien: number, kolumna: number) {
+  /** `pasow` - ile pasów wielodniowych leży nad kartami; karty schodzą pod nie. */
+  function kratka(dzien: number, kolumna: number, pasow: number) {
     const kol = kolizje.get(dzien)
     const twarda = kol?.osoby.some((o) => o.twarda) || (kol?.sale.length ?? 0) > 0
     const weekend = kolumna >= 5
@@ -145,6 +150,7 @@ export function WidokMiesiaca({
         onDragOver={edytowalne ? (e) => { e.preventDefault(); setNadDniem(dzien) } : undefined}
         onDragLeave={edytowalne ? () => setNadDniem((d) => (d === dzien ? null : d)) : undefined}
         onDrop={edytowalne ? () => upusc(dzien) : undefined}
+        style={{ gridColumn: kolumna + 1, gridRow: '1 / -1' }}
         className={`group relative min-h-[92px] rounded-md border p-1.5 transition ${
           cel
             ? 'border-deck-accent bg-deck-accent/10'
@@ -188,7 +194,7 @@ export function WidokMiesiaca({
           </div>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1" style={pasow ? { marginTop: pasow * WYSOKOSC_PASA } : undefined}>
           {(poDniach.get(dzien) ?? []).map((w) => (
             <KartaWydarzenia
               key={w.id}
@@ -281,27 +287,32 @@ export function WidokMiesiaca({
             const odcinki = odcinkiTygodnia(tydzien, miesiac, wielodniowe)
             const pasow = odcinki.reduce((n, o) => Math.max(n, o.pas + 1), 0)
             return (
-              <div key={t} className="space-y-1">
-                {Array.from({ length: pasow }, (_, p) => (
-                  <div key={p} className="grid grid-cols-7 gap-1.5">
-                    {odcinki
-                      .filter((o) => o.pas === p)
-                      .map((o) => (
-                        <PasekWielodniowy
-                          key={o.wydarzenie.id}
-                          odcinek={o}
-                          onOtworz={onOtworz}
-                          przeciagalne={edytowalne && startujeTutaj(o.wydarzenie)}
-                          onPrzeciagnij={setPrzeciagany}
-                          onPrzesun={onPrzesun}
-                          zaznaczone={stanWyboru(o.wydarzenie.id)}
-                        />
-                      ))}
-                  </div>
+              // Jedna siatka na tydzień: kratki zajmują wszystkie wiersze, a paski leżą
+              // w wierszach pod numerami dni - widać, które dni zajmują.
+              <div
+                key={t}
+                className="grid grid-cols-7 gap-x-1.5"
+                style={{ gridTemplateRows: `${NAGLOWEK_KRATKI}px repeat(${pasow}, ${WYSOKOSC_PASA}px) minmax(0, 1fr)` }}
+              >
+                {tydzien.map((dzien, i) =>
+                  dzien === null ? (
+                    <div key={`pusty-${t}-${i}`} style={{ gridColumn: i + 1, gridRow: '1 / -1' }} />
+                  ) : (
+                    kratka(dzien, i, pasow)
+                  ),
+                )}
+                {odcinki.map((o) => (
+                  <PasekWielodniowy
+                    key={o.wydarzenie.id}
+                    odcinek={o}
+                    wiersz={o.pas + 2}
+                    onOtworz={onOtworz}
+                    przeciagalne={edytowalne && startujeTutaj(o.wydarzenie)}
+                    onPrzeciagnij={setPrzeciagany}
+                    onPrzesun={onPrzesun}
+                    zaznaczone={stanWyboru(o.wydarzenie.id)}
+                  />
                 ))}
-                <div className="grid grid-cols-7 gap-1.5">
-                  {tydzien.map((dzien, i) => (dzien === null ? <div key={`pusty-${t}-${i}`} /> : kratka(dzien, i)))}
-                </div>
               </div>
             )
           })}

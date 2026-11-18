@@ -6,9 +6,13 @@ export function przezPolnoc(w: Pick<Wydarzenie, 'godzina' | 'godzinaDo'>): boole
   return !!w.godzina && !!w.godzinaDo && w.godzinaDo < w.godzina
 }
 
-/** „cały dzień”, „18:00-20:00”, „18:00-04:00 (+1)”, „18:00” albo nic, gdy godzina nieustalona. */
+/**
+ * „cały dzień”, „18:00-20:00”, „18:00-04:00 (+1)”, „18:00” albo nic, gdy godzina nieustalona.
+ * Koniec 23:59 to w danych „do końca dnia”, czyli koniec nieznany - pokazujemy „od 16:30”.
+ */
 export function opisCzasu(w: Pick<Wydarzenie, 'calyDzien' | 'godzina' | 'godzinaDo'>): string | null {
   if (w.calyDzien) return 'cały dzień'
+  if (w.godzina && w.godzinaDo === '23:59') return `od ${w.godzina}`
   if (w.godzina && w.godzinaDo) return `${w.godzina}-${w.godzinaDo}${przezPolnoc(w) ? ' (+1)' : ''}`
   return w.godzina
 }
