@@ -4,9 +4,12 @@ import { ExternalLink, Paperclip, Sparkles } from 'lucide-react'
 import { TekstAsystenta } from '@/components/deck/TekstAsystenta'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import { ETYKIETY_STATUSOW, adresZalacznika, linkGmail, pelnaData, rozmiar } from '@/lib/skrzynka/widok'
-import { MAKS_POBRANIA, type Sprawa, type Status, type SzczegolySprawy, type ZmianaSprawy } from '@/lib/skrzynka/typy'
+import { MAKS_POBRANIA, type Sprawa, type Status, type SzczegolySprawy, type WiadomoscPelna, type ZmianaSprawy } from '@/lib/skrzynka/typy'
 import { OknoOdpowiedzi } from './OknoOdpowiedzi'
 import { TrescWiadomosci } from './TrescWiadomosci'
+
+/** Załączniki do listy - bez obrazków wklejonych w treść (stopki, logotypy), które już widać w mailu. */
+const doListy = (w: WiadomoscPelna) => w.zalaczniki.filter((z) => !(z.cid && w.html?.includes(`cid:${z.cid}`)))
 
 /** Statusy do ustawienia jednym kliknięciem; Do przejrzenia ustawia tylko automat. */
 const AKCJE: Status[] = ['do-odpowiedzi', 'w-toku', 'czeka-na-nich', 'zalatwiona']
@@ -187,10 +190,10 @@ export function WidokSprawy({ id, sklad, email, onZmiana, onZamknij }: {
               <span className="text-deck-text">{w.od ? (w.od.imie ? `${w.od.imie} <${w.od.email}>` : w.od.email) : '(nieznany nadawca)'}</span>
               <span className="font-mono text-deck-muted">{pelnaData(w.kiedy)}</span>
             </div>
-            <TrescWiadomosci w={w} />
-            {w.zalaczniki.length > 0 && (
+            <TrescWiadomosci w={w} sprawaId={s.id} />
+            {doListy(w).length > 0 && (
               <ul aria-label="Załączniki" className="mt-2 flex flex-wrap gap-2">
-                {w.zalaczniki.map((z) => (
+                {doListy(w).map((z) => (
                   <li key={z.id}>
                     {z.rozmiar > MAKS_POBRANIA ? (
                       <a href={linkGmail(email, s.id)} target="_blank" rel="noopener noreferrer" className={`${przycisk} inline-flex items-center gap-1`}>

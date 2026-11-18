@@ -2,7 +2,7 @@
 // TextDecoder z ISO-8859-2 i atob - jak na serwerze.
 import { describe, it, expect } from 'vitest'
 import { odczytajWatekPelny, type CzescApi } from '@/lib/skrzynka/tresc'
-import { bezpiecznyHtml } from '@/lib/skrzynka/html'
+import { bezpiecznyHtml, zewnetrzneObrazki } from '@/lib/skrzynka/html'
 
 const NASZ = 'kontakt@samorzad.ue.wroc.pl'
 const utf = (s: string) => Buffer.from(s, 'utf8').toString('base64url')
@@ -98,6 +98,23 @@ describe('odczytajWatekPelny', () => {
     expect(w.map((m) => m.id)).toEqual(['m1', 'm3'])
   })
 
+  it('obrazki wklejone w treść (stopki): Content-ID przy załączniku, małe wprost jako data:', () => {
+    const [m] = odczytajWatekPelny({ id: 't1', messages: [wiadomosc('m1', 1, 'a@x.pl', {
+      mimeType: 'multipart/related',
+      parts: [
+        { mimeType: 'text/html', body: { data: utf('<img src="cid:logo@x"><img src="cid:ikona">') } },
+        { mimeType: 'image/png', filename: 'image001.png', headers: [{ name: 'Content-ID', value: '<logo@x>' }], body: { attachmentId: 'ATT9', size: 5000 } },
+        { mimeType: 'image/gif', headers: [{ name: 'Content-ID', value: '<ikona>' }], body: { data: Buffer.from('GIF89a').toString('base64url'), size: 6 } },
+        { mimeType: 'image/jpeg', headers: [{ name: 'Content-ID', value: '<bez-nazwy>' }], body: { attachmentId: 'ATT8', size: 900 } },
+      ],
+    })] })
+    expect(m.zalaczniki).toEqual([
+      { id: 'ATT9', wiadomoscId: 'm1', nazwa: 'image001.png', typ: 'image/png', rozmiar: 5000, cid: 'logo@x' },
+      { id: 'ATT8', wiadomoscId: 'm1', nazwa: 'obrazek.jpeg', typ: 'image/jpeg', rozmiar: 900, cid: 'bez-nazwy' },
+    ])
+    expect(m.wbudowane).toEqual({ ikona: `data:image/gif;base64,${Buffer.from('GIF89a').toString('base64')}` })
+  })
+
   it('wiadomość bez treści i bez części', () => {
     const [m] = odczytajWatekPelny({ id: 't1', messages: [wiadomosc('m1', 1, 'a@x.pl', { mimeType: 'text/plain' })] })
     expect(m.tekst).toBeNull()
@@ -116,5 +133,32 @@ describe('bezpiecznyHtml', () => {
     expect(h).toContain(`content="default-src 'none'; img-src data: cid:; style-src 'unsafe-inline'; font-src data:"`)
     expect(h).toContain('<base target="_blank">')
     expect(h).toContain('<meta name="referrer" content="no-referrer">')
+  })
+})
+
+describe('obrazki w ramce maila', () => {
+  const ZRODLO = 'https://ssuew-analytics.vercel.app'
+
+  it('cid: podmienione na adres załącznika albo data:; CSP wpuszcza obrazki z D.E.C.K., z internetu nie', () => {
+    const h = bezpiecznyHtml(`<img src="cid:logo@x"><img src='cid:ikona'><img src="https://tracker.pl/p.gif">`, {
+      obrazki: { 'logo@x': `${ZRODLO}/api/z?1`, ikona: 'data:image/gif;base64,R0lG' },
+      zrodlo: ZRODLO,
+    })
+    expect(h).toContain(`<img src="${ZRODLO}/api/z?1">`)
+    expect(h).toContain(`<img src='data:image/gif;base64,R0lG'>`)
+    expect(h).toContain(`img-src data: cid: ${ZRODLO};`)
+    expect(h).not.toMatch(/img-src[^;]*https:(?!\/\/ssuew)/)
+  })
+
+  it('„Pokaż obrazki” - CSP wpuszcza też obrazki z internetu', () => {
+    expect(bezpiecznyHtml('<img src="https://firma.pl/logo.png">', { zrodlo: ZRODLO, zSieci: true }))
+      .toContain(`img-src data: cid: ${ZRODLO} https: http:;`)
+  })
+
+  it('wykrywa obrazki z internetu: img, tło w stylu i atrybut background', () => {
+    expect(zewnetrzneObrazki('<p>Hej</p><img src="cid:a">')).toBe(false)
+    expect(zewnetrzneObrazki('<IMG alt="x" SRC="https://firma.pl/a.png">')).toBe(true)
+    expect(zewnetrzneObrazki(`<div style="background-image: url('http://a.pl/t.jpg')">`)).toBe(true)
+    expect(zewnetrzneObrazki('<td background="https://a.pl/t.jpg">')).toBe(true)
   })
 })

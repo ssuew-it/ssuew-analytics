@@ -48,19 +48,31 @@ function tekstCzesci(c: CzescApi): string {
   }
 }
 
-type Zebrane = { tekst: string | null; html: string | null; zalaczniki: Zalacznik[] }
+type Zebrane = { tekst: string | null; html: string | null; zalaczniki: Zalacznik[]; wbudowane: Record<string, string> }
 
-/** Pierwszy tekst, pierwszy HTML i wszystkie załączniki - przez całe drzewo części. */
+/** base64url Gmaila → zwykły base64 do adresu `data:`. */
+const naBase64 = (dane: string) => {
+  const b64 = dane.replace(/-/g, '+').replace(/_/g, '/')
+  return b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+}
+
+/** Pierwszy tekst, pierwszy HTML, wszystkie załączniki i obrazki wklejone w treść - przez całe drzewo części. */
 function zbierz(c: CzescApi, wiadomoscId: string, w: Zebrane): void {
   const typ = (c.mimeType ?? '').toLowerCase()
-  if (c.filename && c.body?.attachmentId) {
+  const cid = naglowek(c, 'Content-ID').trim().replace(/^<|>$/g, '')
+  if (c.body?.attachmentId && (c.filename || (cid && typ.startsWith('image/')))) {
     w.zalaczniki.push({
       id: c.body.attachmentId,
       wiadomoscId,
-      nazwa: dekodujNaglowek(c.filename),
+      nazwa: c.filename ? dekodujNaglowek(c.filename) : `obrazek.${typ.split('/')[1] ?? 'img'}`,
       typ: typ || 'application/octet-stream',
       rozmiar: c.body.size ?? 0,
+      ...(cid ? { cid } : {}),
     })
+    return
+  }
+  if (cid && typ.startsWith('image/') && c.body?.data) {
+    w.wbudowane[cid] = `data:${typ};base64,${naBase64(c.body.data)}`
     return
   }
   if (c.parts?.length) {
@@ -77,15 +89,17 @@ export function odczytajWatekPelny(w: WatekPelnyApi): WiadomoscPelna[] {
     .filter((m) => !(m.labelIds ?? []).some((e) => POMIJANE_ETYKIETY.includes(e)))
     .map((m) => {
       const p = m.payload ?? {}
-      const z: Zebrane = { tekst: null, html: null, zalaczniki: [] }
+      const z: Zebrane = { tekst: null, html: null, zalaczniki: [], wbudowane: {} }
       zbierz(p, m.id, z)
+      const { wbudowane, ...reszta } = z
       return {
         id: m.id,
         kiedy: Number(m.internalDate) || 0,
         od: odczytajAdresy(naglowek(p, 'From'))[0] ?? null,
         do: [...odczytajAdresy(naglowek(p, 'To')), ...odczytajAdresy(naglowek(p, 'Cc'))],
         temat: dekodujNaglowek(naglowek(p, 'Subject')).trim(),
-        ...z,
+        ...reszta,
+        ...(Object.keys(wbudowane).length ? { wbudowane } : {}),
       }
     })
     .sort((a, b) => a.kiedy - b.kiedy)

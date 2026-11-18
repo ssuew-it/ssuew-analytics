@@ -685,6 +685,12 @@ body::after {
   animation: deck-crt-dryf 8s linear infinite;
 }
 
+/* Otwarty mail ma byc czytelny jak w Gmailu - paski kineskopu nie
+   przejezdzaja po bialym tle wiadomosci. */
+body:has([data-bez-crt])::after {
+  display: none;
+}
+
 @keyframes deck-crt-dryf {
   from { transform: translateY(0); }
   to   { transform: translateY(3px); }

@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 /** Tylko te typy podajemy wprost; reszta jako octet-stream. Plik od nadawcy nigdy nie renderuje się w domenie D.E.C.K. */
-const BEZPIECZNE_TYPY = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif']
+const BEZPIECZNE_TYPY = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp']
 
 type Kontekst = { params: Promise<{ id: string; zid: string }> }
 

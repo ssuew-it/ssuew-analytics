@@ -119,6 +119,8 @@ export interface Zalacznik {
   nazwa: string
   typ: string
   rozmiar: number
+  /** Content-ID obrazka wklejonego w treść (stopki, logotypy) - HTML odwołuje się do niego przez `cid:`. */
+  cid?: string
 }
 
 /** Wiadomość z treścią - tylko w odpowiedzi trasy, nigdy w bazie. */
@@ -131,6 +133,8 @@ export interface WiadomoscPelna {
   tekst: string | null
   html: string | null
   zalaczniki: Zalacznik[]
+  /** Małe obrazki wklejone w treść, podane przez Gmaila wprost: Content-ID → `data:`. */
+  wbudowane?: Record<string, string>
 }
 
 export interface SzczegolySprawy {

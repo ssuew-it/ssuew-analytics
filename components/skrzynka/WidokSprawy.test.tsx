@@ -51,7 +51,7 @@ describe('WidokSprawy', () => {
     expect(screen.getByRole('heading', { name: 'Sponsoring Juwenaliów' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Otwórz w Gmailu' })).toHaveAttribute('href', 'https://mail.google.com/mail/?authuser=kontakt%40samorzad.ue.wroc.pl#all/t1')
     const ramka = screen.getByTitle(/Treść/)
-    expect(ramka.getAttribute('sandbox')).toBe('allow-popups allow-popups-to-escape-sandbox')
+    expect(ramka.getAttribute('sandbox')).toBe('allow-same-origin allow-popups allow-popups-to-escape-sandbox')
     expect(ramka.getAttribute('srcdoc')).toContain("default-src 'none'")
     expect(ramka.getAttribute('srcdoc')).not.toContain('<script')
     expect(screen.getByText('Dziękujemy, wrócimy z odpowiedzią.')).toBeInTheDocument()
@@ -97,6 +97,18 @@ describe('WidokSprawy', () => {
     const l = screen.getByRole('link', { name: /Skan\.pdf · 7,6 MB/ })
     expect(l).toHaveAttribute('href', 'https://mail.google.com/mail/?authuser=kontakt%40samorzad.ue.wroc.pl#all/t1')
     expect(l).toHaveTextContent('w Gmailu')
+  })
+
+  it('obrazek wklejony w treść (stopka) nie udaje załącznika; niewykorzystany w treści zostaje na liście', async () => {
+    const d = D()
+    d.wiadomosci[0].html = '<p>Oferta</p><img src="cid:logo@x">'
+    d.wiadomosci[0].zalaczniki = [
+      { id: 'A3', wiadomoscId: 'm1', nazwa: 'image001.png', typ: 'image/png', rozmiar: 4_000, cid: 'logo@x' },
+      { id: 'A4', wiadomoscId: 'm1', nazwa: 'plakat.png', typ: 'image/png', rozmiar: 90_000, cid: 'plakat' },
+    ]
+    await widok(d)
+    expect(screen.queryByRole('link', { name: /image001\.png/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /plakat\.png/ })).toBeInTheDocument()
   })
 
   it('wątek usunięty w Gmailu - komunikat, akcje dalej dostępne', async () => {
