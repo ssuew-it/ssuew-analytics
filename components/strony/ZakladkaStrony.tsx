@@ -21,13 +21,14 @@ export function ZakladkaStrony({ wynik }: { wynik: WynikStrony }) {
   }
 
   const s = wynik.dane
-  const spadek = s.zmiana.klikniecia === null ? 0 : Math.round(-s.zmiana.klikniecia * 100)
+  // Ten sam opis co w liczbach - 12 kliknięć to „-99%”, nie „-100%”.
+  const spadek = opisZmiany('klikniecia', s.biezace.klikniecia, s.poprzednie.klikniecia).tekst.replace(/^-/, '')
   return (
     <section className="space-y-4">
       {s.alert && (
         <div role="alert" className="flex items-center gap-2 rounded-lg border border-deck-warn/40 bg-deck-warn/10 px-4 py-3 text-[12.5px] text-deck-text">
           <AlertTriangle size={14} className="flex-none text-deck-warn" aria-hidden="true" />
-          Kliknięcia spadły o {spadek}% wobec poprzednich {DNI_OKRESU} dni.
+          Kliknięcia spadły o {spadek} wobec poprzednich {DNI_OKRESU} dni.
         </div>
       )}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

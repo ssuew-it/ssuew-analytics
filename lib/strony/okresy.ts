@@ -89,6 +89,12 @@ export function opisZmiany(miara: Miara, biez: number, pop: number): OpisZmiany 
     const z = zmiana(biez, pop)
     if (z === null) return biez > 0 ? { tekst: 'nowe', kierunek: 'brak', dobra: null } : BRAK
     roznica = Math.round(z * 100)
+    // Zaokrąglenie nie może kłamać: 12 kliknięć to nie „-100%”, a 1001 wobec 1000 to nie „bez zmian”.
+    if (biez > 0 && roznica <= -100) roznica = -99
+    if (roznica === 0 && biez !== pop) {
+      const w = biez > pop ? 'gora' : 'dol'
+      return { tekst: `${w === 'gora' ? '+' : '-'}<1%`, kierunek: w, dobra: w === 'gora' }
+    }
     tekst = `${znak(roznica)}${roznica}%`
   } else if (miara === 'ctr') {
     if (!biez && !pop) return BRAK

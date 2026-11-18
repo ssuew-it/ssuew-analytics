@@ -61,6 +61,13 @@ describe('opisZmiany', () => {
     expect(opisZmiany('klikniecia', 100, 100)).toEqual({ tekst: '0%', kierunek: 'brak', dobra: null })
   })
 
+  it('spadek prawie do zera, ale nie do zera - nie udaje -100%; mała zmiana nie udaje braku zmiany', () => {
+    expect(opisZmiany('klikniecia', 12, 2700)).toEqual({ tekst: '-99%', kierunek: 'dol', dobra: false })
+    expect(opisZmiany('klikniecia', 0, 2700)).toEqual({ tekst: '-100%', kierunek: 'dol', dobra: false })
+    expect(opisZmiany('wyswietlenia', 1001, 1000)).toEqual({ tekst: '+<1%', kierunek: 'gora', dobra: true })
+    expect(opisZmiany('wyswietlenia', 999, 1000)).toEqual({ tekst: '-<1%', kierunek: 'dol', dobra: false })
+  })
+
   it('bez poprzedniego okresu - „nowe” albo „-”, nigdy NaN ani Infinity', () => {
     expect(opisZmiany('klikniecia', 7, 0)).toEqual({ tekst: 'nowe', kierunek: 'brak', dobra: null })
     expect(opisZmiany('klikniecia', 0, 0)).toEqual({ tekst: '-', kierunek: 'brak', dobra: null })
