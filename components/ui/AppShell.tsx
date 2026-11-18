@@ -24,7 +24,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <div className="deck-chip hidden xl:flex items-center gap-2 rounded-lg px-2 py-1">
-              <Filter size={13} className="text-deck-accent" />
+              <Filter size={13} className="text-deck-accent" aria-hidden="true" />
+              <span className="text-[11px] text-deck-text">Filtruj</span>
               <Suspense fallback={<div className="text-[11px] text-deck-muted">...</div>}>
                 <FilterBar />
               </Suspense>

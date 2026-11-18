@@ -11,7 +11,8 @@ export function FilterBar() {
   const { filters, setFilters } = useFilters()
   return (
     <div className="flex items-center gap-2">
-      <div className="flex rounded-md bg-deck-bg-deep/70 p-0.5">
+      <span className="text-[11px] text-deck-muted">sezon</span>
+      <div role="group" aria-label="Sezon" className="flex rounded-md bg-deck-bg-deep/70 p-0.5">
         {seasons.map((season) => {
           const active = filters.sezon === season.value
           return (
@@ -30,6 +31,7 @@ export function FilterBar() {
           )
         })}
       </div>
+      <span className="text-[11px] text-deck-muted">lata</span>
       <input
         aria-label="Rok od"
         type="number"

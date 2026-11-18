@@ -53,28 +53,23 @@ export function ExportButton() {
     }
   }
 
+  const przycisk =
+    'flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-deck-muted transition hover:bg-white/8 hover:text-deck-text disabled:opacity-40'
+
+  // Podpisy zamiast samych ikon - bez najechania nie było wiadomo, co robią.
   return (
-    <div className="deck-chip flex items-center gap-1 rounded-lg p-1">
-      <span className="grid h-7 w-7 place-items-center text-deck-accent">
-        <Download size={14} />
+    <div className="deck-chip flex items-center gap-1 rounded-lg p-1" role="group" aria-label="Pobierz widok">
+      <span className="flex items-center gap-1 pl-1.5 pr-0.5 text-[11px] text-deck-muted">
+        <Download size={13} className="text-deck-accent" aria-hidden="true" />
+        Pobierz
       </span>
-      <button
-        type="button"
-        onClick={exportPng}
-        disabled={!!busy}
-        className="grid h-7 w-7 place-items-center rounded-md text-deck-muted transition hover:bg-white/8 hover:text-deck-text disabled:opacity-40"
-        title="Eksport PNG"
-      >
-        {busy === 'png' ? <span className="text-[10px]">...</span> : <ImageDown size={14} />}
+      <button type="button" onClick={exportPng} disabled={!!busy} className={przycisk} title="Zapisz widok jako obraz PNG">
+        <ImageDown size={13} aria-hidden="true" />
+        {busy === 'png' ? '...' : 'PNG'}
       </button>
-      <button
-        type="button"
-        onClick={exportPdf}
-        disabled={!!busy}
-        className="grid h-7 w-7 place-items-center rounded-md text-deck-muted transition hover:bg-white/8 hover:text-deck-text disabled:opacity-40"
-        title="Eksport PDF"
-      >
-        {busy === 'pdf' ? <span className="text-[10px]">...</span> : <FileText size={14} />}
+      <button type="button" onClick={exportPdf} disabled={!!busy} className={przycisk} title="Zapisz widok jako PDF">
+        <FileText size={13} aria-hidden="true" />
+        {busy === 'pdf' ? '...' : 'PDF'}
       </button>
     </div>
   )
