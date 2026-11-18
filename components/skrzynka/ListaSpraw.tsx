@@ -1,7 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
+import { ETYKIETY_STATUSOW } from '@/lib/skrzynka/widok'
 import type { Status, StronaSpraw } from '@/lib/skrzynka/typy'
+
+/** Dokąd można przenieść zaznaczone sprawy jednym kliknięciem. */
+const ZBIORCZO: Status[] = ['zalatwiona', 'pominieta', 'do-przejrzenia']
 import { useTeraz } from '@/lib/useTeraz'
 import { WierszSprawy } from './WierszSprawy'
 
@@ -23,6 +27,8 @@ export function ListaSpraw({ status, szukane, wybrana, onWybierz, wersja, onZmia
   const [strona, setStrona] = useState<StronaSpraw | null>(null)
   const [blad, setBlad] = useState<string | null>(null)
   const [laduje, setLaduje] = useState(false)
+  const [zaznaczone, setZaznaczone] = useState<Set<string>>(new Set())
+  const [zmienia, setZmienia] = useState(false)
 
   useEffect(() => {
     let aktywny = true
@@ -71,6 +77,33 @@ export function ListaSpraw({ status, szukane, wybrana, onWybierz, wersja, onZmia
     }
   }
 
+  function przelacz(id: string) {
+    setZaznaczone((z) => {
+      const n = new Set(z)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  }
+
+  /** Zaznaczone sprawy jednym żądaniem do innej zakładki - np. stare „Do odpowiedzi” do Załatwionych. */
+  async function przeniesZaznaczone(s: Status) {
+    const ids = strona?.sprawy.filter((x) => zaznaczone.has(x.id)).map((x) => x.id) ?? []
+    if (!ids.length) return
+    setZmienia(true)
+    try {
+      await klientSkrzynki.zmienWiele(ids, s)
+      setStrona((st) => st && { ...st, sprawy: st.sprawy.filter((x) => !zaznaczone.has(x.id)) })
+      setZaznaczone(new Set())
+      setBlad(null)
+      onZmiana?.()
+    } catch (e) {
+      setBlad((e as Error).message)
+    } finally {
+      setZmienia(false)
+    }
+  }
+
   const alert = blad && <p role="alert" className="text-[12.5px] text-deck-danger">{blad}</p>
   if (!strona) return alert || <p className="font-mono text-[11px] text-deck-muted">Wczytuję sprawy…</p>
   if (!strona.sprawy.length) {
@@ -79,9 +112,32 @@ export function ListaSpraw({ status, szukane, wybrana, onWybierz, wersja, onZmia
 
   const szybkie = status === 'do-przejrzenia' && !szukane
   const maly = 'deck-chip rounded-md px-2 py-0.5 text-[10.5px] transition hover:text-deck-text'
+  const zZaznaczaniem = !szukane
+  const widoczne = strona.sprawy
+  const ileZaznaczonych = widoczne.filter((x) => zaznaczone.has(x.id)).length
+  const wszystkie = ileZaznaczonych === widoczne.length
 
   return (
     <div className="space-y-2">
+      {zZaznaczaniem && (
+        <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-deck-muted">
+          <label className="flex cursor-pointer items-center gap-1.5 px-0.5">
+            <input
+              type="checkbox"
+              aria-label={`Zaznacz wszystkie (${widoczne.length})`}
+              checked={wszystkie}
+              onChange={() => setZaznaczone(wszystkie ? new Set() : new Set(widoczne.map((x) => x.id)))}
+            />
+            {ileZaznaczonych ? `Zaznaczone: ${ileZaznaczonych}` : 'Zaznacz wszystkie'}
+          </label>
+          {ileZaznaczonych > 0 &&
+            ZBIORCZO.filter((z) => z !== status).map((z) => (
+              <button key={z} type="button" disabled={zmienia} onClick={() => przeniesZaznaczone(z)} className={`${maly} disabled:opacity-50`}>
+                {ETYKIETY_STATUSOW[z]} ({ileZaznaczonych})
+              </button>
+            ))}
+        </div>
+      )}
       <ul aria-label="Sprawy" className="space-y-1.5">
         {strona.sprawy.map((s) => (
           <WierszSprawy
@@ -90,6 +146,7 @@ export function ListaSpraw({ status, szukane, wybrana, onWybierz, wersja, onZmia
             teraz={teraz}
             wybrana={s.id === wybrana}
             onWybierz={wybierz}
+            zaznaczenie={zZaznaczaniem ? { zaznaczona: zaznaczone.has(s.id), onPrzelacz: () => przelacz(s.id) } : undefined}
             akcje={
               szybkie && (
                 <>

@@ -3,12 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ListaSpraw } from '@/components/skrzynka/ListaSpraw'
 import type { Sprawa } from '@/lib/skrzynka/typy'
 
-const klient = { sprawy: vi.fn(), szukaj: vi.fn(), zmien: vi.fn() }
+const klient = { sprawy: vi.fn(), szukaj: vi.fn(), zmien: vi.fn(), zmienWiele: vi.fn() }
 vi.mock('@/lib/skrzynka/klient', () => ({
   klientSkrzynki: {
     sprawy: (...a: unknown[]) => klient.sprawy(...a),
     szukaj: (...a: unknown[]) => klient.szukaj(...a),
     zmien: (...a: unknown[]) => klient.zmien(...a),
+    zmienWiele: (...a: unknown[]) => klient.zmienWiele(...a),
   },
 }))
 
@@ -107,5 +108,37 @@ describe('ListaSpraw - Do przejrzenia i błędy', () => {
     })
     expect(screen.getByRole('alert')).toHaveTextContent('Gmail nie odpowiedział')
     expect(screen.getByRole('button', { name: /Temat t1/ })).toBeInTheDocument()
+  })
+
+  it('zaznaczanie: wszystkie albo wybrane, zbiorczo do Załatwionych, znikają z listy', async () => {
+    klient.sprawy.mockResolvedValue({ sprawy: [S('t1', { status: 'do-odpowiedzi' }), S('t2', { status: 'do-odpowiedzi' }), S('t3', { status: 'do-odpowiedzi' })], nastepna: null })
+    const onZmiana = vi.fn()
+    await lista({ status: 'do-odpowiedzi', onZmiana })
+    expect(screen.queryByRole('button', { name: /Załatwione \(/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Zaznacz wszystkie (3)' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Zaznacz: Temat t2' }))
+    klient.zmienWiele.mockResolvedValue({ zmienione: 2 })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Załatwione (2)' }))
+    })
+    expect(klient.zmienWiele).toHaveBeenCalledWith(['t1', 't3'], 'zalatwiona')
+    expect(screen.queryByRole('button', { name: /Temat t1/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Temat t2/ })).toBeInTheDocument()
+    expect(onZmiana).toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: /Załatwione \(/ })).not.toBeInTheDocument()
+  })
+
+  it('zbiorcze akcje bez obecnej zakładki; błąd serwera - sprawy zostają', async () => {
+    klient.sprawy.mockResolvedValue({ sprawy: [S('t1', { status: 'do-przejrzenia' })], nastepna: null })
+    await lista({ status: 'do-przejrzenia' })
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Zaznacz: Temat t1' }))
+    expect(screen.getByRole('button', { name: 'Pominięte (1)' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Do przejrzenia (1)' })).not.toBeInTheDocument()
+    klient.zmienWiele.mockRejectedValue(new Error('Nie udało się zmienić spraw.'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Załatwione (1)' }))
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('Nie udało się zmienić spraw.')
+    expect(screen.getByText('Temat t1')).toBeInTheDocument()
   })
 })

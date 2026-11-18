@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { GET as lista } from '@/app/api/skrzynka/sprawy/route'
+import { GET as lista, POST as zbiorczo } from '@/app/api/skrzynka/sprawy/route'
 import { GET as szukaj } from '@/app/api/skrzynka/szukaj/route'
 import { GET as sprawa, PATCH as zmien } from '@/app/api/skrzynka/sprawy/[id]/route'
 import { GET as zalacznik } from '@/app/api/skrzynka/sprawy/[id]/zalacznik/[zid]/route'
@@ -63,6 +63,26 @@ describe('dostęp', () => {
 })
 
 describe('lista i wyszukiwanie', () => {
+  it('zbiorczo: bez sesji 401, zarząd 403', async () => {
+    ktoPyta.mockResolvedValue(null)
+    expect((await zbiorczo(zadanie('/api/skrzynka/sprawy', { ids: ['t1'], status: 'zalatwiona' }))).status).toBe(401)
+    ktoPyta.mockResolvedValue({ uid: 'kod:1', email: 'Jula', rola: 'board' })
+    expect((await zbiorczo(zadanie('/api/skrzynka/sprawy', { ids: ['t1'], status: 'zalatwiona' }))).status).toBe(403)
+    expect(dane.zmienSprawe).not.toHaveBeenCalled()
+  })
+
+  it('zbiorczo: zła treść 400; każda sprawa zmieniona i bez znacznika nowej; liczba zmienionych', async () => {
+    for (const body of [null, { ids: [], status: 'zalatwiona' }, { ids: ['t1'], status: 'nieznany' }, { ids: 't1', status: 'zalatwiona' }, { ids: Array(301).fill('t'), status: 'zalatwiona' }]) {
+      expect((await zbiorczo(zadanie('/api/skrzynka/sprawy', body))).status).toBe(400)
+    }
+    dane.zmienSprawe.mockImplementation(async (id: string) => (id === 'znikla' ? null : S(id)))
+    const r = await zbiorczo(zadanie('/api/skrzynka/sprawy', { ids: ['t1', 't2', 'znikla', 't1'], status: 'zalatwiona' }))
+    expect(r.status).toBe(200)
+    expect(await r.json()).toEqual({ zmienione: 2 })
+    expect(dane.zmienSprawe).toHaveBeenCalledTimes(3)
+    expect(dane.zmienSprawe).toHaveBeenCalledWith('t1', { status: 'zalatwiona', nowa: false })
+  })
+
   it('lista: nieznany status 400; strona z kursorem', async () => {
     expect((await lista(zadanie('/api/skrzynka/sprawy?status=archiwum'))).status).toBe(400)
     dane.listaSpraw.mockResolvedValue({ sprawy: [S('t1')], nastepna: 'k' })

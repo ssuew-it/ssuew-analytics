@@ -9,17 +9,24 @@ import type { Sprawa } from '@/lib/skrzynka/typy'
  * - na karcie osoby albo organizacji, gdzie sprawy mają różne statusy.
  * `akcje` stoją obok przycisku, nie w nim - przycisk w przycisku jest niepoprawny.
  */
-export function WierszSprawy({ s, teraz, wybrana, onWybierz, zStatusem = false, akcje }: {
+export function WierszSprawy({ s, teraz, wybrana, onWybierz, zStatusem = false, akcje, zaznaczenie }: {
   s: Sprawa
   teraz: number
   wybrana: boolean
   onWybierz: (id: string) => void
   zStatusem?: boolean
   akcje?: ReactNode
+  /** Pole wyboru do zbiorczej zmiany statusu. */
+  zaznaczenie?: { zaznaczona: boolean; onPrzelacz: () => void }
 }) {
   const poCzasie = poTerminie(s.oczekujeOd, teraz)
   return (
     <li className="flex items-stretch gap-1.5">
+      {zaznaczenie && (
+        <label className="flex flex-none cursor-pointer items-center px-0.5">
+          <input type="checkbox" aria-label={`Zaznacz: ${s.temat}`} checked={zaznaczenie.zaznaczona} onChange={zaznaczenie.onPrzelacz} />
+        </label>
+      )}
       <button
         type="button"
         onClick={() => onWybierz(s.id)}

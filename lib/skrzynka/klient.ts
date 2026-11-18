@@ -15,6 +15,7 @@ export const klientSkrzynki = {
   szukaj: (q: string) => wywolaj<StronaSpraw>(`/api/skrzynka/szukaj?${new URLSearchParams({ q })}`),
   sprawa: (id: string) => wywolaj<SzczegolySprawy>(`/api/skrzynka/sprawy/${encodeURIComponent(id)}`),
   zmien: (id: string, z: ZmianaSprawy) => wywolaj<Sprawa>(`/api/skrzynka/sprawy/${encodeURIComponent(id)}`, json('PATCH', z)),
+  zmienWiele: (ids: string[], status: Status) => wywolaj<{ zmienione: number }>('/api/skrzynka/sprawy', json('POST', { ids, status })),
   odpowiedz: (id: string, tekst: string, pliki: File[]) => {
     const fd = new FormData()
     fd.append('tekst', tekst)
