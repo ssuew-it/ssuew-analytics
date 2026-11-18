@@ -56,6 +56,15 @@ describe('UstawieniaSkrzynki', () => {
     expect(screen.getByLabelText('Domena do pomijania')).toHaveValue('gmail.com')
   })
 
+  it('listy pomijanych podpisane - Adresy i Domeny, także gdy puste', async () => {
+    klient.ustawienia.mockResolvedValue({ ...U, pomijaneAdresy: [], pomijaneDomeny: [] })
+    await pokaz()
+    expect(screen.getByRole('heading', { name: 'Adresy' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Domeny' })).toBeInTheDocument()
+    expect(screen.getByText('Brak pomijanych adresów.')).toBeInTheDocument()
+    expect(screen.getByText('Brak pomijanych domen.')).toBeInTheDocument()
+  })
+
   it('rozłączenie: tylko po potwierdzeniu; z usuwaniem danych, gdy zaznaczone; potem odświeżenie strony', async () => {
     await pokaz()
     const potwierdz = vi.spyOn(window, 'confirm').mockReturnValueOnce(false)

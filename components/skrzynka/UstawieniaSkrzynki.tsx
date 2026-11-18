@@ -77,8 +77,8 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
   const naglowek = 'font-mono text-[10px] uppercase tracking-[0.16em] text-deck-muted'
   const przycisk = 'deck-button rounded-md px-3 py-1 text-[11.5px] disabled:opacity-50'
 
-  const lista = (nazwa: string, pole: 'pomijaneAdresy' | 'pomijaneDomeny', wartosci: string[]) => {
-    if (!wartosci.length) return <p className="text-deck-muted">Pusto.</p>
+  const lista = (nazwa: string, pole: 'pomijaneAdresy' | 'pomijaneDomeny', wartosci: string[], pusto: string) => {
+    if (!wartosci.length) return <p className="text-deck-muted">{pusto}</p>
     return (
       <ul aria-label={nazwa} className="flex flex-wrap gap-1.5">
         {wartosci.map((w) => (
@@ -109,7 +109,8 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
       <div className="space-y-2">
         <h3 className={naglowek}>Zawsze pomijaj</h3>
         <p className="text-deck-muted">Nowe wątki od tych nadawców trafiają od razu do Pominiętych. Usunięcie z listy nie przywraca spraw już pominiętych.</p>
-        {lista('Pomijane adresy', 'pomijaneAdresy', u.pomijaneAdresy)}
+        <h4 className="pt-1 text-[12px] font-semibold text-deck-text">Adresy</h4>
+        {lista('Pomijane adresy', 'pomijaneAdresy', u.pomijaneAdresy, 'Brak pomijanych adresów.')}
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -122,7 +123,8 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
             Dodaj adres
           </button>
         </form>
-        {lista('Pomijane domeny', 'pomijaneDomeny', u.pomijaneDomeny)}
+        <h4 className="pt-2 text-[12px] font-semibold text-deck-text">Domeny</h4>
+        {lista('Pomijane domeny', 'pomijaneDomeny', u.pomijaneDomeny, 'Brak pomijanych domen.')}
         <form
           onSubmit={(e) => {
             e.preventDefault()
