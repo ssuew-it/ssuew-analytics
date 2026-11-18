@@ -2,8 +2,9 @@ export function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3)
 }
 
+/** Liczba po polsku: przecinek dziesiętny („3,5”, nie „3.5”). */
 export function formatNumber(value: number, decimals = 0): string {
-  return value.toFixed(decimals)
+  return value.toFixed(decimals).replace('.', ',')
 }
 
 /**

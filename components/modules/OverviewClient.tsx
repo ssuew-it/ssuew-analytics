@@ -106,14 +106,14 @@ export default function OverviewClient() {
           value={m.lastAccepted != null ? <AnimatedNumber value={m.lastAccepted} /> : '-'}
           sub={
             m.lastApplications != null && m.lastAccepted != null
-              ? `z ${m.lastApplications} zgłoszeń · ${m.lastApplications > 0 ? ((m.lastAccepted / m.lastApplications) * 100).toFixed(1) : '0.0'}% konwersji`
+              ? `z ${m.lastApplications} zgłoszeń · ${m.lastApplications > 0 ? ((m.lastAccepted / m.lastApplications) * 100).toFixed(1).replace('.', ',') : '0,0'}% konwersji`
               : ''
           }
         />
         <KpiTile
           label="KPI rosnące r/r"
           value={`${summary.up}/${summary.up + summary.down}`}
-          sub={`średnia zmiana ${zmianaRr(summary.avgRatio)} r/r`}
+          sub={`typowa zmiana ${zmianaRr(summary.typowyIloraz)} r/r`}
           accent="accent"
         />
       </div>

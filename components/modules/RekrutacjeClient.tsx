@@ -5,7 +5,7 @@ import { useAnalyticsData } from '@/lib/useAnalyticsData'
 import { useFilters } from '@/lib/useFilters'
 import { applyFilters } from '@/lib/filters'
 import { useAuth } from '@/lib/auth/useAuth'
-import { analyzeRekrutacje, linearForecast, mean } from '@/lib/stats'
+import { analyzeRekrutacje, mean, prognozaPrzyjetych } from '@/lib/stats'
 import { chartTheme, axisTick, tooltipStyle } from '@/lib/chartTheme'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { KpiTile } from '@/components/ui/KpiTile'
@@ -41,7 +41,7 @@ export default function RekrutacjeClient() {
   }
 
   const s = rekr.length >= 2 ? analyzeRekrutacje(rekr) : null
-  const fc = s ? linearForecast(s.przyj, 2) : []
+  const fc = s ? prognozaPrzyjetych(rekr, 2) : []
   const avgCR = s ? Math.round(mean(s.cr) * 10) / 10 : 0
   const lastIdx = s ? s.przyj.length - 1 : 0
   const trendData = s ? s.sorted.map((r, i) => ({ edycja: r.edycja, zgłoszenia: s.zglos[i], przyjęci: s.przyj[i], 'CR%': s.cr[i] })) : []
@@ -49,7 +49,7 @@ export default function RekrutacjeClient() {
   const fcData: Record<string, number | string | number[]>[] = s
     ? [
         ...s.sorted.map((r, i) => ({ label: r.edycja, hist: s.przyj[i] })),
-        ...fc.map((p, k) => ({ label: `prog.${k + 1}`, yhat: p.yhat, band: [p.lo, p.hi] as number[] })),
+        ...fc.map((p) => ({ label: p.edycja, yhat: p.yhat, band: [p.lo, p.hi] as number[] })),
       ]
     : []
 
@@ -67,7 +67,7 @@ export default function RekrutacjeClient() {
           </thead>
           <tbody className="text-deck-text">
             {sorted.map((r) => {
-              const cr = r.zgloszenia > 0 ? ((r.przyjeci / r.zgloszenia) * 100).toFixed(1) : '-'
+              const cr = r.zgloszenia > 0 ? ((r.przyjeci / r.zgloszenia) * 100).toFixed(1).replace('.', ',') : '-'
               return (
                 <tr key={r.id} className="border-t border-deck-border">
                   <td className="p-1">{r.edycja}</td>
@@ -102,8 +102,12 @@ export default function RekrutacjeClient() {
           <div className="grid grid-cols-4 gap-2">
             <KpiTile label={`Przyjęci ${s.sorted[lastIdx].edycja}`} value={s.przyj[lastIdx]} sub={`z ${s.zglos[lastIdx]} zgłoszeń`} />
             <KpiTile label="Średnia konwersja" value={`${avgCR}%`} sub="wszystkie edycje" accent="accent" />
-            <KpiTile label="Prognoza następnej" value={`~${fc[0].yhat}`} sub={`±${Math.round((fc[0].hi - fc[0].yhat) * 10) / 10}`} accent="violet" />
-            <KpiTile label="Korelacja r" value={s.corZglosAccepted.r.toFixed(3)} sub={`R²=${(s.corZglosAccepted.r2 * 100).toFixed(0)}%`} />
+            {fc[0] ? (
+              <KpiTile label={`Prognoza ${fc[0].edycja}`} value={`~${Math.round(fc[0].yhat)}`} sub={`±${Math.round(fc[0].hi - fc[0].yhat)} · z edycji tego sezonu`} accent="violet" />
+            ) : (
+              <KpiTile label="Prognoza następnej" value="-" sub="za mało edycji w sezonie" accent="violet" />
+            )}
+            <KpiTile label="Korelacja r" value={s.corZglosAccepted.r.toFixed(3).replace('.', ',')} sub={`R²=${(s.corZglosAccepted.r2 * 100).toFixed(0)}%`} />
           </div>
 
           <BentoCard title="Zgłoszenia, przyjęci i konwersja (CR%)" sub="trend w kolejnych edycjach" span={4}>
@@ -125,7 +129,7 @@ export default function RekrutacjeClient() {
           <div className="grid grid-cols-2 gap-3">
             <BentoCard
               title="Korelacja zgłoszenia ↔ przyjęci"
-              sub={`r = ${s.corZglosAccepted.r.toFixed(3)} · R² = ${(s.corZglosAccepted.r2 * 100).toFixed(0)}% · p ${s.corZglosAccepted.p_approx}`}
+              sub={`r = ${s.corZglosAccepted.r.toFixed(3).replace('.', ',')} · R² = ${(s.corZglosAccepted.r2 * 100).toFixed(0)}% · p ${s.corZglosAccepted.p_approx}`}
             >
               <ResponsiveContainer width="100%" height={180}>
                 <ScatterChart margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
@@ -141,18 +145,18 @@ export default function RekrutacjeClient() {
 
             <BentoCard
               title="Sezonowość - test t Welcha"
-              sub={`t = ${s.sezonowosc.tStat.toFixed(2)} · df ≈ ${s.sezonowosc.df} · p ${s.sezonowosc.p_approx}`}
+              sub={`t = ${s.sezonowosc.tStat.toFixed(2).replace('.', ',')} · df ≈ ${s.sezonowosc.df} · p ${s.sezonowosc.p_approx}`}
             >
               <div className="flex gap-3 mb-2">
                 <div className="flex-1 bg-deck-bg border border-deck-border rounded-lg p-2 text-center">
                   <div className="text-[10px] text-deck-muted">Jesień - średnia</div>
-                  <div className="text-lg font-semibold tabular text-deck-accent">{s.sezonowosc.meanA.toFixed(1)}</div>
-                  <div className="text-[9px] text-deck-muted">SD {s.sezonowosc.sdA.toFixed(1)}</div>
+                  <div className="text-lg font-semibold tabular text-deck-accent">{s.sezonowosc.meanA.toFixed(1).replace('.', ',')}</div>
+                  <div className="text-[9px] text-deck-muted">SD {s.sezonowosc.sdA.toFixed(1).replace('.', ',')}</div>
                 </div>
                 <div className="flex-1 bg-deck-bg border border-deck-border rounded-lg p-2 text-center">
                   <div className="text-[10px] text-deck-muted">Wiosna - średnia</div>
-                  <div className="text-lg font-semibold tabular text-deck-violet">{s.sezonowosc.meanB.toFixed(1)}</div>
-                  <div className="text-[9px] text-deck-muted">SD {s.sezonowosc.sdB.toFixed(1)}</div>
+                  <div className="text-lg font-semibold tabular text-deck-violet">{s.sezonowosc.meanB.toFixed(1).replace('.', ',')}</div>
+                  <div className="text-[9px] text-deck-muted">SD {s.sezonowosc.sdB.toFixed(1).replace('.', ',')}</div>
                 </div>
               </div>
               <p className="text-[11px] text-deck-muted">{s.sezonowosc.interpretation}</p>

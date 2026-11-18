@@ -57,6 +57,20 @@ describe('zbudujKontekst', () => {
     expect(k.kpi[0]).toMatchObject({ nazwa: 'Listopad', wartosc: 30, zmianaRr: '-40%', kierunek: 'spadek' })
   })
 
+  it('rekrutacje: sezon i zmiana tylko wobec poprzedniej edycji tego samego sezonu', () => {
+    const r = (edycja: string, sezon: 'jesien' | 'wiosna', rok: number, zgloszenia: number) =>
+      ({ id: edycja, edycja, sezon, rok, zgloszenia, przyjeci: 10, created_at: '' })
+    const k = zbudujKontekst(dane({
+      rekrutacje: [r("J'25", 'jesien', 2025, 60), r("W'25", 'wiosna', 2025, 31), r("W'26", 'wiosna', 2026, 18), r("J'24", 'jesien', 2024, 50)],
+    }), DZIS)
+    expect(k.rekrutacje.map((x) => [x.edycja, x.sezon, x.zmianaWSezonie])).toEqual([
+      ["J'24", 'jesień', null],
+      ["W'25", 'wiosna', null],
+      ["J'25", 'jesień', '+20%'],
+      ["W'26", 'wiosna', '-42%'],
+    ])
+  })
+
   it('skrzynka: obraz bez zmian; niepołączona - null', () => {
     const skrzynka = {
       liczby: { doOdpowiedzi: 3, poTerminie: 1, doPrzejrzenia: 0, czekaNaNich: 2, wToku: 1 },

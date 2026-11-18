@@ -131,7 +131,7 @@ export default function KpiClient() {
       <div className="grid grid-cols-3 gap-3">
         <KpiTile label="Metryki rosnące" value={<AnimatedNumber value={summary.up} />} sub="rok do roku" accent="accent" />
         <KpiTile label="Metryki spadające" value={<AnimatedNumber value={summary.down} />} sub="rok do roku" accent="violet" />
-        <KpiTile label="Średnia zmiana" value={zmianaRr(summary.avgRatio)} sub="r/r" />
+        <KpiTile label="Typowa zmiana" value={zmianaRr(summary.typowyIloraz)} sub="r/r, środkowa metryka" />
       </div>
 
       <BentoCard title="KPI strategiczne" sub="syntetyczne wskaźniki dla pracy Zarządu" span={4}>

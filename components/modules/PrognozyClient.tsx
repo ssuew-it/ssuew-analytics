@@ -3,7 +3,7 @@ import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Respon
 import { useAnalyticsData } from '@/lib/useAnalyticsData'
 import { useFilters } from '@/lib/useFilters'
 import { applyFilters } from '@/lib/filters'
-import { linearForecast, retentionModel } from '@/lib/stats'
+import { prognozaPrzyjetych, prognozaRetencji } from '@/lib/stats'
 import { chartTheme, axisTick, tooltipStyle } from '@/lib/chartTheme'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
@@ -17,33 +17,25 @@ export default function PrognozyClient() {
   const rekr = applyFilters(rekrutacje, filters)
   const koh = applyFilters(kohorty, filters)
 
-  // Prognoza rekrutacji (przyjęci)
+  // Prognoza rekrutacji (przyjęci) - każda edycja z historii swojego sezonu
   const sorted = [...rekr].sort((a, b) => a.rok - b.rok || (a.sezon === 'wiosna' ? -1 : 1))
-  const przyj = sorted.map((r) => r.przyjeci)
-  const fc = przyj.length >= 2 ? linearForecast(przyj, 2) : []
+  const fc = prognozaPrzyjetych(rekr, 2)
   const rekrData: Record<string, number | string | number[]>[] = [
     ...sorted.map((r) => ({ label: r.edycja, hist: r.przyjeci })),
-    ...fc.map((p, k) => ({ label: `prog.${k + 1}`, yhat: p.yhat, band: [p.lo, p.hi] as number[] })),
+    ...fc.map((p) => ({ label: p.edycja, yhat: p.yhat, band: [p.lo, p.hi] as number[] })),
   ]
 
   // Prognoza retencji
-  const model = retentionModel(koh)
+  const pr = prognozaRetencji(koh)
   const completed = [...koh]
     .filter((k) => !k.in_progress)
     .sort((a, b) => a.rok - b.rok || (a.sezon === 'wiosna' ? -1 : 1))
-  let retData: Record<string, number | string | number[]>[] = []
-  if (model) {
-    const pred = Math.round(model.predict(model.nextEdNr, 1, model.meanNCzl) * 100) / 100
-    const sd = model.residualSd
-    retData = [
-      ...completed.map((k) => ({ label: k.edycja, hist: k.avg_retention_sem })),
-      {
-        label: 'prog.',
-        yhat: pred,
-        band: [Math.max(0, Math.round((pred - sd) * 100) / 100), Math.round((pred + sd) * 100) / 100] as number[],
-      },
-    ]
-  }
+  const retData: Record<string, number | string | number[]>[] = pr
+    ? [
+        ...completed.map((k) => ({ label: k.edycja, hist: k.avg_retention_sem })),
+        { label: pr.edycja, yhat: pr.yhat, band: [pr.lo, pr.hi] as number[] },
+      ]
+    : []
 
   return (
     <div className="space-y-3">
@@ -52,8 +44,8 @@ export default function PrognozyClient() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <BentoCard title="Prognoza rekrutacji" sub="przyjęci - historia + 2 edycje">
-          {rekrData.length >= 2 ? (
+        <BentoCard title="Prognoza rekrutacji" sub="przyjęci - historia i 2 kolejne edycje, każda z historii swojego sezonu">
+          {fc.length ? (
             <ResponsiveContainer width="100%" height={200}>
               <ComposedChart data={rekrData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
@@ -66,12 +58,12 @@ export default function PrognozyClient() {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-[11px] text-deck-muted">Za mało edycji do prognozy.</p>
+            <p className="text-[11px] text-deck-muted">Za mało edycji do prognozy - potrzeba co najmniej dwóch w każdym sezonie.</p>
           )}
         </BentoCard>
 
-        <BentoCard title="Prognoza retencji" sub="średnia retencja - historia i następna edycja">
-          {model ? (
+        <BentoCard title="Prognoza retencji" sub="średnia retencja w semestrach - historia i następna edycja">
+          {pr ? (
             <ResponsiveContainer width="100%" height={200}>
               <ComposedChart data={retData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />

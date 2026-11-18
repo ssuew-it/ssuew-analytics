@@ -75,14 +75,22 @@ export function zbudujKontekst(d: DaneProjektu, dzis: Data) {
   })
 
   const rekrutacje = [...d.rekrutacje]
-    // Rok akademicki zaczyna się jesienią: J'25 przed W'26 tego samego `rok`.
-    .sort((a, b) => a.rok - b.rok || (a.sezon === b.sezon ? 0 : a.sezon === 'jesien' ? -1 : 1))
-    .map((r) => ({
-      edycja: r.edycja,
-      zgloszenia: r.zgloszenia,
-      przyjeci: r.przyjeci,
-      konwersjaProc: r.zgloszenia ? Math.round((r.przyjeci / r.zgloszenia) * 1000) / 10 : null,
-    }))
+    // `rok` to rok kalendarzowy edycji (W'26 → 2026), więc w jednym roku
+    // wiosna jest przed jesienią - tak jak w analizie rekrutacji.
+    .sort((a, b) => a.rok - b.rok || (a.sezon === b.sezon ? 0 : a.sezon === 'wiosna' ? -1 : 1))
+    // Wiosna jest zawsze kilka razy mniejsza od jesieni (18-31 wobec 100-149 zgłoszeń):
+    // bez gotowej zmiany w sezonie model porównywał je ze sobą i widział „zapaść”.
+    .map((r, i, wszystkie) => {
+      const poprzednia = wszystkie.slice(0, i).reverse().find((x) => x.sezon === r.sezon)
+      return {
+        edycja: r.edycja,
+        sezon: r.sezon === 'jesien' ? 'jesień' : 'wiosna',
+        zgloszenia: r.zgloszenia,
+        zmianaWSezonie: poprzednia && poprzednia.zgloszenia > 0 ? zmianaRr(r.zgloszenia / poprzednia.zgloszenia) : null,
+        przyjeci: r.przyjeci,
+        konwersjaProc: r.zgloszenia ? Math.round((r.przyjeci / r.zgloszenia) * 1000) / 10 : null,
+      }
+    })
 
   const retencja = d.kohorty.map((k) => ({
     edycja: k.edycja, liczebnosc: k.n_czlonkow, sredniaSemestrow: k.avg_retention_sem, wToku: k.in_progress,

@@ -46,7 +46,7 @@ Przygotuj odprawę:
 - podsumowanie: 2-4 zdania, co z danych wynika teraz;
 - zagrozenia: do 5 obszarów wzbudzających niepokój, od najpoważniejszego, każde z uzasadnieniem opartym na konkretnych liczbach z danych;
 - dzis: do 4 krótkich punktów na dziś (wydarzenia, decyzje, kolizje).
-Zasady: tylko na podstawie przekazanych danych, nic nie zmyślaj; gdy danych brakuje, powiedz to; pisz po polsku, zwięźle, rzeczowo; używaj zwykłego łącznika „-”, nigdy długich myślników.`
+Zasady: tylko na podstawie przekazanych danych, nic nie zmyślaj; gdy danych brakuje, powiedz to; pisz po polsku, zwięźle, rzeczowo; używaj zwykłego łącznika „-”, nigdy długich myślników. Rekrutacje: edycje wiosenne (W) są z natury kilka razy mniejsze od jesiennych (J) - nie porównuj ich ze sobą; o wzroście albo spadku rekrutacji mów tylko na podstawie pola zmianaWSezonie (zmiana wobec poprzedniej edycji tego samego sezonu).`
 
 const S = (extra: object = {}) => ({ type: 'STRING', ...extra })
 

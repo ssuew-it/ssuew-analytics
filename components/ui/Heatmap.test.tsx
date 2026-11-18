@@ -12,6 +12,6 @@ describe('Heatmap', () => {
       { a: 'y', b: 'y', r: 1, significant: true },
     ]
     render(<Heatmap vars={['x', 'y']} cells={cells} />)
-    expect(screen.getAllByText('0.50').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('0,50').length).toBeGreaterThan(0)
   })
 })

@@ -12,8 +12,8 @@ describe('easeOutCubic', () => {
 })
 
 describe('formatNumber', () => {
-  it('formatuje z liczbą miejsc po przecinku', () => {
-    expect(formatNumber(3.456, 1)).toBe('3.5')
+  it('formatuje z przecinkiem dziesiętnym', () => {
+    expect(formatNumber(3.456, 1)).toBe('3,5')
     expect(formatNumber(42, 0)).toBe('42')
   })
 })

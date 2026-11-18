@@ -29,13 +29,13 @@ describe('AnimatedNumber', () => {
 
   it('respektuje miejsca po przecinku i prefix', () => {
     render(<AnimatedNumber value={3.456} decimals={1} prefix="~" />)
-    expect(screen.getByText('~3.5')).toBeInTheDocument()
+    expect(screen.getByText('~3,5')).toBeInTheDocument()
   })
 
   it('pierwsze wejście bez liczenia od zera - od razu prawdziwa wartość, nawet z animacjami', () => {
     ruch(false)
     render(<AnimatedNumber value={24} decimals={1} />)
-    expect(screen.getByText('24.0')).toBeInTheDocument()
+    expect(screen.getByText('24,0')).toBeInTheDocument()
   })
 
   it('zmiana wartości (np. filtr) przechodzi od poprzedniej do nowej, nie od zera', () => {

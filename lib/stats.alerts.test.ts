@@ -51,6 +51,15 @@ describe('buildAlerts', () => {
     expect(buildAlerts([], [], [seria('Odbicie', [10, 4, 9])])).toEqual([])
   })
 
+  it('spadek o jedną-dwie sztuki to szum, nie alert: Koordynatorzy ME 2 → 1', () => {
+    expect(buildAlerts([], [], [seria('ME', [2, 1], 'Koordynatorzy'), seria('RJ', [5, 3])])).toEqual([])
+  })
+
+  it('mała baza daje najwyżej ostrzeżenie, nie krytyczny', () => {
+    const [a] = buildAlerts([], [], [seria('Bal', [8, 3])]) // -63%, ale z 8
+    expect(a.severity).toBe('warning')
+  })
+
   it('seria jednopunktowa nie daje alertu', () => {
     const alerts = buildAlerts([], [], [seria('Nowa', [3])])
     expect(alerts.filter((a) => a.id.startsWith('kpi-'))).toHaveLength(0)

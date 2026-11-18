@@ -20,7 +20,7 @@ export function EditableCell({ value, onCommit, editable = true, decimals, suffi
     setV(String(value))
   }
 
-  const shown = decimals != null ? value.toFixed(decimals) : String(value)
+  const shown = (decimals != null ? value.toFixed(decimals) : String(value)).replace('.', ',')
   if (!editable) return <span className={`tabular ${className}`}>{shown}{suffix}</span>
 
   // kreskowany underline = wyraźny sygnał „to pole można kliknąć i edytować"

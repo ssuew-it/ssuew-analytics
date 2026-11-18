@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import type { Rekrutacja, Kohorta } from '@/types'
-import { retentionModel, retentionFraction, linearForecast } from '@/lib/stats'
+import { retentionModel, retentionFraction, prognozaPrzyjetych, mean } from '@/lib/stats'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { Slider } from '@/components/ui/Slider'
 
@@ -23,8 +23,12 @@ export default function Symulator({ rekrutacje, kohorty }: Props) {
       ) / 10
     : 50
   const model = retentionModel(kohorty)
-  const meanN = model ? Math.round(model.meanNCzl) : 15
-  const trend = sorted.length >= 2 ? linearForecast(sorted.map((r) => r.przyjeci), 1)[0] : null
+  // Domyślnie jesień, więc i liczebność jesienna - średnia z obu sezonów
+  // (ok. 26) to obsada, jakiej jesień nie miała, i model wyrzucał ok. 6 sem.
+  const jesienne = kohorty.filter((k) => k.sezon === 'jesien' && !k.in_progress)
+  const meanN = jesienne.length ? Math.round(mean(jesienne.map((k) => k.n_czlonkow))) : model ? Math.round(model.meanNCzl) : 15
+  const [trend] = prognozaPrzyjetych(rekrutacje, 1)
+  const maxZgloszen = Math.max(60, ...sorted.map((r) => Math.ceil((r.zgloszenia * 1.5) / 10) * 10))
 
   // Sekcja 1: rekrutacja
   const [zgloszenia, setZgloszenia] = useState(last?.zgloszenia ?? 30)
@@ -60,12 +64,12 @@ export default function Symulator({ rekrutacje, kohorty }: Props) {
           {/* Rekrutacja */}
           <div className="space-y-2">
             <div className="text-[11px] text-deck-text font-medium">Rekrutacja</div>
-            <Slider label="Zgłoszenia" min={0} max={60} value={zgloszenia} onChange={setZgloszenia} />
+            <Slider label="Zgłoszenia" min={0} max={maxZgloszen} value={zgloszenia} onChange={setZgloszenia} />
             <Slider label="Konwersja %" min={0} max={100} value={cr} onChange={setCr} />
             <div className="text-deck-accent text-lg font-semibold tabular">{przyjeciCR} przyjętych</div>
             {trend && (
               <div className="text-[10px] text-deck-muted">
-                trend: ~{trend.yhat} (±{Math.round((trend.hi - trend.yhat) * 10) / 10})
+                trend {trend.edycja}: ~{Math.round(trend.yhat)} (±{Math.round(trend.hi - trend.yhat)})
               </div>
             )}
           </div>

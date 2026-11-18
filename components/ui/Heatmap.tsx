@@ -41,9 +41,9 @@ export function Heatmap({ vars, cells, onSelect }: Props) {
                     onClick={() => onSelect?.(a, b)}
                     className="w-12 h-8 text-center cursor-pointer border border-deck-border tabular-nums text-deck-text"
                     style={{ background: cellColor(r) }}
-                    title={`${a} ↔ ${b}: ${r == null ? '-' : r.toFixed(2)}`}
+                    title={`${a} ↔ ${b}: ${r == null ? '-' : r.toFixed(2).replace('.', ',')}`}
                   >
-                    {r == null ? '-' : r.toFixed(2)}
+                    {r == null ? '-' : r.toFixed(2).replace('.', ',')}
                   </td>
                 )
               })}

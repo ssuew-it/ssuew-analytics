@@ -53,8 +53,8 @@ export function pearsonTest(x: number[], y: number[]): StatResult {
   const direction = r > 0 ? 'dodatnia' : 'ujemna'
 
   const interpretation =
-    `r = ${r.toFixed(3)} - korelacja ${direction}, ${strength}. ` +
-    `R² = ${(r2 * 100).toFixed(1)}% zmienności wyjaśnionej. ` +
+    `r = ${r.toFixed(3).replace('.', ',')} - korelacja ${direction}, ${strength}. ` +
+    `R² = ${(r2 * 100).toFixed(1).replace('.', ',')}% zmienności wyjaśnionej. ` +
     `p ${p_approx}${significant ? ' - wynik statystycznie istotny.' : ' - brak istotności przy obecnej liczbie obserwacji.'}`
 
   return { r, r2, p_approx, significant, interpretation }
@@ -87,10 +87,10 @@ export function welchT(a: number[], b: number[]) {
     p_approx,
     significant,
     interpretation:
-      `t = ${tStat.toFixed(2)}, df ≈ ${df.toFixed(1)}, p ${p_approx}. ` +
+      `t = ${tStat.toFixed(2).replace('.', ',')}, df ≈ ${df.toFixed(1).replace('.', ',')}, p ${p_approx}. ` +
       (significant
-        ? `Różnica (${(ma - mb).toFixed(1)} jednostki) jest statystycznie istotna - sezon ma realny wpływ.`
-        : `Różnica widoczna (${(ma - mb).toFixed(1)}), ale nieistotna statystycznie przy tej liczbie obserwacji.`)
+        ? `Różnica (${(ma - mb).toFixed(1).replace('.', ',')} jednostki) jest statystycznie istotna - sezon ma realny wpływ.`
+        : `Różnica widoczna (${(ma - mb).toFixed(1).replace('.', ',')}), ale nieistotna statystycznie przy tej liczbie obserwacji.`)
   }
 }
 
@@ -262,20 +262,20 @@ export function analyzeRetention(kohort: Kohorta[]): RegressionResult {
       name: 'Nr edycji (trend czasowy)',
       beta: betas[0],
       interpretation: betas[0] < 0
-        ? `Każda kolejna edycja to ${Math.abs(betas[0]).toFixed(2)} sem. mniej retention - trend spadkowy wymaga interwencji.`
-        : `Trend rosnący: +${betas[0].toFixed(2)} sem. na edycję - poprawa jakości rekrutacji lub środowiska organizacyjnego.`
+        ? `Każda kolejna edycja to ${Math.abs(betas[0]).toFixed(2).replace('.', ',')} sem. mniej retention - trend spadkowy wymaga interwencji.`
+        : `Trend rosnący: +${betas[0].toFixed(2).replace('.', ',')} sem. na edycję - poprawa jakości rekrutacji lub środowiska organizacyjnego.`
     },
     {
       name: 'Sezon (1=jesień, 0=wiosna)',
       beta: betas[1],
-      interpretation: `Edycje ${betas[1] > 0 ? 'jesienne mają wyższy' : 'wiosenne mają wyższy'} retention o ${Math.abs(betas[1]).toFixed(2)} sem. po uwzględnieniu pozostałych zmiennych.`
+      interpretation: `Edycje ${betas[1] > 0 ? 'jesienne mają wyższy' : 'wiosenne mają wyższy'} retention o ${Math.abs(betas[1]).toFixed(2).replace('.', ',')} sem. po uwzględnieniu pozostałych zmiennych.`
     },
     {
       name: 'Liczba przyjętych',
       beta: betas[2],
       interpretation: Math.abs(betas[2]) < 0.05
-        ? `Efekt minimalny (β=${betas[2].toFixed(3)}) - liczba przyjętych nie wyjaśnia retencji. Liczy się jakość, nie wolumen.`
-        : `Każda dodatkowa przyjęta osoba zmienia retention o ${betas[2].toFixed(3)} sem.`
+        ? `Efekt minimalny (β=${betas[2].toFixed(3).replace('.', ',')}) - liczba przyjętych nie wyjaśnia retencji. Liczy się jakość, nie wolumen.`
+        : `Każda dodatkowa przyjęta osoba zmienia retention o ${betas[2].toFixed(3).replace('.', ',')} sem.`
     },
   ]
 
@@ -513,6 +513,60 @@ export function retentionModel(kohort: Kohorta[]): RetentionModel | null {
   return { predict, r2, n: sorted.length, residualSd, nextEdNr: sorted.length, meanNCzl: mean(nCzl) }
 }
 
+// ─── Prognozy z podziałem na sezony ──────────────────────────────────────────
+// Edycje wiosenne są kilka razy mniejsze od jesiennych, więc jedna prosta
+// przez obie (J, W, J, W...) kreśli piłę i prognozuje średnią z obu sezonów.
+// Każdą przyszłą edycję liczymy z historii jej własnego sezonu.
+
+export interface PrognozaEdycji {
+  edycja: string
+  sezon: Sezon
+  yhat: number
+  lo: number
+  hi: number
+}
+
+const wgCzasu = <T extends { rok: number; sezon: Sezon }>(a: T, b: T) =>
+  a.rok - b.rok || (a.sezon === b.sezon ? 0 : a.sezon === 'wiosna' ? -1 : 1)
+
+export function prognozaPrzyjetych(rekrutacje: Rekrutacja[], kroki: number): PrognozaEdycji[] {
+  const sorted = [...rekrutacje].sort(wgCzasu)
+  const ostatnia = sorted.at(-1)
+  if (!ostatnia) return []
+  const out: PrognozaEdycji[] = []
+  const krokWSezonie: Record<Sezon, number> = { jesien: 0, wiosna: 0 }
+  for (const nast of kolejneSemestry(ostatnia.sezon, ostatnia.rok, kroki)) {
+    const krok = ++krokWSezonie[nast.sezon]
+    const hist = sorted.filter((r) => r.sezon === nast.sezon).map((r) => r.przyjeci)
+    if (hist.length < 2) continue
+    const f = linearForecast(hist, krok)[krok - 1]
+    out.push({ edycja: nast.label, sezon: nast.sezon, yhat: Math.max(0, f.yhat), lo: f.lo, hi: f.hi })
+  }
+  return out
+}
+
+/**
+ * Średnia retencja następnej edycji po ostatniej ukończonej. Liczebność
+ * bierzemy z tej edycji (jeśli już jest w danych) albo średnią jej sezonu -
+ * średnia ze wszystkich (ok. 26) to „jesień z wiosenną obsadą”, której model
+ * nigdy nie widział, i prognoza wyskakiwała do ok. 6 sem. przy historii 2,7-4,4.
+ */
+export function prognozaRetencji(kohorty: Kohorta[]): PrognozaEdycji | null {
+  const model = retentionModel(kohorty)
+  if (!model) return null
+  const ukonczone = kohorty.filter((k) => !k.in_progress).sort(wgCzasu)
+  const ost = ukonczone[ukonczone.length - 1]
+  const [nast] = kolejneSemestry(ost.sezon, ost.rok, 1)
+  const zSezonu = ukonczone.filter((k) => k.sezon === nast.sezon)
+  const n =
+    kohorty.find((k) => k.edycja === nast.label)?.n_czlonkow ??
+    (zSezonu.length ? mean(zSezonu.map((k) => k.n_czlonkow)) : model.meanNCzl)
+  const r2 = (v: number) => Math.round(v * 100) / 100
+  const yhat = model.predict(model.nextEdNr, nast.sezon === 'jesien' ? 1 : 0, n)
+  const sd = model.residualSd
+  return { edycja: nast.label, sezon: nast.sezon, yhat: r2(yhat), lo: r2(Math.max(0, yhat - sd)), hi: r2(yhat + sd) }
+}
+
 // ─── Grupowanie KPI po komisji (drill-down / trend) ──────────────────────────
 
 export function kpiByKomisja(periods: KpiPeriod[]): Map<string, KpiPeriod[]> {
@@ -540,6 +594,10 @@ export interface Alert {
 }
 
 const SEVERITY_ORDER: Record<Alert['severity'], number> = { critical: 0, warning: 1, info: 2 }
+/** Spadek KPI mniejszy niz tyle sztuk nie daje alertu. */
+const KPI_MIN_SPADEK = 3
+/** Krytyczny tylko od takiej wartosci w poprzednim okresie; nizej najwyzej ostrzezenie. */
+const KPI_MIN_BAZA_KRYTYCZNY = 10
 
 export function buildAlerts(
   rekrutacje: Rekrutacja[],
@@ -550,15 +608,18 @@ export function buildAlerts(
 
   // 1. Metryki ze spadkiem miedzy dwoma ostatnimi okresami.
   // Jedna seria to jeden alert, niezaleznie od tego, ile lat obejmuje.
+  // KPI to liczebnosci, czesto jednocyfrowe (koordynatorzy 1-2 osoby):
+  // spadek o 1-2 to szum, a krytyczny wymaga bazy, z ktorej procent cos mowi.
   for (const s of kpiSerie) {
     const ratio = ilorazSerii(s)
     if (ratio <= 0 || ratio >= 0.8) continue
     const przed = s.punkty[s.punkty.length - 2].wartosc
     const teraz = s.punkty[s.punkty.length - 1].wartosc
+    if (przed - teraz < KPI_MIN_SPADEK) continue
     const id = `kpi-${s.kategoria}-${s.nazwa}`
     const detail = `${przed} → ${teraz} (${zmianaRr(ratio)} r/r)`
     alerts.push(
-      ratio < 0.6
+      ratio < 0.6 && przed >= KPI_MIN_BAZA_KRYTYCZNY
         ? { id, severity: 'critical', title: `${s.kategoria}: ${s.nazwa} - duży spadek`, detail, recommendation: 'Sprawdź przyczyny - priorytet Zarządu.', href: '/analytics/kpi' }
         : { id, severity: 'warning', title: `${s.kategoria}: ${s.nazwa} - spadek r/r`, detail, recommendation: 'Monitorować trend.', href: '/analytics/kpi' },
     )
@@ -572,7 +633,7 @@ export function buildAlerts(
     const first = completed[0]
     const last = completed[completed.length - 1]
     if (last.avg_retention_sem < first.avg_retention_sem) {
-      alerts.push({ id: 'ret-decline', severity: 'warning', title: 'Spadkowy trend retencji', detail: `Z ${first.avg_retention_sem.toFixed(1)} (${first.edycja}) do ${last.avg_retention_sem.toFixed(1)} sem. (${last.edycja}).`, recommendation: 'Sprawdź onboarding i obciążenie sesją.', href: '/analytics/retencja' })
+      alerts.push({ id: 'ret-decline', severity: 'warning', title: 'Spadkowy trend retencji', detail: `Z ${first.avg_retention_sem.toFixed(1).replace('.', ',')} (${first.edycja}) do ${last.avg_retention_sem.toFixed(1).replace('.', ',')} sem. (${last.edycja}).`, recommendation: 'Sprawdź onboarding i obciążenie sesją.', href: '/analytics/retencja' })
     }
   }
 
@@ -582,7 +643,7 @@ export function buildAlerts(
     const meanCR = mean(s.cr)
     const lastCR = s.cr[s.cr.length - 1]
     if (meanCR > 0 && lastCR < 0.7 * meanCR) {
-      alerts.push({ id: 'cr-low', severity: 'warning', title: 'Niska konwersja ostatniej edycji', detail: `Konwersja ${lastCR}% wobec średniej ${meanCR.toFixed(1)}%.`, recommendation: 'Sprawdź jakość kandydatów / proces rekrutacji.', href: '/analytics/rekrutacje' })
+      alerts.push({ id: 'cr-low', severity: 'warning', title: 'Niska konwersja ostatniej edycji', detail: `Konwersja ${lastCR}% wobec średniej ${meanCR.toFixed(1).replace('.', ',')}%.`, recommendation: 'Sprawdź jakość kandydatów / proces rekrutacji.', href: '/analytics/rekrutacje' })
     }
   }
 
@@ -611,20 +672,24 @@ export function buildAlerts(
 // Iloraz i grupowanie mieszkaja w lib/kpi/serie.ts - tu zostaje tylko to,
 // co skleja metryki w obraz calosci.
 
-export function kpiSummary(serie: SeriaKpi[]): { up: number; down: number; avgRatio: number } {
+export function kpiSummary(serie: SeriaKpi[]): { up: number; down: number; typowyIloraz: number } {
   // ilorazSerii zwraca 0, gdy nie da sie policzyc: seria jednopunktowa
-  // albo zerowy mianownik. Takie serie nie moga ciagnac sredniej w dol.
+  // albo zerowy mianownik. Takie serie nie moga ciagnac wyniku w dol.
   const policzalne = serie.map(ilorazSerii).filter((r) => r > 0)
-  if (policzalne.length === 0) return { up: 0, down: 0, avgRatio: 0 }
+  if (policzalne.length === 0) return { up: 0, down: 0, typowyIloraz: 0 }
   let up = 0
   let down = 0
-  let sum = 0
   for (const r of policzalne) {
-    sum += r
     if (r > 1) up++
     else if (r < 1) down++
   }
-  return { up, down, avgRatio: Math.round((sum / policzalne.length) * 100) / 100 }
+  // Mediana, nie srednia: metryk jest kilkanascie, a jeden skok z malej bazy
+  // (Gala 1 -> 5, iloraz 5) podnosil srednia do „+29%”, choc typowa metryka
+  // stala w miejscu.
+  const r = [...policzalne].sort((a, b) => a - b)
+  const s = Math.floor(r.length / 2)
+  const mediana = r.length % 2 ? r[s] : (r[s - 1] + r[s]) / 2
+  return { up, down, typowyIloraz: Math.round(mediana * 100) / 100 }
 }
 
 // ─── Członkowie (widok per-osoba) ────────────────────────────────────────────
@@ -659,7 +724,7 @@ export function buildStrategicKpis(
     : 0
 
   const summary = kpiSummary(serie)
-  const kpiScore = clampScore(summary.avgRatio * 70)
+  const kpiScore = clampScore(summary.typowyIloraz * 70)
   const leaderRows = serie.filter((s) => s.kategoria.toLowerCase().includes('koordynator'))
   // ilorazSerii daje 0 dla serii jednopunktowych i zerowych mianownikow,
   // wiec warunek `>= 1` sam je odsiewa.
@@ -669,7 +734,7 @@ export function buildStrategicKpis(
   const healthScore = clampScore((totalCr / 65) * 25 + (avgRetention / 4.5) * 30 + (retentionAfter2 / 100) * 25 + kpiScore * 0.2)
   const activationScore = clampScore(retentionAfter2)
   const recruitmentQuality = clampScore((avgCr / 55) * 65 + (totalCr / 45) * 35)
-  const deliveryMomentum = clampScore(summary.avgRatio * 100)
+  const deliveryMomentum = clampScore(summary.typowyIloraz * 100)
 
   return [
     {
@@ -714,10 +779,10 @@ export function buildStrategicKpis(
     {
       id: 'momentum',
       title: 'Tempo rozwoju',
-      value: `${zmianaRr(summary.avgRatio)} r/r`,
+      value: `${zmianaRr(summary.typowyIloraz)} r/r`,
       score: deliveryMomentum,
       trend: scoreTrend(deliveryMomentum),
-      detail: `Średnia zmiana KPI rok do roku; rośnie ${summary.up}, spada ${summary.down}.`,
+      detail: `Typowa (środkowa) zmiana KPI rok do roku; rośnie ${summary.up}, spada ${summary.down}.`,
       recommendation: 'Dobre do kwartalnego przeglądu: pokazuje, czy samorząd przyspiesza, czy traci tempo.',
     },
   ]

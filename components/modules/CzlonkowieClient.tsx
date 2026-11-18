@@ -127,7 +127,7 @@ export default function CzlonkowieClient() {
           <span style={{ color: STATUS_COLOR.alumn }}>alumni: <b>{counts.alumn}</b></span>
           <span style={{ color: STATUS_COLOR.zawieszone }}>zawieszone: <b>{counts.zawieszone}</b></span>
           <span style={{ color: STATUS_COLOR.nieaktywny }}>nieaktywni: <b>{counts.nieaktywny}</b></span>
-          <span className="text-deck-text">avg Σ: <b>{avgSigma.toFixed(2)}</b> sem</span>
+          <span className="text-deck-text">avg Σ: <b>{avgSigma.toFixed(2).replace('.', ',')}</b> sem</span>
           <svg viewBox="0 0 200 34" className="ml-auto" style={{ width: 160, height: 34 }}>
             <polyline points={sparkPoints} fill="none" stroke="#2EE6A6" strokeWidth={2} />
           </svg>

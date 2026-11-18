@@ -121,7 +121,7 @@ describe('DeckHub', () => {
   it('kafelek Analytics: konwersja podpisana edycją, KPI wzrosty na tle porównywalnych serii - jak w Analityce', async () => {
     await hub()
     expect(await screen.findByText("% konwersji · J'26")).toBeInTheDocument()
-    expect(screen.getByText('24.0')).toBeInTheDocument()
+    expect(screen.getByText('24,0')).toBeInTheDocument()
     expect(screen.getByText('/ 20 porównywalnych')).toBeInTheDocument()
   })
 

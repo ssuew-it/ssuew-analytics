@@ -147,7 +147,7 @@ export default function RetencjaClient() {
             {reg.coefficients.map((c) => (
               <div key={c.name} className="text-[11px]">
                 <span className="text-deck-text">{c.name}: </span>
-                <span className="tabular-nums text-deck-accent">β = {c.beta.toFixed(3)}</span>
+                <span className="tabular-nums text-deck-accent">β = {c.beta.toFixed(3).replace('.', ',')}</span>
                 <span className="text-deck-muted"> - {c.interpretation}</span>
               </div>
             ))}
