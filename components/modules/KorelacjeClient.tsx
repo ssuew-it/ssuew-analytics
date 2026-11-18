@@ -34,32 +34,44 @@ export default function KorelacjeClient() {
     }
   })
   const mainCells = correlationMatrix(mainRows, MAIN_VARS)
+  // Bez kliknięcia pokazujemy najsilniejszą parę - prawa połowa nie stoi pusta.
+  const najsilniejsza = mainCells
+    .filter((c) => c.a !== c.b && c.r !== null && MAIN_VARS.indexOf(c.a) < MAIN_VARS.indexOf(c.b))
+    .sort((x, y) => Math.abs(y.r ?? 0) - Math.abs(x.r ?? 0))[0]
+  const para = pair ?? (najsilniejsza ? { a: najsilniejsza.a, b: najsilniejsza.b } : null)
+  const rPary = para ? mainCells.find((c) => c.a === para.a && c.b === para.b)?.r ?? null : null
+  const edycji = mainRows.length
 
   const scatterData =
-    pair && pair.a !== pair.b
+    para && para.a !== para.b
       ? mainRows
-          .filter((row) => row[pair.a] != null && row[pair.b] != null)
-          .map((row) => ({ x: row[pair.a] as number, y: row[pair.b] as number }))
+          .filter((row) => row[para.a] != null && row[para.b] != null)
+          .map((row) => ({ x: row[para.a] as number, y: row[para.b] as number }))
       : []
 
   return (
     <div className="space-y-3">
-      <div className="text-[11px] text-deck-muted border border-deck-border rounded-md px-2 py-1 inline-block">
-        Korelacje per edycja (rekrutacje × retencja). KPI rok-do-roku ma inną ziarnistość i nie wchodzi do macierzy.
-      </div>
+      <p className={`rounded-md border px-3 py-2 text-[11.5px] ${edycji < 10 ? 'border-deck-warn/40 text-deck-warn' : 'border-deck-border text-deck-muted'}`}>
+        Policzone z {edycji} edycji (rekrutacje × retencja, jedna edycja = jeden punkt).
+        {edycji < 10 && ' Przy tak małej próbie korelacja to wskazówka, a nie dowód - jedna nietypowa edycja potrafi ją odwrócić.'}
+      </p>
 
-      <BentoCard title="Macierz korelacji - rekrutacje × retencja" sub="kliknij komórkę, by zobaczyć wykres rozrzutu" span={4}>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <BentoCard title="Macierz korelacji" sub="kliknij komórkę, by zobaczyć rozrzut obok">
         <Heatmap vars={MAIN_VARS} cells={mainCells} onSelect={(a, b) => setPair({ a, b })} />
       </BentoCard>
 
-      {pair && pair.a !== pair.b && (
-        <BentoCard title={`Rozrzut: ${pair.a} ↔ ${pair.b}`} span={2}>
+      {para && para.a !== para.b && (
+        <BentoCard
+          title={`Rozrzut: ${para.a} ↔ ${para.b}`}
+          sub={`${pair ? 'wybrana para' : 'najsilniejsza para'}${rPary !== null ? ` · r = ${rPary.toFixed(2).replace('.', ',')}` : ''}`}
+        >
           {scatterData.length >= 3 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={260}>
               <ScatterChart margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                <XAxis type="number" dataKey="x" name={pair.a} tick={axisTick} />
-                <YAxis type="number" dataKey="y" name={pair.b} tick={axisTick} />
+                <XAxis type="number" dataKey="x" name={para.a} tick={axisTick} />
+                <YAxis type="number" dataKey="y" name={para.b} tick={axisTick} />
                 <Tooltip contentStyle={tooltipStyle} formatter={liczbaPl} cursor={{ strokeDasharray: '3 3' }} />
                 <Scatter data={scatterData} fill={chartTheme.accent} />
               </ScatterChart>
@@ -69,6 +81,7 @@ export default function KorelacjeClient() {
           )}
         </BentoCard>
       )}
+      </div>
     </div>
   )
 }

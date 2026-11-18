@@ -35,6 +35,22 @@ export default function LejekClient() {
     }
   }
 
+  const wgEdycji = [...rekr]
+    .sort((a, b) => a.rok - b.rok || (a.sezon === 'wiosna' ? -1 : 1))
+    .map((r) => {
+      const etapy = buildFunnel(rekr, koh, { edycja: r.edycja, threshold })
+      let najgorszy = -1
+      let ubytek = -1
+      for (let i = 1; i < etapy.length; i++) {
+        const d = etapy[i - 1].count > 0 ? (etapy[i - 1].count - etapy[i].count) / etapy[i - 1].count : 0
+        if (d > ubytek) {
+          ubytek = d
+          najgorszy = i
+        }
+      }
+      return { edycja: r.edycja, etapy, najgorszy }
+    })
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-4 flex-wrap">
@@ -91,6 +107,39 @@ export default function LejekClient() {
           </p>
         )}
       </BentoCard>
+
+      {/* Sam lejek zbiorczy zostawiał pół ekranu pustego - a pytanie zwykle brzmi:
+          która edycja gubi ludzi i na którym etapie. */}
+      {wgEdycji.length > 1 && (
+        <BentoCard title="Lejek w kolejnych edycjach" sub="ile osób zostaje na każdym etapie, w % zgłoszeń" span={4}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[11px]">
+              <thead>
+                <tr className="text-left text-deck-muted">
+                  <th className="p-1 font-medium">Edycja</th>
+                  {funnel.map((f) => (
+                    <th key={f.stage} className="p-1 text-right font-medium">{f.stage}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="text-deck-text">
+                {wgEdycji.map(({ edycja: e, etapy, najgorszy }) => (
+                  <tr key={e} className="border-t border-deck-border">
+                    <td className="p-1">{e}</td>
+                    {etapy.map((f, i) => (
+                      <td key={f.stage} className={`p-1 text-right tabular ${i === najgorszy ? 'text-deck-warn' : ''}`}>
+                        {f.count}
+                        {i > 0 && <span className="ml-1 text-deck-muted">({String(f.pct).replace('.', ',')}%)</span>}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-[10.5px] text-deck-muted">Na złoto etap z największym ubytkiem w danej edycji.</p>
+        </BentoCard>
+      )}
     </div>
   )
 }

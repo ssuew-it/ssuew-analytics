@@ -162,7 +162,8 @@ export default function WpisClient() {
   }
 
   return (
-    <div className="max-w-2xl space-y-3">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,42rem)_minmax(0,1fr)]">
+    <div className="min-w-0 space-y-3">
       <div className="flex gap-2 flex-wrap">
         {(['rekrutacja', 'kohorta', 'kpi', 'rocznik', 'projekt'] as Tab[]).map((t) => (
           <button key={t} onClick={() => { setTab(t); setStatus(null) }}
@@ -333,6 +334,29 @@ export default function WpisClient() {
         </BentoCard>
       )}
     </div>
+    <aside className="min-w-0">
+      {tab === 'rekrutacja' && (
+        <WArkuszu
+          tytul="Rekrutacje w arkuszu"
+          wiersze={[...rekrutacje].sort((a, b) => b.rok - a.rok || (a.sezon === 'jesien' ? -1 : 1)).map((r) => ({
+            edycja: r.edycja,
+            opis: `${r.zgloszenia} zgłoszeń · ${r.przyjeci} przyjętych`,
+            wybierz: () => setRekr({ edycja: r.edycja, sezon: r.sezon, rok: r.rok, zgloszenia: String(r.zgloszenia), przyjeci: String(r.przyjeci) }),
+          }))}
+        />
+      )}
+      {tab === 'kohorta' && (
+        <WArkuszu
+          tytul="Kohorty w arkuszu"
+          wiersze={[...kohorty].sort((a, b) => b.rok - a.rok || (a.sezon === 'jesien' ? -1 : 1)).map((k) => ({
+            edycja: k.edycja,
+            opis: `${k.n_czlonkow} osób · średnio ${String(k.avg_retention_sem).replace('.', ',')} sem.${k.in_progress ? ' · w toku' : ''}`,
+            wybierz: () => setKoh({ edycja: k.edycja, sezon: k.sezon, rok: k.rok, n: String(k.n_czlonkow), avg: String(k.avg_retention_sem), max: String(k.max_retention_sem), inProgress: k.in_progress }),
+          }))}
+        />
+      )}
+    </aside>
+    </div>
   )
 }
 
@@ -343,5 +367,31 @@ function Istniejaca({ opis, onWczytaj }: { opis: string; onWczytaj: () => void }
       <span>Ta edycja już jest ({opis}). Zapis zastąpi te liczby.</span>
       <button type="button" onClick={onWczytaj} className="text-deck-accent hover:underline">Wczytaj obecne</button>
     </p>
+  )
+}
+
+/** Co już jest w arkuszu - kliknięcie wczytuje edycję do formularza, żeby ją poprawić. */
+function WArkuszu({ tytul, wiersze }: { tytul: string; wiersze: { edycja: string; opis: string; wybierz: () => void }[] }) {
+  return (
+    <BentoCard title={tytul} sub="kliknij edycję, by ją poprawić w formularzu">
+      {wiersze.length ? (
+        <ul className="space-y-1">
+          {wiersze.map((w) => (
+            <li key={w.edycja}>
+              <button
+                type="button"
+                onClick={w.wybierz}
+                className="flex w-full items-baseline justify-between gap-3 rounded-md px-2 py-1.5 text-left text-[11.5px] transition hover:bg-white/[0.05]"
+              >
+                <span className="font-medium text-deck-text">{w.edycja}</span>
+                <span className="text-deck-muted">{w.opis}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[11px] text-deck-muted">Jeszcze nic - pierwszy wpis pojawi się tutaj.</p>
+      )}
+    </BentoCard>
   )
 }
