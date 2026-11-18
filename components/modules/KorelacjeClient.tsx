@@ -45,6 +45,7 @@ export default function KorelacjeClient() {
   const para = pair ?? (najsilniejsza ? { a: najsilniejsza.a, b: najsilniejsza.b } : null)
   const rPary = para ? mainCells.find((c) => c.a === para.a && c.b === para.b)?.r ?? null : null
   const edycji = mainRows.length
+  const zRetencja = mainRows.filter((r) => r['średnia retencja'] != null).length
 
   const scatterData =
     para && para.a !== para.b
@@ -56,7 +57,7 @@ export default function KorelacjeClient() {
   return (
     <div className="space-y-3">
       <p className={`rounded-md border px-3 py-2 text-[11.5px] ${edycji < 10 ? 'border-deck-warn/40 text-deck-warn' : 'border-deck-border text-deck-muted'}`}>
-        Policzone z {edycji} edycji (rekrutacje × retencja, jedna edycja = jeden punkt).
+        Jedna edycja = jeden punkt: {edycji} edycji z rekrutacją, z tego {zRetencja} z wpisaną kohortą (tylko te liczą się w parach z retencją).
         {edycji < 10 && ' Przy tak małej próbie korelacja to wskazówka, a nie dowód - jedna nietypowa edycja potrafi ją odwrócić.'}
       </p>
 
