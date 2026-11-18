@@ -4,17 +4,12 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, KeyRound, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react'
 import { useAuth } from '@/lib/auth/useAuth'
 import { KodInput } from '@/components/deck/KodInput'
-import { MatrixRain } from '@/components/deck/MatrixRain'
+import { Telemetria } from '@/components/deck/Telemetria'
 import { TekstDekodowany } from '@/components/deck/TekstDekodowany'
+import { TloLogowania } from '@/components/deck/TloLogowania'
 import { LiveDigits } from '@/components/ui/LiveDigits'
 import { LogoMark } from '@/components/ui/LogoMark'
-
-const logLines = [
-  'sync: recruitment.signal -> ready',
-  'retention.curves: calibrated',
-  'kpi.yoy: live comparator online',
-  'private vault: awaiting operator',
-]
+import { NAGLOWKI, losujEkran, type EkranLogowania } from '@/lib/deck/ekranLogowania'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,6 +19,15 @@ export default function LoginPage() {
   const [haslo, setHaslo] = useState('')
   const [zajety, setZajety] = useState(false)
   const [udalo, setUdalo] = useState(false)
+  // Losujemy po zamontowaniu, jak motyw kodu w KodInput: serwer i przeglądarka
+  // wylosowałyby co innego i React zgłosiłby niezgodność drzewa.
+  const [ekran, setEkran] = useState<EkranLogowania | null>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- patrz wyżej
+    setEkran(losujEkran())
+  }, [])
+  // Przejście startuje razem z przekierowaniem i trwa, gdy kokpit się wczytuje.
+  const wchodzi = udalo || Boolean(rola)
 
   useEffect(() => {
     if (rola) {
@@ -49,13 +53,19 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-deck-bg-deep">
+    <main className={`relative min-h-screen overflow-hidden bg-deck-bg-deep ${wchodzi ? 'deck-wejscie' : ''}`}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(46,230,166,0.16),transparent_34%),radial-gradient(circle_at_80%_70%,rgba(217,176,106,0.13),transparent_32%)]" />
       <div className="absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-deck-accent/10 bg-deck-accent/5 blur-3xl" />
-      <MatrixRain moc={0.3} />
+      {ekran && <TloLogowania scena={ekran.scena} moc={0.3} przyspiesz={wchodzi} />}
+      {/* Gdy kokpit wczytuje się dłużej, pusty ekran wyglądałby na zawieszony. */}
+      {wchodzi && (
+        <div className="deck-wejscie__napis pointer-events-none fixed inset-0 z-20 grid place-items-center font-mono text-xs uppercase tracking-[0.3em] text-deck-accent" role="status">
+          <span className="deck-caret">Otwieram kokpit</span>
+        </div>
+      )}
       {/* Do 1100 px jedna kolumna: sztywne 420 px obok elastycznej reszty
           rozjeżdżało się na laptopie i było nieczytelne na telefonie. */}
-      <div className="relative z-10 grid min-h-screen grid-cols-1 gap-8 px-5 py-8 lg:grid-cols-[1fr_420px] lg:gap-10 lg:px-10">
+      <div className="deck-wejscie__tresc relative z-10 grid min-h-screen grid-cols-1 gap-8 px-5 py-8 lg:grid-cols-[1fr_420px] lg:gap-10 lg:px-10">
         <section className="flex flex-col justify-between gap-8">
           <div className="flex items-center gap-3">
             <LogoMark />
@@ -72,14 +82,20 @@ export default function LoginPage() {
           <div className="max-w-3xl">
             <div className="deck-chip inline-flex items-center gap-2 rounded-lg px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-deck-accent">
               <Sparkles size={13} />
-              encrypted cockpit
+              kokpit szyfrowany
             </div>
-            <TekstDekodowany
-              as="h1"
-              tekst="Dane, które wyglądają jak centrum dowodzenia."
-              tempo={26}
-              className="mt-6 text-4xl font-semibold leading-[1.05] tracking-normal text-deck-text sm:text-5xl xl:text-6xl"
-            />
+            {ekran ? (
+              <TekstDekodowany
+                key={ekran.naglowek}
+                as="h1"
+                tekst={ekran.naglowek}
+                tempo={26}
+                className="mt-6 text-4xl font-semibold leading-[1.05] tracking-normal text-deck-text sm:text-5xl xl:text-6xl"
+              />
+            ) : (
+              // Do wylosowania nagłówek tylko trzyma miejsce - inaczej mignąłby inny.
+              <h1 className="invisible mt-6 text-4xl font-semibold leading-[1.05] sm:text-5xl xl:text-6xl">{NAGLOWKI[0]}</h1>
+            )}
             <p className="mt-5 max-w-xl text-base leading-7 text-deck-muted">
               Wejdź do prywatnego kokpitu strategii SSUEW. W tle już pulsują rekrutacje, retencja i KPI rok-do-roku.
             </p>
@@ -96,18 +112,12 @@ export default function LoginPage() {
             <div className="deck-card deck-scan rounded-lg p-4">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-deck-accent">
                 <ShieldCheck size={14} />
-                system telemetry
+                telemetria systemu
               </div>
-              <div className="mt-3 space-y-2 font-mono text-[11px] text-deck-muted">
-                {logLines.map((line, index) => (
-                  <div key={line} className="deck-caret" style={{ animationDelay: `${index * 120}ms` }}>
-                    {line}
-                  </div>
-                ))}
-              </div>
+              <div className="mt-3">{ekran && <Telemetria linie={ekran.telemetria} />}</div>
             </div>
             <div className="deck-card deck-orbit rounded-lg p-4">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-deck-muted">access layer</div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-deck-muted">warstwa dostępu</div>
               <div className="mt-4 h-2 rounded-full bg-deck-bg-deep/70">
                 <div className="deck-meter-fill h-full w-[82%] rounded-full bg-gradient-to-r from-deck-accent to-deck-warn" />
               </div>
@@ -199,7 +209,7 @@ export default function LoginPage() {
             )}
 
             <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-              {['KOD', 'URZĄDZENIE', 'LIVE'].map((item) => (
+              {['KOD', 'URZĄDZENIE', 'NA ŻYWO'].map((item) => (
                 <div key={item} className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] text-deck-muted">
                   {item}
                 </div>
