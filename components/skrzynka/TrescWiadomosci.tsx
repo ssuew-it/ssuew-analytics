@@ -6,6 +6,9 @@ import type { WiadomoscPelna } from '@/lib/skrzynka/typy'
 import { adresZalacznika } from '@/lib/skrzynka/widok'
 
 const MIN_WYSOKOSC = 80
+const RAMKA_PX = 2
+/** Obrazki z sieci doczytują się po `load` ramki - mierzymy jeszcze raz chwilę później. */
+const POMIARY_PO_MS = [400, 1500, 4000]
 
 /**
  * HTML maila w ramce bez skryptów (`allow-same-origin` bez `allow-scripts` -
@@ -30,12 +33,14 @@ export function TrescWiadomosci({ w, sprawaId }: { w: WiadomoscPelna; sprawaId: 
   const zmierz = useCallback(() => {
     const doc = ref.current?.contentDocument
     if (!doc?.documentElement) return
-    setWysokosc(Math.max(MIN_WYSOKOSC, doc.documentElement.scrollHeight))
+    // + obramowanie ramki (2 × 1 px) - bez tego zostaje cienki pasek przewijania.
+    setWysokosc(Math.max(MIN_WYSOKOSC, doc.documentElement.scrollHeight + RAMKA_PX))
   }, [])
 
   /** Po wczytaniu i przy każdym doczytanym obrazku ramka rośnie do treści - bez drugiego paska przewijania. */
   const poWczytaniu = useCallback(() => {
     zmierz()
+    for (const ms of POMIARY_PO_MS) setTimeout(zmierz, ms)
     const doc = ref.current?.contentDocument
     if (!doc?.body || typeof ResizeObserver === 'undefined') return
     new ResizeObserver(zmierz).observe(doc.body)

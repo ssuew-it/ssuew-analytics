@@ -159,7 +159,7 @@ export function Organizacje({ wybrana, onWybierz, panel = null, onKarta }: {
                 disabled={trwa}
                 aria-pressed={karta?.organizacja.domena === o.domena}
                 onClick={() => otworz(o.domena)}
-                className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-left text-[12px] transition hover:bg-white/[0.06]"
+                className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-left text-[12px] transition hover:bg-white/[0.06] aria-pressed:border-deck-accent/50 aria-pressed:bg-deck-accent/10"
               >
                 <span className="text-deck-text">{o.nazwa}</span>
                 <span className="text-deck-muted">
