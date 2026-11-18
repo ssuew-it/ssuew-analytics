@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, KeyRound, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react'
 import { useAuth } from '@/lib/auth/useAuth'
+import { PARAM_POWROTU, celPowrotu } from '@/lib/auth/powrot'
 import { KodInput } from '@/components/deck/KodInput'
 import { Telemetria } from '@/components/deck/Telemetria'
 import { TekstDekodowany } from '@/components/deck/TekstDekodowany'
@@ -31,7 +32,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (rola) {
-      router.push('/')
+      // Czytane z adresu tu, nie przez useSearchParams - ten wymagałby Suspense nad całą stroną.
+      router.push(celPowrotu(new URLSearchParams(window.location.search).get(PARAM_POWROTU)))
       router.refresh()
     }
   }, [rola, router])

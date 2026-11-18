@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { PARAM_POWROTU } from '@/lib/auth/powrot'
 
 const PUBLICZNE = ['/login']
 
@@ -17,6 +18,10 @@ export function proxy(req: NextRequest) {
   if (!maSesje) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
+    // Po wygaśnięciu ciasteczka logowanie zwykle samo odnawia sesję - ma wtedy
+    // wrócić tam, dokąd szedł użytkownik, a nie na kokpit.
+    url.search = ''
+    if (sciezka !== '/') url.searchParams.set(PARAM_POWROTU, sciezka + req.nextUrl.search)
     return NextResponse.redirect(url)
   }
   return NextResponse.next()
