@@ -1,6 +1,8 @@
 'use client'
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { zakladkaZAdresu, type ZakladkaWpisu } from '@/lib/wpis'
 import { useAnalyticsData } from '@/lib/useAnalyticsData'
 import { useProjekty } from '@/lib/useProjekty'
 import { useAuth } from '@/lib/auth/useAuth'
@@ -9,7 +11,7 @@ import { serieWgKategorii, ostatniPunkt } from '@/lib/kpi/serie'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
 
-type Tab = 'rekrutacja' | 'kohorta' | 'kpi' | 'rocznik' | 'projekt'
+type Tab = ZakladkaWpisu
 
 const PUSTY_PROJEKT = {
   projekt: '', edycja: '', obszar: '',
@@ -28,14 +30,17 @@ const labelCls = 'block text-[11px] text-deck-muted mb-1'
 const btnCls = 'w-full bg-deck-accent text-deck-bg-deep rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-50'
 
 export default function WpisClient() {
-  const { serie, addRekrutacja, addKohorta, addKpiMetric, addKpiMetricsBulk } = useAnalyticsData()
+  const { serie, rekrutacje, kohorty, addRekrutacja, addKohorta, addKpiMetric, addKpiMetricsBulk } = useAnalyticsData()
   const { rola, laduje } = useAuth()
-  const [tab, setTab] = useState<Tab>('rekrutacja')
+  // Moduły (Rekrutacje, Retencja) prowadzą tu linkiem z zakładką i edycją do poprawy.
+  const adres = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() => zakladkaZAdresu(adres.get('tab')))
+  const edycjaZAdresu = adres.get('edycja') ?? ''
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const [rekr, setRekr] = useState({ edycja: '', sezon: 'jesien' as 'jesien' | 'wiosna', rok: new Date().getFullYear(), zgloszenia: '', przyjeci: '' })
-  const [koh, setKoh] = useState({ edycja: '', sezon: 'jesien' as 'jesien' | 'wiosna', rok: new Date().getFullYear(), n: '', avg: '', max: '', inProgress: false })
+  const [rekr, setRekr] = useState({ edycja: tab === 'rekrutacja' ? edycjaZAdresu : '', sezon: 'jesien' as 'jesien' | 'wiosna', rok: new Date().getFullYear(), zgloszenia: '', przyjeci: '' })
+  const [koh, setKoh] = useState({ edycja: tab === 'kohorta' ? edycjaZAdresu : '', sezon: 'jesien' as 'jesien' | 'wiosna', rok: new Date().getFullYear(), n: '', avg: '', max: '', inProgress: false })
   const [kpi, setKpi] = useState({ kategoria: 'SKS', nazwa: '', okres: '', wartosc: '' })
   const { dodajProjekt } = useProjekty()
   const [proj, setProj] = useState(PUSTY_PROJEKT)
@@ -58,6 +63,10 @@ export default function WpisClient() {
   const [rocznikWpisany, setRocznikOkres] = useState<string | null>(null)
   const rocznikOkres = rocznikWpisany ?? nextOkres(latestOkres)
   const [rocznikVals, setRocznikVals] = useState<Record<string, string>>({})
+
+  const ta = (e: string) => e.trim().toLowerCase().replace('’', "'")
+  const istniejacaRekr = rekr.edycja ? rekrutacje.find((r) => ta(r.edycja) === ta(rekr.edycja)) : undefined
+  const istniejacaKoh = koh.edycja ? kohorty.find((k) => ta(k.edycja) === ta(koh.edycja)) : undefined
 
   if (laduje) return <ModuleSkeleton />
   if (rola !== 'owner') {
@@ -179,7 +188,7 @@ export default function WpisClient() {
       )}
 
       {tab === 'rekrutacja' && (
-        <BentoCard title="Dodaj rekrutację">
+        <BentoCard title="Dodaj albo popraw rekrutację">
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div><label className={labelCls}>Edycja</label><input className={inputCls} placeholder="J'26" value={rekr.edycja} onChange={(e) => setRekr((p) => ({ ...p, edycja: e.target.value }))} /></div>
@@ -187,6 +196,12 @@ export default function WpisClient() {
                 <select className={inputCls} value={rekr.sezon} onChange={(e) => setRekr((p) => ({ ...p, sezon: e.target.value as 'jesien' | 'wiosna' }))}><option value="jesien">Jesień</option><option value="wiosna">Wiosna</option></select>
               </div>
             </div>
+            {istniejacaRekr && (
+              <Istniejaca
+                opis={`${istniejacaRekr.zgloszenia} zgłoszeń, ${istniejacaRekr.przyjeci} przyjętych`}
+                onWczytaj={() => setRekr({ edycja: istniejacaRekr.edycja, sezon: istniejacaRekr.sezon, rok: istniejacaRekr.rok, zgloszenia: String(istniejacaRekr.zgloszenia), przyjeci: String(istniejacaRekr.przyjeci) })}
+              />
+            )}
             <div><label className={labelCls}>Rok</label><input type="number" className={inputCls} value={rekr.rok} onChange={(e) => setRekr((p) => ({ ...p, rok: parseInt(e.target.value) }))} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className={labelCls}>Zgłoszenia</label><input type="number" className={inputCls} value={rekr.zgloszenia} onChange={(e) => setRekr((p) => ({ ...p, zgloszenia: e.target.value }))} /></div>
@@ -198,7 +213,7 @@ export default function WpisClient() {
       )}
 
       {tab === 'kohorta' && (
-        <BentoCard title="Dodaj kohortę">
+        <BentoCard title="Dodaj albo popraw kohortę">
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div><label className={labelCls}>Edycja</label><input className={inputCls} placeholder="J'26" value={koh.edycja} onChange={(e) => setKoh((p) => ({ ...p, edycja: e.target.value }))} /></div>
@@ -206,6 +221,12 @@ export default function WpisClient() {
                 <select className={inputCls} value={koh.sezon} onChange={(e) => setKoh((p) => ({ ...p, sezon: e.target.value as 'jesien' | 'wiosna' }))}><option value="jesien">Jesień</option><option value="wiosna">Wiosna</option></select>
               </div>
             </div>
+            {istniejacaKoh && (
+              <Istniejaca
+                opis={`${istniejacaKoh.n_czlonkow} osób, średnio ${String(istniejacaKoh.avg_retention_sem).replace('.', ',')} sem.`}
+                onWczytaj={() => setKoh({ edycja: istniejacaKoh.edycja, sezon: istniejacaKoh.sezon, rok: istniejacaKoh.rok, n: String(istniejacaKoh.n_czlonkow), avg: String(istniejacaKoh.avg_retention_sem), max: String(istniejacaKoh.max_retention_sem), inProgress: istniejacaKoh.in_progress })}
+              />
+            )}
             <div><label className={labelCls}>Rok</label><input type="number" className={inputCls} value={koh.rok} onChange={(e) => setKoh((p) => ({ ...p, rok: parseInt(e.target.value) }))} /></div>
             <div className="grid grid-cols-3 gap-3">
               <div><label className={labelCls}>Liczebność</label><input type="number" className={inputCls} value={koh.n} onChange={(e) => setKoh((p) => ({ ...p, n: e.target.value }))} /></div>
@@ -312,5 +333,15 @@ export default function WpisClient() {
         </BentoCard>
       )}
     </div>
+  )
+}
+
+/** Edycja już jest w arkuszu - zapis ją zastąpi; jednym kliknięciem można wczytać obecne liczby. */
+function Istniejaca({ opis, onWczytaj }: { opis: string; onWczytaj: () => void }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-deck-warn/30 bg-deck-warn/[0.06] px-3 py-2 text-[11px] text-deck-muted">
+      <span>Ta edycja już jest ({opis}). Zapis zastąpi te liczby.</span>
+      <button type="button" onClick={onWczytaj} className="text-deck-accent hover:underline">Wczytaj obecne</button>
+    </p>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 import { formatNumber } from '@/lib/format'
-import { useState } from 'react'
+import Link from 'next/link'
 import { ComposedChart, Bar, Line, Area, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { useAnalyticsData } from '@/lib/useAnalyticsData'
 import { useFilters } from '@/lib/useFilters'
@@ -11,16 +11,11 @@ import { chartTheme, axisTick, tooltipStyle, liczbaPl } from '@/lib/chartTheme'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { KpiTile } from '@/components/ui/KpiTile'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
-import { EditableCell } from '@/components/ui/EditableCell'
-import type { Rekrutacja } from '@/types'
-
-const inp = 'bg-deck-bg border border-deck-border rounded-md px-2 py-1 text-[11px] text-deck-text'
+import { linkWpisu } from '@/lib/wpis'
 
 export default function RekrutacjeClient() {
-  const { rekrutacje, loading, addRekrutacja } = useAnalyticsData()
+  const { rekrutacje, loading } = useAnalyticsData()
   const { filters } = useFilters()
-  const [nowa, setNowa] = useState({ edycja: '', sezon: 'jesien' as 'jesien' | 'wiosna', rok: new Date().getFullYear(), zgloszenia: '', przyjeci: '' })
-  const [err, setErr] = useState<string | null>(null)
 
   const { rola } = useAuth()
 
@@ -30,16 +25,6 @@ export default function RekrutacjeClient() {
   const sorted = [...rekr].sort((a, b) => a.rok - b.rok || (a.sezon === 'wiosna' ? -1 : 1))
   const editable = rola === 'owner'
 
-  const saveField = (r: Rekrutacja, patch: Partial<Pick<Rekrutacja, 'zgloszenia' | 'przyjeci'>>) => {
-    addRekrutacja({ edycja: r.edycja, sezon: r.sezon, rok: r.rok, zgloszenia: r.zgloszenia, przyjeci: r.przyjeci, ...patch }).catch((e) => setErr(String(e)))
-  }
-  const addEdition = () => {
-    setErr(null)
-    if (!nowa.edycja || !nowa.zgloszenia || !nowa.przyjeci) return
-    addRekrutacja({ edycja: nowa.edycja, sezon: nowa.sezon, rok: nowa.rok, zgloszenia: parseInt(nowa.zgloszenia), przyjeci: parseInt(nowa.przyjeci) })
-      .then(() => setNowa({ edycja: '', sezon: 'jesien', rok: new Date().getFullYear(), zgloszenia: '', przyjeci: '' }))
-      .catch((e) => setErr(String(e)))
-  }
 
   const s = rekr.length >= 2 ? analyzeRekrutacje(rekr) : null
   const fc = s ? prognozaPrzyjetych(rekr, 2) : []
@@ -56,7 +41,12 @@ export default function RekrutacjeClient() {
 
   return (
     <div className="space-y-3">
-      <BentoCard title="Edycje rekrutacji" sub={editable ? 'kliknij wartość, by edytować · dodaj edycję poniżej - zapisuje się samo' : 'dane pokazowe - tylko do odczytu'} span={4}>
+      <BentoCard
+        title="Edycje rekrutacji"
+        sub={editable ? 'dane wpisujesz i poprawiasz w jednym miejscu - w „Wpisz dane”' : 'tylko do odczytu'}
+        span={4}
+        action={editable ? <Link href={linkWpisu('rekrutacja')} className="text-[11px] text-deck-accent hover:underline">+ dodaj edycję</Link> : undefined}
+      >
         <div className="overflow-x-auto">
         <table className="w-full text-[11px] border-collapse">
           <thead>
@@ -65,6 +55,7 @@ export default function RekrutacjeClient() {
               <th className="p-1 text-right font-medium">Zgłoszenia</th>
               <th className="p-1 text-right font-medium">Przyjęci</th>
               <th className="p-1 text-right font-medium">Konwersja</th>
+              {editable && <th className="p-1"><span className="sr-only">Popraw</span></th>}
             </tr>
           </thead>
           <tbody className="text-deck-text">
@@ -73,31 +64,20 @@ export default function RekrutacjeClient() {
               return (
                 <tr key={r.id} className="border-t border-deck-border">
                   <td className="p-1">{r.edycja}</td>
-                  <td className="p-1 text-right"><EditableCell value={r.zgloszenia} editable={editable} onCommit={(v) => saveField(r, { zgloszenia: v })} /></td>
-                  <td className="p-1 text-right"><EditableCell value={r.przyjeci} editable={editable} onCommit={(v) => saveField(r, { przyjeci: v })} /></td>
+                  <td className="p-1 text-right tabular">{r.zgloszenia}</td>
+                  <td className="p-1 text-right tabular">{r.przyjeci}</td>
                   <td className="p-1 text-right text-deck-muted tabular">{cr}%</td>
+                  {editable && (
+                    <td className="p-1 text-right">
+                      <Link href={linkWpisu('rekrutacja', r.edycja)} className="text-[10.5px] text-deck-muted hover:text-deck-accent">popraw</Link>
+                    </td>
+                  )}
                 </tr>
               )
             })}
           </tbody>
         </table>
         </div>
-        {editable && (
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            <input className={`w-16 ${inp}`} placeholder="J'26" value={nowa.edycja} onChange={(e) => setNowa((p) => ({ ...p, edycja: e.target.value }))} />
-            <select className={inp} value={nowa.sezon} onChange={(e) => setNowa((p) => ({ ...p, sezon: e.target.value as 'jesien' | 'wiosna' }))}>
-              <option value="jesien">jesień</option>
-              <option value="wiosna">wiosna</option>
-            </select>
-            <input type="number" className={`w-16 ${inp}`} placeholder="rok" value={nowa.rok} onChange={(e) => setNowa((p) => ({ ...p, rok: parseInt(e.target.value) }))} />
-            <input type="number" className={`w-20 ${inp}`} placeholder="zgłoszenia" value={nowa.zgloszenia} onChange={(e) => setNowa((p) => ({ ...p, zgloszenia: e.target.value }))} />
-            <input type="number" className={`w-20 ${inp}`} placeholder="przyjęci" value={nowa.przyjeci} onChange={(e) => setNowa((p) => ({ ...p, przyjeci: e.target.value }))} />
-            <button onClick={addEdition} disabled={!nowa.edycja || !nowa.zgloszenia || !nowa.przyjeci} className="text-[11px] px-3 py-1 rounded-md border border-deck-accent/40 text-deck-accent disabled:opacity-40">
-              + dodaj edycję
-            </button>
-          </div>
-        )}
-        {err && <p className="text-[11px] text-deck-danger mt-2">{err}</p>}
       </BentoCard>
 
       {s ? (
