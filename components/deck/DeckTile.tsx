@@ -10,6 +10,8 @@ type Props = {
   etykieta: string
   tytul: string
   odznaka?: string
+  /** „uwaga” dla alertów i zaległości - zielona plakietka czytała się jak „wszystko dobrze”. */
+  odznakaTon?: 'info' | 'uwaga'
   wkrotce?: string
   span?: 1 | 2
   rows?: 1 | 2
@@ -49,6 +51,7 @@ export function DeckTile({
   etykieta,
   tytul,
   odznaka,
+  odznakaTon = 'info',
   wkrotce,
   span = 1,
   rows = 1,
@@ -63,7 +66,7 @@ export function DeckTile({
         <h2 className="mt-1 text-[17px] font-semibold leading-tight tracking-[-0.015em] text-balance">{tytul}</h2>
       </div>
       {odznaka && (
-        <span className="deck-chip flex-none rounded-full px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-deck-accent">
+        <span className={`deck-chip flex-none rounded-full px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.1em] ${odznakaTon === 'uwaga' ? 'border-deck-warn/40 text-deck-warn' : 'text-deck-accent'}`}>
           {odznaka}
         </span>
       )}

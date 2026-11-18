@@ -214,6 +214,7 @@ function KafelekAnalytics({ dane }: { dane: DaneAnalityki | null }) {
       etykieta="moduł 01 · analityka"
       tytul="SSUEW Analytics"
       odznaka={dane && dane.alerty > 0 ? odmiana(dane.alerty, ['alert', 'alerty', 'alertów']) : undefined}
+      odznakaTon="uwaga"
       span={2}
     >
       <div className="flex h-full flex-col justify-between gap-4">
@@ -291,6 +292,7 @@ function KafelekStron({ dane }: { dane: PodsumowanieStron | null | undefined }) 
       tytul="Strony"
       span={2}
       odznaka={dane && dane.alerty > 0 ? odmiana(dane.alerty, ['alert', 'alerty', 'alertów']) : undefined}
+      odznakaTon="uwaga"
     >
       {dane === undefined ? (
         <Brak />
@@ -333,6 +335,7 @@ function KafelekSkrzynki({ dane }: { dane: LicznikiSkrzynki | null | undefined }
       tytul="Skrzynka"
       span={2}
       odznaka={dane?.stan === 'polaczona' && dane.poTerminie > 0 ? `${dane.poTerminie} po terminie` : undefined}
+      odznakaTon="uwaga"
     >
       {dane === undefined ? (
         <Brak />

@@ -74,11 +74,11 @@ export default function LejekClient() {
               <span className="text-[11px] text-deck-muted w-40 shrink-0">{s.stage}</span>
               <div className="flex-1 bg-deck-bg rounded h-6 relative overflow-hidden border border-deck-border">
                 <div
-                  className={`h-full ${i === worstIdx ? 'bg-deck-danger/60' : 'bg-deck-accent/50'}`}
+                  className={`h-full ${i === worstIdx ? 'bg-deck-warn/55' : 'bg-deck-accent/50'}`}
                   style={{ width: `${s.pct}%` }}
                 />
                 <span className="absolute inset-0 flex items-center px-2 text-[11px] text-deck-text tabular-nums">
-                  {s.count} · {s.pct}%
+                  {s.count} · {s.pct}%{i === worstIdx && <span className="ml-2 text-deck-warn">· największy ubytek</span>}
                 </span>
               </div>
             </div>

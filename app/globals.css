@@ -377,6 +377,10 @@ body::before {
   z-index: 0;
   pointer-events: none;
   opacity: 0.85;
+  /* Znaki leciały przez nagłówek - pod adresem i datą. Deszcz zaczyna się
+     dopiero pod nim i wchodzi łagodnie. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 110px, #000 230px);
+  mask-image: linear-gradient(to bottom, transparent 0, transparent 110px, #000 230px);
 }
 
 .deck-tile-locked {

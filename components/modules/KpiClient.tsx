@@ -146,7 +146,8 @@ export default function KpiClient() {
                 <div className={`text-xl font-semibold tabular-nums ${kpi.score >= 70 ? 'text-deck-accent' : kpi.score < 45 ? 'text-deck-danger' : 'text-deck-warn'}`}>{kpi.value}</div>
               </div>
               <div className="mt-4 h-2 rounded-full bg-deck-bg-deep/70 overflow-hidden">
-                <div className="deck-meter-fill h-full rounded-full bg-gradient-to-r from-deck-accent to-deck-warn" style={{ width: `${kpi.score}%` }} />
+                {/* Kolor paska = kolor oceny obok; wcześniej zawsze gradient zielony→złoty. */}
+                <div className={`deck-meter-fill h-full rounded-full ${kpi.score >= 70 ? 'bg-deck-accent' : kpi.score < 45 ? 'bg-deck-danger' : 'bg-deck-warn'}`} style={{ width: `${kpi.score}%` }} />
               </div>
               <div className="mt-3 text-[11px] text-deck-muted italic">{kpi.recommendation}</div>
             </div>

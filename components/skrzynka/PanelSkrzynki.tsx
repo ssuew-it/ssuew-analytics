@@ -150,7 +150,7 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
               </button>
             </form>
             <span>Synchronizacja: {liczniki.ostatniaSynchronizacja ? kiedy(liczniki.ostatniaSynchronizacja) : 'jeszcze nie było'}</span>
-            <button type="button" onClick={dociagnij} disabled={trwa} className="deck-button inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11.5px] disabled:opacity-50">
+            <button type="button" onClick={dociagnij} disabled={trwa} className="deck-chip inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11.5px] text-deck-muted transition hover:text-deck-text disabled:opacity-50">
               <RefreshCw size={12} aria-hidden="true" className={trwa ? 'animate-spin' : ''} />
               Dociągnij
             </button>
@@ -158,7 +158,7 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
               type="button"
               aria-pressed={ustawienia}
               onClick={() => setUstawienia((u) => !u)}
-              className="deck-button inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11.5px]"
+              className="deck-chip inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11.5px] text-deck-muted transition hover:text-deck-text aria-pressed:text-deck-accent"
             >
               <Settings size={12} aria-hidden="true" />
               Ustawienia
