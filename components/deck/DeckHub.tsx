@@ -1,4 +1,5 @@
 'use client'
+import type { DaneAnalityki } from '@/lib/kokpit/analityka'
 import { Suspense, use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -21,16 +22,8 @@ import { PanelFaktow } from './PanelFaktow'
 import { PanelOdprawy, SzkieletOdprawy } from './PanelOdprawy'
 import { PasekStatusu, type DanePaska } from './PasekStatusu'
 
-/** Liczby z arkusza - wolne: Apps Script odpowiada 1-3 s przy pustym cache. */
-export interface DaneAnalityki {
-  konwersja: number
-  retencja: number
-  kpiWzrosty: number
-  kpiRazem: number
-  alerty: number
-  /** Czas odpowiedzi arkusza; `null`, gdy żadna zakładka nie odpowiedziała. */
-  czasArkuszaMs: number | null
-}
+/** Liczby z arkusza - wolne: Apps Script odpowiada 1-3 s przy pustym cache. Wylicza je `naAnalityke`. */
+export type { DaneAnalityki }
 
 /** Stan z Firestore - szybszy, więc nie może czekać na arkusz. */
 export interface DanePlanera {
@@ -228,15 +221,15 @@ function KafelekAnalytics({ dane }: { dane: DaneAnalityki | null }) {
           <span className="text-[clamp(30px,3.4vw,46px)] font-bold leading-none tracking-[-0.035em]">
             {dane ? <AnimatedNumber value={dane.konwersja} decimals={1} /> : <Brak />}
           </span>
-          <span className="text-[13px] font-medium text-deck-muted">% konwersji</span>
+          <span className="text-[13px] font-medium text-deck-muted">{dane?.edycja ? `% konwersji · ${dane.edycja}` : '% konwersji'}</span>
         </div>
         <div className="grid grid-cols-3 gap-2.5 border-t border-white/8 pt-3.5">
           <Statystyka etykieta="retencja" wartosc={dane?.retencja ?? null} miejsca={2} jednostka="sem." />
           <Statystyka
-            etykieta="KPI r/r"
+            etykieta="KPI rosnące r/r"
             wartosc={dane?.kpiWzrosty ?? null}
             miejsca={0}
-            jednostka={dane ? `/ ${dane.kpiRazem} wzrostów` : 'wzrostów'}
+            jednostka={dane ? `/ ${dane.kpiPorownywalne} porównywalnych` : 'wzrostów'}
           />
           <Statystyka etykieta="alerty" wartosc={dane?.alerty ?? null} miejsca={0} jednostka="otwarte" />
         </div>

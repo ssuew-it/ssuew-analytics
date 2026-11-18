@@ -89,9 +89,9 @@ export default function OverviewClient() {
 
       <div className="grid grid-cols-4 gap-3">
         <KpiTile
-          label="Conversion avg"
+          label="Konwersja - średnia edycji"
           value={m.avgConversion != null ? <AnimatedNumber value={m.avgConversion} decimals={1} suffix="%" /> : '-'}
-          sub="filtrowane edycje"
+          sub="wszystkie edycje w filtrze"
           accent="accent"
         />
         <KpiTile
@@ -103,7 +103,11 @@ export default function OverviewClient() {
         <KpiTile
           label={`Przyjęci ${m.lastEdycja ?? ''}`.trim()}
           value={m.lastAccepted != null ? <AnimatedNumber value={m.lastAccepted} /> : '-'}
-          sub={m.lastApplications != null ? `z ${m.lastApplications} zgłoszeń` : ''}
+          sub={
+            m.lastApplications != null && m.lastAccepted != null
+              ? `z ${m.lastApplications} zgłoszeń · ${m.lastApplications > 0 ? ((m.lastAccepted / m.lastApplications) * 100).toFixed(1) : '0.0'}% konwersji`
+              : ''
+          }
         />
         <KpiTile
           label="KPI rosnące r/r"

@@ -1,10 +1,10 @@
 import { after } from 'next/server'
 import { redirect } from 'next/navigation'
 import { ktoNaStronie } from '@/lib/auth/naStronie'
-import { computeOverview } from '@/lib/overview'
+import { naAnalityke } from '@/lib/kokpit/analityka'
 import { buildAlerts } from '@/lib/stats'
-import { serieZWierszy, ilorazSerii } from '@/lib/kpi/serie'
-import { DeckHub, type DaneAnalityki, type DanePlanera } from '@/components/deck/DeckHub'
+import { serieZWierszy } from '@/lib/kpi/serie'
+import { DeckHub, type DanePlanera } from '@/components/deck/DeckHub'
 import { biezacySemestr } from '@/lib/planer/semestry'
 import { dzisWarszawa, godzinaWarszawa } from '@/lib/czas'
 import { faktyKokpitu, najblizszeWydarzenia } from '@/lib/asystent/fakty'
@@ -14,7 +14,6 @@ import {
   pobierzArkusz,
   pobierzObrazSkrzynki,
   pobierzPlaner,
-  type DaneArkusza,
 } from '@/lib/asystent/dane'
 import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import { tresciNotatek } from '@/lib/asystent/pamiecDane'
@@ -25,25 +24,6 @@ import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
 
 /** Zapas na odprawę generowaną w tle po wysłaniu strony (Gemini do 25 s). */
 export const maxDuration = 60
-
-function naAnalityke(a: DaneArkusza): DaneAnalityki {
-  const serie = serieZWierszy(a.punkty)
-  // Trzeci argument to KpiPeriod[], którego aplikacja nie pobiera - tak samo
-  // wywołuje to OverviewClient.
-  const m = computeOverview(a.rekrutacje, a.kohorty, [])
-  const konwersja =
-    m.lastApplications && m.lastApplications > 0 && m.lastAccepted != null
-      ? (m.lastAccepted / m.lastApplications) * 100
-      : 0
-  return {
-    konwersja,
-    retencja: m.histRetention ?? 0,
-    kpiWzrosty: serie.filter((s) => ilorazSerii(s) > 1).length,
-    kpiRazem: serie.length,
-    alerty: buildAlerts(a.rekrutacje, a.kohorty, serie).length,
-    czasArkuszaMs: a.czasMs,
-  }
-}
 
 export default async function KokpitPage() {
   // Obie drogi wejścia. Sprawdzanie samego hasła odsyłało osoby na kodzie

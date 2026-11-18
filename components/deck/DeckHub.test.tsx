@@ -20,7 +20,9 @@ const push = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
 vi.mock('@/lib/auth/useAuth', () => ({ useAuth: () => ({ wyloguj }) }))
 
-const ANALITYKA: DaneAnalityki = { konwersja: 61.1, retencja: 3.81, kpiWzrosty: 20, kpiRazem: 28, alerty: 2, czasArkuszaMs: 420 }
+const ANALITYKA: DaneAnalityki = {
+  konwersja: 24.04, edycja: "J'26", retencja: 3.81, kpiWzrosty: 13, kpiPorownywalne: 20, kpiRazem: 28, alerty: 2, czasArkuszaMs: 420,
+}
 const PLANER: DanePlanera = { propozycje: 0, sesja: { wlaczony: false, od: null, przez: null }, najblizsze: [], ok: true }
 const STRONY: PodsumowanieStron = {
   stron: 2, klikniecia: 125, wyswietlenia: 4000, poprzednieKlikniecia: 100, poprzednieWyswietlenia: 3000, alerty: 1, bledy: 0,
@@ -114,6 +116,13 @@ describe('DeckHub', () => {
   it('pokazuje liczbę alertów na kafelku Analytics, gdy arkusz odpowie', async () => {
     await hub()
     expect(await screen.findByText('2 alerty')).toBeInTheDocument()
+  })
+
+  it('kafelek Analytics: konwersja podpisana edycją, KPI wzrosty na tle porównywalnych serii - jak w Analityce', async () => {
+    await hub()
+    expect(await screen.findByText("% konwersji · J'26")).toBeInTheDocument()
+    expect(screen.getByText('24.0')).toBeInTheDocument()
+    expect(screen.getByText('/ 20 porównywalnych')).toBeInTheDocument()
   })
 
   it('nie pokazuje odznaki alertów, gdy alertów nie ma', async () => {

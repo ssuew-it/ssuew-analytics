@@ -10,9 +10,15 @@ type Props = {
   duration?: number
 }
 
+/**
+ * Liczba, która przy ZMIANIE przechodzi płynnie od starej wartości do nowej
+ * (np. po zmianie filtra). Pierwsze wejście pokazuje od razu prawdziwą wartość -
+ * liczenie od zera wyświetlało przez chwilę nieprawdziwe liczby („0.6% konwersji”)
+ * obok prawdziwych plakietek.
+ */
 export function AnimatedNumber({ value, decimals = 0, prefix = '', suffix = '', duration = 700 }: Props) {
-  const [display, setDisplay] = useState(0)
-  const fromRef = useRef(0)
+  const [display, setDisplay] = useState(value)
+  const fromRef = useRef(value)
   const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
