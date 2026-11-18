@@ -432,7 +432,7 @@ export function PlanerClient({ semestr, rola, kto, poczatkowy, naZywo }: Props) 
       />
 
       {widok === 'miesiac' && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             aria-label="Poprzedni miesiąc"
@@ -454,7 +454,7 @@ export function PlanerClient({ semestr, rola, kto, poczatkowy, naZywo }: Props) 
           >
             <ChevronRight size={15} />
           </button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <button
               type="button"
               onClick={() => setDoCra((z) => (z ? null : new Set()))}

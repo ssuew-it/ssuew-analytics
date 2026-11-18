@@ -34,7 +34,7 @@ export const NAV = [
 export function Sidebar() {
   const pathname = usePathname()
   return (
-    <aside className="sticky top-0 h-screen w-[224px] shrink-0 border-r border-white/10 bg-deck-bg-deep/70 p-3 flex flex-col gap-2 backdrop-blur-2xl">
+    <aside className="sticky top-0 hidden h-screen w-[224px] shrink-0 border-r border-white/10 bg-deck-bg-deep/70 p-3 flex-col gap-2 backdrop-blur-2xl md:flex">
       <div className="deck-card rounded-lg p-3 mb-2">
         <div className="flex items-center gap-3">
           <LogoMark />
@@ -84,5 +84,39 @@ export function Sidebar() {
         Dane wewnętrzne zarządu
       </div>
     </aside>
+  )
+}
+
+/** Nazwa bieżącej zakładki do nagłówka - zamiast „Kokpit analityczny” na każdej. */
+export function nazwaZakladki(pathname: string): string {
+  if (pathname === '/analytics/wpis') return 'Wpisz dane'
+  return NAV.find((n) => n.href === pathname)?.label ?? 'Analityka'
+}
+
+/** Zakładki na wąskim ekranie: boczny pasek (224 px) zjadał tam ponad pół ekranu. */
+export function ZakladkiMobilne() {
+  const pathname = usePathname()
+  const pozycje = [{ href: '/', label: 'DECK' }, ...NAV, { href: '/analytics/wpis', label: 'Wpisz dane' }]
+  return (
+    <nav aria-label="Moduły analityki" className="-mx-4 flex basis-full gap-1 overflow-x-auto px-4 pb-1 md:hidden">
+      {pozycje.map((p) => {
+        const active = pathname === p.href
+        return (
+          <Link
+            key={p.href}
+            href={p.href}
+            aria-current={active ? 'page' : undefined}
+            className={`flex shrink-0 items-center gap-1 rounded-lg border px-3 py-1.5 text-[11px] transition ${
+              active
+                ? 'border-deck-accent/35 bg-deck-accent/12 text-deck-accent'
+                : 'border-white/10 text-deck-muted hover:text-deck-text'
+            }`}
+          >
+            {p.href === '/' && <ArrowLeft size={12} />}
+            {p.label}
+          </Link>
+        )
+      })}
+    </nav>
   )
 }

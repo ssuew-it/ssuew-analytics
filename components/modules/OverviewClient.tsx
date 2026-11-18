@@ -44,7 +44,7 @@ export default function OverviewClient() {
   return (
     <div className="space-y-4">
       <BentoCard span={4} className="p-0">
-        <div className="grid min-h-[260px] grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg">
+        <div className="grid min-h-[260px] grid-cols-1 md:grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg">
           <div className="p-6">
             <div className="inline-flex items-center gap-2 rounded-lg border border-deck-accent/30 bg-deck-accent/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-deck-accent">
               <Sparkles size={13} />
@@ -56,7 +56,7 @@ export default function OverviewClient() {
             <p className="mt-3 max-w-xl text-sm leading-6 text-deck-muted">
               Rekrutacja, retencja i KPI rok-do-roku składają się tu w jeden obraz decyzji zarządczych.
             </p>
-            <div className="mt-6 grid max-w-2xl grid-cols-3 gap-2">
+            <div className="mt-6 grid max-w-2xl grid-cols-1 gap-2 sm:grid-cols-3">
               {strategic.slice(1, 4).map((kpi) => (
                 <div key={kpi.id} className="rounded-lg border border-white/10 bg-white/[0.045] p-3">
                   <div className="text-[10px] text-deck-muted">{kpi.title}</div>
@@ -88,7 +88,7 @@ export default function OverviewClient() {
         </div>
       </BentoCard>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiTile
           label="Konwersja - średnia edycji"
           value={m.avgConversion != null ? <AnimatedNumber value={m.avgConversion} decimals={1} suffix="%" /> : '-'}
@@ -120,7 +120,7 @@ export default function OverviewClient() {
 
       <BentoCard title="Najważniejsze wnioski" sub="automatyczna lista działań na podstawie danych" span={4}>
         {insights.length ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {insights.slice(0, 3).map((insight) => (
               <InsightCard key={insight.id} insight={insight} />
             ))}
@@ -130,7 +130,7 @@ export default function OverviewClient() {
         )}
       </BentoCard>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
         <BentoCard title="Zgłoszenia i przyjęci" sub="trend historyczny" span={2}>
           {barData.length ? (
             <ResponsiveContainer width="100%" height={230}>
@@ -150,7 +150,7 @@ export default function OverviewClient() {
 
         <BentoCard title="KPI - zmiany rok-do-roku" sub="największe wzrosty i spadki" span={2}>
           {movers.length ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 {top.map((s) => (
                   <div key={`${s.kategoria}|${s.nazwa}`} className="flex items-center justify-between gap-3 rounded-lg bg-white/[0.04] px-3 py-2 text-[11px]">

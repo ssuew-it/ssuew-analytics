@@ -11,9 +11,11 @@ type Props = {
 
 const spanClass: Record<NonNullable<Props['span']>, string> = {
   1: '',
-  2: 'col-span-2',
-  3: 'col-span-3',
-  4: 'col-span-4',
+  // Szerokość w siatce tylko od lg - niżej siatki mają 1-2 kolumny, a col-span-4
+  // w siatce dwukolumnowej dokłada kolumny i rozpycha stronę w bok.
+  2: 'lg:col-span-2',
+  3: 'lg:col-span-3',
+  4: 'lg:col-span-4',
 }
 
 export function BentoCard({ title, sub, span = 1, tone = 'default', className = '', children }: Props) {

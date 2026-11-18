@@ -60,7 +60,7 @@ export default function Symulator({ rekrutacje, kohorty }: Props) {
   return (
     <div className="space-y-3">
       <BentoCard title="Symulator „co jeśli”" sub="suwaki przeliczają wynik na żywo" span={4}>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Rekrutacja */}
           <div className="space-y-2">
             <div className="text-[11px] text-deck-text font-medium">Rekrutacja</div>
@@ -118,6 +118,7 @@ export default function Symulator({ rekrutacje, kohorty }: Props) {
 
       {scenarios.length > 0 && (
         <BentoCard title="Porównanie scenariuszy" span={4}>
+          <div className="overflow-x-auto">
           <table className="w-full text-[11px]">
             <thead>
               <tr className="text-deck-muted text-left">
@@ -138,6 +139,7 @@ export default function Symulator({ rekrutacje, kohorty }: Props) {
               ))}
             </tbody>
           </table>
+          </div>
         </BentoCard>
       )}
     </div>

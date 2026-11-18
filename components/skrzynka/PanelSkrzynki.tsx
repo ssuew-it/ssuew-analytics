@@ -208,8 +208,10 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
                 </div>
               )}
 
-              <div className="grid gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
-                <div className={wybrana ? 'hidden lg:block' : ''}>
+              {/* grid-cols-1 = minmax(0, 1fr): bez tego długi temat (truncate) rozpychał
+                  jedyną kolumnę na telefonie do ok. 1150 px. */}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
+                <div className={`min-w-0 ${wybrana ? 'hidden lg:block' : ''}`}>
                   {szukane || czyStatus(zakladka) ? (
                     <ListaSpraw
                       key={`${zakladka}|${szukane}`}

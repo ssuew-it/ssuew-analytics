@@ -56,6 +56,7 @@ export default function RekrutacjeClient() {
   return (
     <div className="space-y-3">
       <BentoCard title="Edycje rekrutacji" sub={editable ? 'kliknij wartość, by edytować · dodaj edycję poniżej (autosave)' : 'tryb demo - read-only'} span={4}>
+        <div className="overflow-x-auto">
         <table className="w-full text-[11px] border-collapse">
           <thead>
             <tr className="text-deck-muted text-left">
@@ -79,6 +80,7 @@ export default function RekrutacjeClient() {
             })}
           </tbody>
         </table>
+        </div>
         {editable && (
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             <input className={`w-16 ${inp}`} placeholder="J'26" value={nowa.edycja} onChange={(e) => setNowa((p) => ({ ...p, edycja: e.target.value }))} />
@@ -99,7 +101,7 @@ export default function RekrutacjeClient() {
 
       {s ? (
         <>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             <KpiTile label={`Przyjęci ${s.sorted[lastIdx].edycja}`} value={s.przyj[lastIdx]} sub={`z ${s.zglos[lastIdx]} zgłoszeń`} />
             <KpiTile label="Średnia konwersja" value={`${avgCR}%`} sub="wszystkie edycje" accent="accent" />
             {fc[0] ? (
@@ -126,7 +128,7 @@ export default function RekrutacjeClient() {
             </ResponsiveContainer>
           </BentoCard>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <BentoCard
               title="Korelacja zgłoszenia ↔ przyjęci"
               sub={`r = ${s.corZglosAccepted.r.toFixed(3).replace('.', ',')} · R² = ${(s.corZglosAccepted.r2 * 100).toFixed(0)}% · p ${s.corZglosAccepted.p_approx}`}

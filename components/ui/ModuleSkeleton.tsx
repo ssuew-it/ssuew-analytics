@@ -59,11 +59,11 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
     return (
       <Ramka>
         <Karta className="p-0">
-          <div className="grid min-h-[260px] grid-cols-[1.15fr_0.85fr] gap-3 p-4">
+          <div className="grid min-h-[260px] grid-cols-1 md:grid-cols-[1.15fr_0.85fr] gap-3 p-4">
             <div className="space-y-3">
               <Skeleton className="h-10 w-3/4" />
               <Skeleton className="h-4 w-2/3" />
-              <div className="grid max-w-2xl grid-cols-3 gap-2 pt-3">
+              <div className="grid max-w-2xl grid-cols-1 sm:grid-cols-3 gap-2 pt-3">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-16" />
                 ))}
@@ -73,7 +73,7 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
           </div>
         </Karta>
 
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Karta key={i}>
               <Skeleton className="h-12" />
@@ -82,19 +82,19 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
         </div>
 
         <Karta>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-24" />
             ))}
           </div>
         </Karta>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Karta>
             <Wykres h="h-56" />
           </Karta>
           <Karta>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-24" />
               ))}
@@ -110,7 +110,7 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
       <Ramka>
         <Karta>
           <Wiersze ile={6} kolumny={6} />
-          <div className="mt-3 grid grid-cols-4 gap-2">
+          <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-9" />
             ))}
@@ -119,7 +119,7 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
         <Karta>
           <Wykres />
         </Karta>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Karta>
             <Wykres h="h-48" />
           </Karta>
@@ -165,7 +165,7 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
             <Skeleton className="h-8 w-44" />
             <Skeleton className="h-4 w-24" />
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-12" />
             ))}
@@ -190,7 +190,7 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
     return (
       <Ramka>
         <Karta>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-9" />
             ))}
@@ -199,7 +199,7 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
         <Karta>
           <Wykres h="h-44" />
         </Karta>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Karta key={i}>
               <Skeleton className="h-20" />
@@ -207,7 +207,7 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
           ))}
         </div>
         <Karta>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-20" />
             ))}
@@ -248,7 +248,7 @@ export function ModuleSkeleton({ variant = 'default' }: { variant?: Variant }) {
       <Karta>
         <Wykres h="h-44" />
       </Karta>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Karta>
           <Skeleton className="h-32" />
         </Karta>

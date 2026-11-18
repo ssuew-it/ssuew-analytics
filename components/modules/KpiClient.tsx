@@ -128,14 +128,14 @@ export default function KpiClient() {
         </div>
       </BentoCard>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <KpiTile label="Metryki rosnące" value={<AnimatedNumber value={summary.up} />} sub="rok do roku" accent="accent" />
         <KpiTile label="Metryki spadające" value={<AnimatedNumber value={summary.down} />} sub="rok do roku" accent="violet" />
         <KpiTile label="Typowa zmiana" value={zmianaRr(summary.typowyIloraz)} sub="r/r, środkowa metryka" />
       </div>
 
       <BentoCard title="KPI strategiczne" sub="syntetyczne wskaźniki dla pracy Zarządu" span={4}>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {strategic.map((kpi) => (
             <div key={kpi.id} className="deck-row rounded-lg p-4">
               <div className="flex items-start justify-between gap-3">
@@ -167,7 +167,7 @@ export default function KpiClient() {
                 return (
                   <div
                     key={`${s.kategoria}|${s.nazwa}`}
-                    className="deck-row deck-pop grid grid-cols-[160px_72px_1fr_72px] items-center gap-3 rounded-lg px-3 py-2 text-[11px]"
+                    className="deck-row deck-pop grid grid-cols-[minmax(0,1fr)_56px_64px] sm:grid-cols-[160px_72px_1fr_72px] items-center gap-3 rounded-lg px-3 py-2 text-[11px]"
                     style={{ animationDelay: `${index * 35}ms` }}
                   >
                     <span className="truncate font-medium text-deck-text">{s.nazwa}</span>
@@ -186,7 +186,7 @@ export default function KpiClient() {
                     <WykresSerii
                       punkty={s.punkty}
                       etykieta={s.nazwa}
-                      className={`h-7 w-full ${ratioColor(ratio)}`}
+                      className={`hidden h-7 w-full sm:block ${ratioColor(ratio)}`}
                     />
                     <span className={`inline-flex items-center justify-end gap-1 tabular font-semibold ${ratioColor(ratio)}`}>
                       {ratioIcon(ratio)}

@@ -70,7 +70,7 @@ export default function ProjektyClient() {
         </div>
       </BentoCard>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <KpiTile label="Z alarmem" value={String(zAlarmem)} sub="wymagają decyzji" accent="violet" />
         <KpiTile label="Z uwagami" value={String(zUwaga)} sub="do obserwacji" />
         <KpiTile label="Bez zastrzeżeń" value={String(czyste)} sub="nic się nie świeci" accent="accent" />

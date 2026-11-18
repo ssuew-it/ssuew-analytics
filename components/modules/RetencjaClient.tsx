@@ -61,6 +61,7 @@ export default function RetencjaClient() {
   return (
     <div className="space-y-3">
       <BentoCard title="Kohorty" sub={editable ? 'kliknij wartość, by edytować · dodaj kohortę poniżej (autosave)' : 'tryb demo - read-only'} span={4}>
+        <div className="overflow-x-auto">
         <table className="w-full text-[11px] border-collapse">
           <thead>
             <tr className="text-deck-muted text-left">
@@ -90,6 +91,7 @@ export default function RetencjaClient() {
             )}
           </tbody>
         </table>
+        </div>
         {editable && (
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             <input className={`w-16 ${inp}`} placeholder="W'26" value={nowa.edycja} onChange={(e) => setNowa((p) => ({ ...p, edycja: e.target.value }))} />
