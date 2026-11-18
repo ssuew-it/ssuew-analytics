@@ -11,6 +11,8 @@ import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
 import { Heatmap } from '@/components/ui/Heatmap'
 
 const MAIN_VARS = ['zgłoszenia', 'przyjęci', 'konwersja %', 'liczebność', 'średnia retencja', 'najdłuższa retencja']
+const REKRUTACJA = ['zgłoszenia', 'przyjęci', 'konwersja %']
+const RETENCJA = ['średnia retencja', 'najdłuższa retencja']
 
 export default function KorelacjeClient() {
   const { rekrutacje, kohorty, loading } = useAnalyticsData()
@@ -34,9 +36,11 @@ export default function KorelacjeClient() {
     }
   })
   const mainCells = correlationMatrix(mainRows, MAIN_VARS)
-  // Bez kliknięcia pokazujemy najsilniejszą parę - prawa połowa nie stoi pusta.
+  // Bez kliknięcia pokazujemy najsilniejszą parę rekrutacja × retencja - prawa
+  // połowa nie stoi pusta. Pary w obrębie jednej grupy (przyjęci ↔ liczebność)
+  // to prawie ta sama liczba i r = 1 nic nie mówi.
   const najsilniejsza = mainCells
-    .filter((c) => c.a !== c.b && c.r !== null && MAIN_VARS.indexOf(c.a) < MAIN_VARS.indexOf(c.b))
+    .filter((c) => REKRUTACJA.includes(c.a) && RETENCJA.includes(c.b) && c.r !== null)
     .sort((x, y) => Math.abs(y.r ?? 0) - Math.abs(x.r ?? 0))[0]
   const para = pair ?? (najsilniejsza ? { a: najsilniejsza.a, b: najsilniejsza.b } : null)
   const rPary = para ? mainCells.find((c) => c.a === para.a && c.b === para.b)?.r ?? null : null
@@ -64,7 +68,7 @@ export default function KorelacjeClient() {
       {para && para.a !== para.b && (
         <BentoCard
           title={`Rozrzut: ${para.a} ↔ ${para.b}`}
-          sub={`${pair ? 'wybrana para' : 'najsilniejsza para'}${rPary !== null ? ` · r = ${rPary.toFixed(2).replace('.', ',')}` : ''}`}
+          sub={`${pair ? 'wybrana para' : 'najsilniejszy związek rekrutacji z retencją'}${rPary !== null ? ` · r = ${rPary.toFixed(2).replace('.', ',')}` : ''} · ${scatterData.length} edycji`}
         >
           {scatterData.length >= 3 ? (
             <ResponsiveContainer width="100%" height={260}>

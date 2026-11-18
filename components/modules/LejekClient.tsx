@@ -35,20 +35,24 @@ export default function LejekClient() {
     }
   }
 
+  // Edycja bez kohorty nie ma jeszcze danych o aktywnych - zero udawałoby ubytek.
+  const zKohorta = new Set(koh.map((k) => k.edycja))
+  const bezKohorty = rekr.filter((r) => !zKohorta.has(r.edycja)).length
   const wgEdycji = [...rekr]
     .sort((a, b) => a.rok - b.rok || (a.sezon === 'wiosna' ? -1 : 1))
     .map((r) => {
       const etapy = buildFunnel(rekr, koh, { edycja: r.edycja, threshold })
+      const znane = zKohorta.has(r.edycja) ? etapy.length : 2
       let najgorszy = -1
       let ubytek = -1
-      for (let i = 1; i < etapy.length; i++) {
+      for (let i = 1; i < znane; i++) {
         const d = etapy[i - 1].count > 0 ? (etapy[i - 1].count - etapy[i].count) / etapy[i - 1].count : 0
         if (d > ubytek) {
           ubytek = d
           najgorszy = i
         }
       }
-      return { edycja: r.edycja, etapy, najgorszy }
+      return { edycja: r.edycja, etapy, najgorszy, znane }
     })
 
   return (
@@ -100,6 +104,11 @@ export default function LejekClient() {
             </div>
           ))}
         </div>
+        {bezKohorty > 0 && !chosen && (
+          <p className="mt-3 text-[11px] text-deck-muted">
+            {bezKohorty} z {rekr.length} edycji nie ma jeszcze kohorty - aktywni i utrzymani liczą się tylko z pozostałych, więc lejek zbiorczy zaniża te etapy.
+          </p>
+        )}
         {worstIdx > 0 && (
           <p className="text-[11px] text-deck-warn mt-3">
             Największy spadek: {funnel[worstIdx - 1].stage} → {funnel[worstIdx].stage}
@@ -123,21 +132,27 @@ export default function LejekClient() {
                 </tr>
               </thead>
               <tbody className="text-deck-text">
-                {wgEdycji.map(({ edycja: e, etapy, najgorszy }) => (
+                {wgEdycji.map(({ edycja: e, etapy, najgorszy, znane }) => (
                   <tr key={e} className="border-t border-deck-border">
                     <td className="p-1">{e}</td>
-                    {etapy.map((f, i) => (
-                      <td key={f.stage} className={`p-1 text-right tabular ${i === najgorszy ? 'text-deck-warn' : ''}`}>
-                        {f.count}
-                        {i > 0 && <span className="ml-1 text-deck-muted">({String(f.pct).replace('.', ',')}%)</span>}
-                      </td>
-                    ))}
+                    {etapy.map((f, i) =>
+                      i < znane ? (
+                        <td key={f.stage} className={`p-1 text-right tabular ${i === najgorszy ? 'text-deck-warn' : ''}`}>
+                          {f.count}
+                          {i > 0 && <span className="ml-1 text-deck-muted">({String(f.pct).replace('.', ',')}%)</span>}
+                        </td>
+                      ) : (
+                        <td key={f.stage} className="p-1 text-right text-deck-muted" title="brak kohorty dla tej edycji">-</td>
+                      ),
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-[10.5px] text-deck-muted">Na złoto etap z największym ubytkiem w danej edycji.</p>
+          <p className="mt-2 text-[10.5px] text-deck-muted">
+            Na złoto etap z największym ubytkiem w danej edycji. „-” to edycja bez wpisanej kohorty - aktywnych jeszcze nie policzono.
+          </p>
         </BentoCard>
       )}
     </div>
