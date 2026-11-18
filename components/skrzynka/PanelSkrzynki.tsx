@@ -63,6 +63,9 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
   const [wpisane, setWpisane] = useState('')
   const [szukane, setSzukane] = useState('')
   const [wybrana, setWybrana] = useState<string | null>(null)
+  /** Prawy panel na kartę osoby albo organizacji (portal z zakładek-kartotek). */
+  const [panel, setPanel] = useState<HTMLDivElement | null>(null)
+  const [kartaOtwarta, setKartaOtwarta] = useState(false)
   const [wersja, setWersja] = useState(0)
   const [trwa, setTrwa] = useState(false)
   const [bladDociagania, setBladDociagania] = useState<string | null>(null)
@@ -91,6 +94,7 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
     setSzukane('')
     setWpisane('')
     setWybrana(null)
+    setKartaOtwarta(false)
   }
 
   const komunikat = blad ? (BLEDY[blad] ?? BLEDY.polaczenie) : null
@@ -217,16 +221,22 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
                       onZmiana={poZmianie}
                     />
                   ) : zakladka === 'kontakty' ? (
-                    <Kontakty wybrana={wybrana} onWybierz={setWybrana} />
+                    <Kontakty wybrana={wybrana} onWybierz={setWybrana} panel={panel} onKarta={setKartaOtwarta} />
                   ) : (
-                    <Organizacje wybrana={wybrana} onWybierz={setWybrana} />
+                    <Organizacje wybrana={wybrana} onWybierz={setWybrana} panel={panel} onKarta={setKartaOtwarta} />
                   )}
                 </div>
-                {wybrana ? (
-                  <WidokSprawy key={wybrana} id={wybrana} sklad={sklad} email={email} onZmiana={poZmianie} onZamknij={() => setWybrana(null)} />
-                ) : (
-                  <p className="hidden text-[12.5px] text-deck-muted lg:block">Wybierz sprawę z listy.</p>
-                )}
+                <div className="min-w-0">
+                  {wybrana && (
+                    <WidokSprawy key={wybrana} id={wybrana} sklad={sklad} email={email} onZmiana={poZmianie} onZamknij={() => setWybrana(null)} />
+                  )}
+                  {!czyStatus(zakladka) && !szukane && <div ref={setPanel} hidden={!!wybrana} />}
+                  {!wybrana && (szukane || czyStatus(zakladka) || !kartaOtwarta) && (
+                    <p className="hidden text-[12.5px] text-deck-muted lg:block">
+                      {szukane || czyStatus(zakladka) ? 'Wybierz sprawę z listy.' : zakladka === 'kontakty' ? 'Wybierz osobę z listy.' : 'Wybierz organizację z listy.'}
+                    </p>
+                  )}
+                </div>
               </div>
             </>
           )}

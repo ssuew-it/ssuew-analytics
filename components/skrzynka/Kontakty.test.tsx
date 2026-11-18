@@ -27,6 +27,44 @@ const klik = (nazwa: string | RegExp) =>
 
 beforeEach(() => Object.values(klient).forEach((f) => f.mockReset()))
 
+describe('karta w prawym panelu', () => {
+  it('kontakt: karta w panelu obok, lista zostaje z zaznaczoną osobą; po otwarciu sprawy karta czeka schowana', async () => {
+    const panel = document.createElement('div')
+    document.body.appendChild(panel)
+    klient.kontakty.mockResolvedValue({ kontakty: [ANNA], nastepna: null })
+    klient.kontakt.mockResolvedValue({ kontakt: ANNA, sprawy: [S('t1')] })
+    const onKarta = vi.fn()
+    const { rerender } = await act(async () => render(<Kontakty wybrana={null} onWybierz={vi.fn()} panel={panel} onKarta={onKarta} />))
+    await klik(/Anna Kowalska/)
+    expect(screen.getByRole('list', { name: 'Kontakty' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Anna Kowalska/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(panel).toHaveTextContent('Anna Kowalska')
+    expect(onKarta).toHaveBeenLastCalledWith(true)
+    rerender(<Kontakty wybrana="t1" onWybierz={vi.fn()} panel={panel} onKarta={onKarta} />)
+    expect(panel).not.toHaveTextContent('Anna Kowalska')
+    rerender(<Kontakty wybrana={null} onWybierz={vi.fn()} panel={panel} onKarta={onKarta} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Zamknij kartę' }))
+    expect(panel).not.toHaveTextContent('Anna Kowalska')
+    expect(onKarta).toHaveBeenLastCalledWith(false)
+    panel.remove()
+  })
+
+  it('organizacja: karta z edycją w panelu obok listy', async () => {
+    const panel = document.createElement('div')
+    document.body.appendChild(panel)
+    const FIRMA = { domena: 'firma.pl', nazwa: 'Firma', typ: 'sponsor' as const }
+    klient.organizacje.mockResolvedValue({ organizacje: [FIRMA] })
+    klient.organizacja.mockResolvedValue({ organizacja: FIRMA, kontakty: [ANNA], sprawy: [] })
+    await act(async () => {
+      render(<Organizacje wybrana={null} onWybierz={vi.fn()} panel={panel} onKarta={vi.fn()} />)
+    })
+    await klik(/Firma/)
+    expect(screen.getByRole('list', { name: 'Organizacje' })).toBeInTheDocument()
+    expect(panel.querySelector('input[aria-label="Nazwa organizacji"]')).not.toBeNull()
+    panel.remove()
+  })
+})
+
 describe('Kontakty', () => {
   it('lista z imieniem i organizacją; kolejna strona po kursorze', async () => {
     klient.kontakty

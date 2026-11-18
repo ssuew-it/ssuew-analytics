@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import { ETYKIETY_TYPOW } from '@/lib/skrzynka/widok'
 import { TYPY_ORGANIZACJI, type KartaOrganizacji, type Organizacja, type TypOrganizacji } from '@/lib/skrzynka/typy'
@@ -10,11 +11,21 @@ import { WierszSprawy } from './WierszSprawy'
  * Zakładka Organizacje: lista z filtrem typu, karta z osobami i sprawami,
  * zmiana nazwy i typu. Synchronizacja nie nadpisuje tego, co tu ustawisz.
  */
-export function Organizacje({ wybrana, onWybierz }: { wybrana: string | null; onWybierz: (id: string) => void }) {
+export function Organizacje({ wybrana, onWybierz, panel = null, onKarta }: {
+  wybrana: string | null
+  onWybierz: (id: string) => void
+  /** Prawy panel na kartę - jak w Kontaktach. */
+  panel?: HTMLElement | null
+  onKarta?: (otwarta: boolean) => void
+}) {
   const teraz = useTeraz(60_000)
   const [lista, setLista] = useState<Organizacja[] | null>(null)
   const [filtr, setFiltr] = useState<TypOrganizacji | ''>('')
-  const [karta, setKarta] = useState<KartaOrganizacji | null>(null)
+  const [karta, setKartaStan] = useState<KartaOrganizacji | null>(null)
+  const setKarta = (k: KartaOrganizacji | null) => {
+    setKartaStan(k)
+    onKarta?.(k !== null)
+  }
   const [nazwa, setNazwa] = useState('')
   const [typ, setTyp] = useState<TypOrganizacji>('inne')
   const [blad, setBlad] = useState<string | null>(null)
@@ -67,14 +78,21 @@ export function Organizacje({ wybrana, onWybierz }: { wybrana: string | null; on
 
   const alert = blad && <p role="alert" className="text-[12.5px] text-deck-danger">{blad}</p>
 
-  if (karta) {
+  const widokKarty = (() => {
+    if (!karta) return null
     const o = karta.organizacja
     const zmieniona = nazwa.trim() !== o.nazwa || typ !== o.typ
     return (
       <section aria-label={`Organizacja: ${o.domena}`} className="space-y-3 text-[12.5px]">
-        <button type="button" onClick={() => setKarta(null)} className="text-[11.5px] text-deck-muted hover:underline">
-          ← Organizacje
-        </button>
+        {panel ? (
+          <button type="button" aria-label="Zamknij kartę" onClick={() => setKarta(null)} className="text-[11.5px] text-deck-muted hover:underline">
+            ✕ Zamknij
+          </button>
+        ) : (
+          <button type="button" onClick={() => setKarta(null)} className="text-[11.5px] text-deck-muted hover:underline">
+            ← Organizacje
+          </button>
+        )}
         <div className="space-y-1.5">
           <h3 className="text-[14px] font-semibold text-deck-text">{o.nazwa}</h3>
           <p className="text-deck-muted">{o.domena}</p>
@@ -115,8 +133,9 @@ export function Organizacje({ wybrana, onWybierz }: { wybrana: string | null; on
         </ul>
       </section>
     )
-  }
+  })()
 
+  if (widokKarty && !panel) return widokKarty
   if (!lista) return alert || <p className="font-mono text-[11px] text-deck-muted">Wczytuję organizacje…</p>
   const widoczne = filtr ? lista.filter((o) => o.typ === filtr) : lista
 
@@ -138,6 +157,7 @@ export function Organizacje({ wybrana, onWybierz }: { wybrana: string | null; on
               <button
                 type="button"
                 disabled={trwa}
+                aria-pressed={karta?.organizacja.domena === o.domena}
                 onClick={() => otworz(o.domena)}
                 className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-left text-[12px] transition hover:bg-white/[0.06]"
               >
@@ -152,6 +172,7 @@ export function Organizacje({ wybrana, onWybierz }: { wybrana: string | null; on
       ) : (
         <p className="text-[12.5px] text-deck-muted">Brak organizacji tego typu.</p>
       )}
+      {widokKarty && panel && !wybrana && createPortal(widokKarty, panel)}
     </div>
   )
 }

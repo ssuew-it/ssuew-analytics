@@ -1,15 +1,29 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import type { KartaKontaktu, StronaKontaktow } from '@/lib/skrzynka/typy'
 import { useTeraz } from '@/lib/useTeraz'
 import { WierszSprawy } from './WierszSprawy'
 
-/** Zakładka Kontakty: lista osób stronami, a po kliknięciu karta osoby z jej sprawami. Sprawa otwiera się obok. */
-export function Kontakty({ wybrana, onWybierz }: { wybrana: string | null; onWybierz: (id: string) => void }) {
+/**
+ * Zakładka Kontakty: lista osób stronami, a po kliknięciu karta osoby z jej
+ * sprawami. Z `panel` karta trafia do prawego panelu obok listy i chowa się,
+ * gdy otwarta jest sprawa; bez niego (wąski widok, testy) zastępuje listę.
+ */
+export function Kontakty({ wybrana, onWybierz, panel = null, onKarta }: {
+  wybrana: string | null
+  onWybierz: (id: string) => void
+  panel?: HTMLElement | null
+  onKarta?: (otwarta: boolean) => void
+}) {
   const teraz = useTeraz(60_000)
   const [strona, setStrona] = useState<StronaKontaktow | null>(null)
-  const [karta, setKarta] = useState<KartaKontaktu | null>(null)
+  const [karta, setKartaStan] = useState<KartaKontaktu | null>(null)
+  const setKarta = (k: KartaKontaktu | null) => {
+    setKartaStan(k)
+    onKarta?.(k !== null)
+  }
   const [blad, setBlad] = useState<string | null>(null)
   const [laduje, setLaduje] = useState(false)
 
@@ -42,13 +56,20 @@ export function Kontakty({ wybrana, onWybierz }: { wybrana: string | null; onWyb
 
   const alert = blad && <p role="alert" className="text-[12.5px] text-deck-danger">{blad}</p>
 
-  if (karta) {
+  const widokKarty = (() => {
+    if (!karta) return null
     const k = karta.kontakt
     return (
       <section aria-label={`Kontakt: ${k.email}`} className="space-y-2 text-[12.5px]">
-        <button type="button" onClick={() => setKarta(null)} className="text-[11.5px] text-deck-muted hover:underline">
-          ← Kontakty
-        </button>
+        {panel ? (
+          <button type="button" aria-label="Zamknij kartę" onClick={() => setKarta(null)} className="text-[11.5px] text-deck-muted hover:underline">
+            ✕ Zamknij
+          </button>
+        ) : (
+          <button type="button" onClick={() => setKarta(null)} className="text-[11.5px] text-deck-muted hover:underline">
+            ← Kontakty
+          </button>
+        )}
         <h3 className="text-[14px] font-semibold text-deck-text">{k.imie || k.email}</h3>
         <p className="text-deck-muted">
           {k.email}
@@ -64,8 +85,9 @@ export function Kontakty({ wybrana, onWybierz }: { wybrana: string | null; onWyb
         {alert}
       </section>
     )
-  }
+  })()
 
+  if (widokKarty && !panel) return widokKarty
   if (!strona) return alert || <p className="font-mono text-[11px] text-deck-muted">Wczytuję kontakty…</p>
   if (!strona.kontakty.length) return <p className="text-[12.5px] text-deck-muted">Brak kontaktów - pojawią się po imporcie skrzynki.</p>
 
@@ -77,6 +99,7 @@ export function Kontakty({ wybrana, onWybierz }: { wybrana: string | null; onWyb
             <button
               type="button"
               disabled={laduje}
+              aria-pressed={karta?.kontakt.email === k.email}
               onClick={() => wczytaj(() => klientSkrzynki.kontakt(k.email), setKarta)}
               className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-left text-[12px] transition hover:bg-white/[0.06]"
             >
@@ -105,6 +128,7 @@ export function Kontakty({ wybrana, onWybierz }: { wybrana: string | null; onWyb
           Pokaż więcej
         </button>
       )}
+      {widokKarty && panel && !wybrana && createPortal(widokKarty, panel)}
     </div>
   )
 }

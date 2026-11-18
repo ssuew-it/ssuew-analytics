@@ -81,6 +81,15 @@ describe('PanelSkrzynki', () => {
     expect(screen.getByText('ustawienia skrzynki z kalendarzem')).toBeInTheDocument()
   })
 
+  it('prawy panel podpowiada, co wybrać - w Kontaktach osobę, w Organizacjach organizację', () => {
+    panel()
+    expect(screen.getByText('Wybierz sprawę z listy.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Kontakty' }))
+    expect(screen.getByText('Wybierz osobę z listy.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Organizacje' }))
+    expect(screen.getByText('Wybierz organizację z listy.')).toBeInTheDocument()
+  })
+
   it('zakładki z liczbami; domyślnie Do odpowiedzi; zmiana zakładki', () => {
     panel()
     const zakladki = screen.getByRole('tablist', { name: 'Statusy spraw' })
