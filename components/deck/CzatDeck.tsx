@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { MessageSquare, Plus } from 'lucide-react'
+import { MessageSquare, Plus, ChevronDown } from 'lucide-react'
 import { CzatRozmowa } from './CzatRozmowa'
 import { CzatWatki } from './CzatWatki'
 import { CzatNotatki } from './CzatNotatki'
@@ -67,7 +67,10 @@ export function CzatDeck() {
       >
         <MessageSquare size={15} className="text-deck-accent" aria-hidden="true" />
         Zapytaj D.E.C.K.
-        <span className="ml-auto font-mono text-[10px] font-normal text-deck-muted">{otwarty ? 'zwiń' : 'rozwiń'}</span>
+        <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px] font-normal text-deck-accent/85">
+          {otwarty ? 'zwiń' : 'rozwiń'}
+          <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${otwarty ? 'rotate-180' : ''}`} />
+        </span>
       </button>
 
       {otwarty && (

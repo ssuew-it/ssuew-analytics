@@ -1,7 +1,7 @@
 'use client'
 import { Suspense, use, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, ChevronDown } from 'lucide-react'
 import { ODNOSNIK_OBSZARU, type Obszar, type Odprawa, type Waga, type ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import { godzinaWarszawa } from '@/lib/czas'
 import type { Fakt } from '@/lib/asystent/fakty'
@@ -107,7 +107,10 @@ export function PanelOdprawy({ odprawa, fakty }: { odprawa: Promise<ZapisanaOdpr
             className="mt-3 flex w-full items-center gap-2 rounded-md border border-white/8 px-3 py-2 text-left text-[12px] text-deck-muted transition hover:border-deck-accent/30 hover:text-deck-text"
           >
             <span>{opisZagrozen(biezaca.odprawa)}</span>
-            <span className="ml-auto font-mono text-[10px]">{rozwinieta ? 'zwiń' : 'rozwiń'}</span>
+            <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px] font-normal text-deck-accent/85">
+              {rozwinieta ? 'zwiń' : 'rozwiń'}
+              <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${rozwinieta ? 'rotate-180' : ''}`} />
+            </span>
           </button>
           {rozwinieta && <TrescOdprawy odprawa={biezaca.odprawa} />}
         </>
