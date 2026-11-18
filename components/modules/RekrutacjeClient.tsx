@@ -101,12 +101,12 @@ export default function RekrutacjeClient() {
         <>
           <div className="grid grid-cols-4 gap-2">
             <KpiTile label={`Przyjęci ${s.sorted[lastIdx].edycja}`} value={s.przyj[lastIdx]} sub={`z ${s.zglos[lastIdx]} zgłoszeń`} />
-            <KpiTile label="Avg CR" value={`${avgCR}%`} sub="wszystkie edycje" accent="accent" />
-            <KpiTile label="Prognoza next" value={`~${fc[0].yhat}`} sub={`±${Math.round((fc[0].hi - fc[0].yhat) * 10) / 10}`} accent="violet" />
+            <KpiTile label="Średnia konwersja" value={`${avgCR}%`} sub="wszystkie edycje" accent="accent" />
+            <KpiTile label="Prognoza następnej" value={`~${fc[0].yhat}`} sub={`±${Math.round((fc[0].hi - fc[0].yhat) * 10) / 10}`} accent="violet" />
             <KpiTile label="Korelacja r" value={s.corZglosAccepted.r.toFixed(3)} sub={`R²=${(s.corZglosAccepted.r2 * 100).toFixed(0)}%`} />
           </div>
 
-          <BentoCard title="Zgłoszenia vs przyjęci + CR%" sub="trend per edycja" span={4}>
+          <BentoCard title="Zgłoszenia, przyjęci i konwersja (CR%)" sub="trend w kolejnych edycjach" span={4}>
             <ResponsiveContainer width="100%" height={220}>
               <ComposedChart data={trendData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
@@ -145,12 +145,12 @@ export default function RekrutacjeClient() {
             >
               <div className="flex gap-3 mb-2">
                 <div className="flex-1 bg-deck-bg border border-deck-border rounded-lg p-2 text-center">
-                  <div className="text-[10px] text-deck-muted">Jesień avg</div>
+                  <div className="text-[10px] text-deck-muted">Jesień - średnia</div>
                   <div className="text-lg font-semibold tabular text-deck-accent">{s.sezonowosc.meanA.toFixed(1)}</div>
                   <div className="text-[9px] text-deck-muted">SD {s.sezonowosc.sdA.toFixed(1)}</div>
                 </div>
                 <div className="flex-1 bg-deck-bg border border-deck-border rounded-lg p-2 text-center">
-                  <div className="text-[10px] text-deck-muted">Wiosna avg</div>
+                  <div className="text-[10px] text-deck-muted">Wiosna - średnia</div>
                   <div className="text-lg font-semibold tabular text-deck-violet">{s.sezonowosc.meanB.toFixed(1)}</div>
                   <div className="text-[9px] text-deck-muted">SD {s.sezonowosc.sdB.toFixed(1)}</div>
                 </div>

@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <ShieldCheck size={13} className="text-deck-accent" />
               SSUEW Analytics
             </div>
-            <div className="mt-1 text-sm font-medium text-deck-text">Strategic intelligence cockpit</div>
+            <div className="mt-1 text-sm font-medium text-deck-text">Kokpit analityczny samorządu</div>
           </div>
           <div className="flex items-center gap-2">
             <div className="deck-chip hidden xl:flex items-center gap-2 rounded-lg px-2 py-1">

@@ -70,7 +70,7 @@ export default function PrognozyClient() {
           )}
         </BentoCard>
 
-        <BentoCard title="Prognoza retencji" sub="avg retencja - historia + następna edycja">
+        <BentoCard title="Prognoza retencji" sub="średnia retencja - historia i następna edycja">
           {model ? (
             <ResponsiveContainer width="100%" height={200}>
               <ComposedChart data={retData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>

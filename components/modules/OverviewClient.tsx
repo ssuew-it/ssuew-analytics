@@ -47,7 +47,7 @@ export default function OverviewClient() {
           <div className="p-6">
             <div className="inline-flex items-center gap-2 rounded-lg border border-deck-accent/30 bg-deck-accent/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-deck-accent">
               <Sparkles size={13} />
-              Live strategy deck
+              Na żywo z arkusza
             </div>
             <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-tight tracking-normal text-deck-text">
               Kondycja organizacji w jednym, żywym kokpicie.
@@ -74,7 +74,7 @@ export default function OverviewClient() {
                 <div className="absolute inset-4 rounded-full border border-white/10" />
                 <Gauge size={42} className="absolute top-8 text-deck-accent" />
                 <div className="text-center">
-                  <div className="text-[10px] uppercase tracking-[0.18em] text-deck-muted">Health</div>
+                  <div className="text-[10px] uppercase tracking-[0.18em] text-deck-muted">Kondycja</div>
                   <div className="mt-2 text-5xl font-semibold tabular-nums text-deck-accent">{health.value}</div>
                   <div className="mt-1 text-[10px] text-deck-muted">
                     {health.trend === 'up' ? 'stabilny wzrost' : health.trend === 'down' ? 'ryzyko spadku' : 'do obserwacji'}
@@ -130,7 +130,7 @@ export default function OverviewClient() {
       </BentoCard>
 
       <div className="grid grid-cols-4 gap-3">
-        <BentoCard title="Zgłoszenia vs przyjęci" sub="trend historyczny" span={2}>
+        <BentoCard title="Zgłoszenia i przyjęci" sub="trend historyczny" span={2}>
           {barData.length ? (
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={barData} margin={{ top: 10, right: 8, left: -16, bottom: 0 }}>

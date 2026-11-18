@@ -40,7 +40,7 @@ export function Sidebar() {
           <LogoMark />
           <div>
             <div className="text-sm font-semibold text-deck-text leading-none">SSUEW</div>
-            <div className="text-[10px] text-deck-muted mt-1">Analytics Command</div>
+            <div className="text-[10px] text-deck-muted mt-1">Analityka samorządu</div>
           </div>
         </div>
       </div>
@@ -81,7 +81,7 @@ export function Sidebar() {
       </Link>
       <div className="flex items-center gap-2 px-2 pt-2 text-[10px] text-deck-muted">
         <UserRound size={12} />
-        Private strategy deck
+        Dane wewnętrzne zarządu
       </div>
     </aside>
   )

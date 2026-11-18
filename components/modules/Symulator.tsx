@@ -61,7 +61,7 @@ export default function Symulator({ rekrutacje, kohorty }: Props) {
           <div className="space-y-2">
             <div className="text-[11px] text-deck-text font-medium">Rekrutacja</div>
             <Slider label="Zgłoszenia" min={0} max={60} value={zgloszenia} onChange={setZgloszenia} />
-            <Slider label="CR %" min={0} max={100} value={cr} onChange={setCr} />
+            <Slider label="Konwersja %" min={0} max={100} value={cr} onChange={setCr} />
             <div className="text-deck-accent text-lg font-semibold tabular">{przyjeciCR} przyjętych</div>
             {trend && (
               <div className="text-[10px] text-deck-muted">
@@ -90,7 +90,7 @@ export default function Symulator({ rekrutacje, kohorty }: Props) {
           <div className="space-y-2">
             <div className="text-[11px] text-deck-text font-medium">Utrzymanie</div>
             <Slider label="Przyjęci" min={0} max={50} value={przyjeci2} onChange={setPrzyjeci2} />
-            <Slider label="Avg retencja" min={1} max={10} value={retencja2} onChange={setRetencja2} />
+            <Slider label="Średnia retencja" min={1} max={10} value={retencja2} onChange={setRetencja2} />
             <Slider label="Próg N sem." min={1} max={10} value={prog} onChange={setProg} />
             <div className="text-deck-accent text-lg font-semibold tabular">{utrzymani} utrzymanych</div>
           </div>
@@ -118,7 +118,7 @@ export default function Symulator({ rekrutacje, kohorty }: Props) {
             <thead>
               <tr className="text-deck-muted text-left">
                 <th className="py-1">Scenariusz</th>
-                <th>Przyjęci (CR)</th>
+                <th>Przyjęci (konwersja)</th>
                 <th>Retencja</th>
                 <th>Utrzymani</th>
               </tr>

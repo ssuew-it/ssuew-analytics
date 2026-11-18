@@ -581,7 +581,7 @@ export function buildAlerts(
     const meanCR = mean(s.cr)
     const lastCR = s.cr[s.cr.length - 1]
     if (meanCR > 0 && lastCR < 0.7 * meanCR) {
-      alerts.push({ id: 'cr-low', severity: 'warning', title: 'Niski conversion rate ostatniej edycji', detail: `CR ${lastCR}% vs średnia ${meanCR.toFixed(1)}%.`, recommendation: 'Sprawdź jakość kandydatów / proces rekrutacji.', href: '/analytics/rekrutacje' })
+      alerts.push({ id: 'cr-low', severity: 'warning', title: 'Niska konwersja ostatniej edycji', detail: `Konwersja ${lastCR}% wobec średniej ${meanCR.toFixed(1)}%.`, recommendation: 'Sprawdź jakość kandydatów / proces rekrutacji.', href: '/analytics/rekrutacje' })
     }
   }
 
@@ -673,51 +673,51 @@ export function buildStrategicKpis(
   return [
     {
       id: 'health',
-      title: 'Organizational Health Score',
+      title: 'Kondycja organizacji',
       value: `${healthScore}/100`,
       score: healthScore,
       trend: scoreTrend(healthScore),
       detail: 'Syntetyczny wynik z konwersji, retencji, utrzymania po 2 sem. i KPI r/r.',
       recommendation:
         healthScore >= 70
-          ? 'Utrzymac obecny rytm i przeniesc najlepsze praktyki do slabszych obszarow.'
-          : 'Najpierw sprawdzic onboarding, przeciazenie aktywnych osob i metryki ze spadkiem r/r.',
+          ? 'Utrzymać obecny rytm i przenieść najlepsze praktyki do słabszych obszarów.'
+          : 'Najpierw sprawdzić wdrażanie nowych osób, przeciążenie aktywnych i metryki ze spadkiem r/r.',
     },
     {
       id: 'leadership',
-      title: 'Leadership Pipeline Index',
+      title: 'Następcy koordynatorów',
       value: leaderRows.length ? `${leaderGrowth}/${leaderRows.length}` : 'brak',
       score: leaderScore,
       trend: scoreTrend(leaderScore),
       detail: 'Ile metryk koordynatorskich nie spada rok do roku.',
-      recommendation: 'Monitorowac jako wczesny sygnal dostepnosci przyszlych liderow projektow.',
+      recommendation: 'Obserwować jako wczesny sygnał, czy będzie komu prowadzić projekty.',
     },
     {
       id: 'retention-2',
-      title: 'Retention After 2 Semesters',
+      title: 'Utrzymanie po 2 semestrach',
       value: `${Math.round(retentionAfter2)}%`,
       score: activationScore,
       trend: scoreTrend(activationScore),
-      detail: 'Odsetek kohort aktywnych po dwoch semestrach, liczony z krzywych survival.',
-      recommendation: 'To najlepszy szybki test jakosci onboardingu i pierwszych doswiadczen w organizacji.',
+      detail: 'Odsetek osób z kohort aktywnych po dwóch semestrach, liczony z krzywych przeżycia.',
+      recommendation: 'Najszybszy test, jak działa wdrażanie nowych osób i ich pierwsze doświadczenia w samorządzie.',
     },
     {
       id: 'recruitment-quality',
-      title: 'Recruitment Quality',
-      value: `${Math.round(avgCr)}% avg CR`,
+      title: 'Jakość rekrutacji',
+      value: `${Math.round(avgCr)}% średnia konwersja`,
       score: recruitmentQuality,
       trend: scoreTrend(recruitmentQuality),
-      detail: `Laczy sredni CR edycji i wazony CR calej historii (${Math.round(totalCr)}%).`,
-      recommendation: 'Interpretowac razem z retencja: wysoki CR bez utrzymania moze oznaczac zbyt miekka selekcje.',
+      detail: `Łączy średnią konwersję edycji i konwersję całej historii (${Math.round(totalCr)}%).`,
+      recommendation: 'Czytać razem z retencją: wysoka konwersja bez utrzymania może znaczyć zbyt łagodną selekcję.',
     },
     {
       id: 'momentum',
-      title: 'Strategic Momentum',
+      title: 'Tempo rozwoju',
       value: `${Math.round(summary.avgRatio * 100)}% r/r`,
       score: deliveryMomentum,
       trend: scoreTrend(deliveryMomentum),
-      detail: `Srednia zmiana KPI rok do roku; rosnie ${summary.up}, spada ${summary.down}.`,
-      recommendation: 'Dobre do kwartalnego przegladu: pokazuje, czy organizacja przyspiesza, czy traci impet.',
+      detail: `Średnia zmiana KPI rok do roku; rośnie ${summary.up}, spada ${summary.down}.`,
+      recommendation: 'Dobre do kwartalnego przeglądu: pokazuje, czy samorząd przyspiesza, czy traci tempo.',
     },
   ]
 }
@@ -741,7 +741,7 @@ export function buildExecutiveInsights(
       title: 'Kondycja organizacji wymaga uwagi',
       metric: health.value,
       detail: health.detail,
-      action: 'Zrobic przeglad onboardingu, obciazenia aktywnych osob i metryk ze spadkiem r/r.',
+      action: 'Przejrzeć wdrażanie nowych osób, obciążenie aktywnych i metryki ze spadkiem r/r.',
       href: '/analytics/kpi',
     })
   }
@@ -752,8 +752,8 @@ export function buildExecutiveInsights(
       priority: retention2.score < 65 ? 'high' : 'medium',
       title: 'Wczesna retencja jest kluczowym punktem kontroli',
       metric: retention2.value,
-      detail: 'To wskaznik, ktory najszybciej pokazuje, czy nowi czlonkowie przechodza z rekrutacji do realnego dzialania.',
-      action: 'Dopisac check-in po 30/60/90 dniach i mierzyc aktywnosc pierwszego semestru per osoba.',
+      detail: 'Ten wskaźnik najszybciej pokazuje, czy nowi członkowie przechodzą z rekrutacji do realnego działania.',
+      action: 'Dodać rozmowy po 30, 60 i 90 dniach i mierzyć aktywność każdej osoby w pierwszym semestrze.',
       href: '/analytics/retencja',
     })
   }
@@ -762,10 +762,10 @@ export function buildExecutiveInsights(
     insights.push({
       id: 'leadership-pipeline',
       priority: leadership.score < 50 ? 'high' : 'medium',
-      title: 'Pipeline liderow moze byc waskim gardlem',
+      title: 'Brak następców koordynatorów może być wąskim gardłem',
       metric: leadership.value,
       detail: leadership.detail,
-      action: 'Wprowadzic osobny tracker kandydatow na koordynatorow i mierzyc gotowosc nastepcow per projekt.',
+      action: 'Prowadzić osobną listę kandydatów na koordynatorów i oceniać gotowość następców w każdym projekcie.',
       href: '/analytics/kpi',
     })
   }
@@ -774,10 +774,10 @@ export function buildExecutiveInsights(
     insights.push({
       id: 'momentum-upside',
       priority: 'low',
-      title: 'Organizacja ma dodatni impet strategiczny',
+      title: 'Samorząd przyspiesza',
       metric: momentum.value,
-      detail: 'Sredni wynik KPI rok do roku rosnie, wiec warto znalezc praktyki, ktore napedzaja wzrost.',
-      action: 'Wyciagnac top 3 wzrosty KPI i zamienic je w standard pracy dla podobnych obszarow.',
+      detail: 'Średni wynik KPI rok do roku rośnie - warto znaleźć praktyki, które napędzają wzrost.',
+      action: 'Wybrać 3 największe wzrosty KPI i zamienić je w standard pracy dla podobnych obszarów.',
       href: '/analytics/kpi',
     })
   }
@@ -788,7 +788,7 @@ export function buildExecutiveInsights(
       id: `alert-${alert.id}`,
       priority: alert.severity === 'critical' ? 'high' : alert.severity === 'warning' ? 'medium' : 'low',
       title: alert.title,
-      metric: alert.severity.toUpperCase(),
+      metric: alert.severity === 'critical' ? 'KRYTYCZNY' : alert.severity === 'warning' ? 'OSTRZEŻENIE' : 'INFO',
       detail: alert.detail,
       action: alert.recommendation,
       href: alert.href,
