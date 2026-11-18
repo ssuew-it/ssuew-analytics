@@ -1,4 +1,4 @@
-import { act, render, screen, fireEvent } from '@testing-library/react'
+import { act, cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { DeckHub, type DaneAnalityki, type DanePlanera } from '@/components/deck/DeckHub'
@@ -123,6 +123,17 @@ describe('DeckHub', () => {
     expect(await screen.findByText("% konwersji · J'26")).toBeInTheDocument()
     expect(screen.getByText('24.0')).toBeInTheDocument()
     expect(screen.getByText('/ 20 porównywalnych')).toBeInTheDocument()
+  })
+
+  it('siatka bez dziur: właściciel - Strony i Skrzynka po pół rzędu; zarząd - Sesja obok Analityki na pół', async () => {
+    const szeroki = (nazwa: RegExp) => screen.getByRole('link', { name: nazwa }).className.includes('sm:col-span-2')
+    await hub()
+    expect(szeroki(/Strony/)).toBe(true)
+    expect(szeroki(/Skrzynka/)).toBe(true)
+    expect(szeroki(/Sesja Operacyjna/)).toBe(false)
+    cleanup()
+    await hub({ rola: 'board' })
+    expect(szeroki(/Sesja Operacyjna/)).toBe(true)
   })
 
   it('nie pokazuje odznaki alertów, gdy alertów nie ma', async () => {

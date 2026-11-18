@@ -140,8 +140,9 @@ export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty,
             <KafelekAnalyticsZDanymi analityka={analityka} />
           </Suspense>
 
-          <Suspense fallback={<KafelekSesji propozycje={null} najblizsze={null} />}>
-            <KafelekSesjiZDanymi planer={planer} />
+          {/* Siatka ma 4 kolumny: zarząd nie widzi Orbity, Stron ani Skrzynki - Sesja dopełnia wtedy rząd. */}
+          <Suspense fallback={<KafelekSesji propozycje={null} najblizsze={null} span={rola === 'owner' ? 1 : 2} />}>
+            <KafelekSesjiZDanymi planer={planer} span={rola === 'owner' ? 1 : 2} />
           </Suspense>
 
           {rola === 'owner' && (
@@ -238,14 +239,15 @@ function KafelekAnalytics({ dane }: { dane: DaneAnalityki | null }) {
   )
 }
 
-function KafelekSesjiZDanymi({ planer }: { planer: Promise<DanePlanera> }) {
+function KafelekSesjiZDanymi({ planer, span }: { planer: Promise<DanePlanera>; span: 1 | 2 }) {
   const p = use(planer)
-  return <KafelekSesji propozycje={p.propozycje} najblizsze={p.najblizsze} />
+  return <KafelekSesji propozycje={p.propozycje} najblizsze={p.najblizsze} span={span} />
 }
 
-function KafelekSesji({ propozycje, najblizsze }: { propozycje: number | null; najblizsze: NajblizszeWydarzenie[] | null }) {
+function KafelekSesji({ propozycje, najblizsze, span }: { propozycje: number | null; najblizsze: NajblizszeWydarzenie[] | null; span: 1 | 2 }) {
   return (
     <DeckTile
+      span={span}
       stan="zywy"
       href="/planer"
       etykieta="moduł 02 · kalendarz semestru"
@@ -287,6 +289,7 @@ function KafelekStron({ dane }: { dane: PodsumowanieStron | null | undefined }) 
       href="/strony"
       etykieta="moduł 04 · search console"
       tytul="Strony"
+      span={2}
       odznaka={dane && dane.alerty > 0 ? odmiana(dane.alerty, ['alert', 'alerty', 'alertów']) : undefined}
     >
       {dane === undefined ? (
@@ -328,6 +331,7 @@ function KafelekSkrzynki({ dane }: { dane: LicznikiSkrzynki | null | undefined }
       href="/skrzynka"
       etykieta="moduł 05 · kontakt@"
       tytul="Skrzynka"
+      span={2}
       odznaka={dane?.stan === 'polaczona' && dane.poTerminie > 0 ? `${dane.poTerminie} po terminie` : undefined}
     >
       {dane === undefined ? (
