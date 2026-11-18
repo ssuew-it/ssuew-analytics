@@ -7,6 +7,7 @@ import { applyFilters } from '@/lib/filters'
 import { computeOverview } from '@/lib/overview'
 import { buildExecutiveInsights, buildStrategicKpis, kpiSummary } from '@/lib/stats'
 import { ilorazSerii } from '@/lib/kpi/serie'
+import { zmianaRr } from '@/lib/format'
 import { chartTheme, axisTick, tooltipStyle } from '@/lib/chartTheme'
 import { KpiTile } from '@/components/ui/KpiTile'
 import { BentoCard } from '@/components/ui/BentoCard'
@@ -112,7 +113,7 @@ export default function OverviewClient() {
         <KpiTile
           label="KPI rosnące r/r"
           value={`${summary.up}/${summary.up + summary.down}`}
-          sub={`średnia zmiana ${Math.round(summary.avgRatio * 100)}% r/r`}
+          sub={`średnia zmiana ${zmianaRr(summary.avgRatio)} r/r`}
           accent="accent"
         />
       </div>

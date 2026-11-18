@@ -27,6 +27,11 @@ describe('buildAlerts', () => {
     expect(crit!.href).toBe('/analytics/kpi')
   })
 
+  it('opis alertu podaje zmianę, nie iloraz: 47 → 28 to -40%, nie „60%”', () => {
+    const [a] = buildAlerts([], [], [seria('Gala', [47, 28], 'Wydarzenia')])
+    expect(a.detail).toBe('47 → 28 (-40% r/r)')
+  })
+
   it('umiarkowany spadek (ratio 0.7) → warning', () => {
     const alerts = buildAlerts([], [], [seria('Luty', [100, 70])])
     expect(alerts.some((a) => a.severity === 'warning' && a.href === '/analytics/kpi')).toBe(true)

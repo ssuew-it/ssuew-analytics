@@ -1,5 +1,6 @@
 import { buildAlerts } from '@/lib/stats'
 import { ilorazSerii, ostatniPunkt, serieZWierszy } from '@/lib/kpi/serie'
+import { zmianaRr } from '@/lib/format'
 import { edycje, kondycjaEdycji } from '@/lib/projekty/flagi'
 import { dzienTygodnia } from '@/lib/planer/daty'
 import { kolizjeWMiesiacu } from '@/lib/planer/kolizje'
@@ -68,7 +69,7 @@ export function zbudujKontekst(d: DaneProjektu, dzis: Data) {
       nazwa: s.nazwa,
       okres: ost?.okres ?? null,
       wartosc: ost?.wartosc ?? null,
-      rokDoRoku: q ? Math.round(q * 100) / 100 : null,
+      zmianaRr: q ? zmianaRr(q) : null,
       kierunek: kierunek(q),
     }
   })

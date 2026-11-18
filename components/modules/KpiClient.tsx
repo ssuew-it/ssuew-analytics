@@ -5,6 +5,7 @@ import { useAnalyticsData } from '@/lib/useAnalyticsData'
 import { useAuth } from '@/lib/auth/useAuth'
 import { buildStrategicKpis, kpiSummary } from '@/lib/stats'
 import { ilorazSerii, ostatniPunkt, serieWgKategorii } from '@/lib/kpi/serie'
+import { zmianaRr } from '@/lib/format'
 import { WykresSerii } from '@/components/modules/WykresSerii'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { KpiTile } from '@/components/ui/KpiTile'
@@ -130,7 +131,7 @@ export default function KpiClient() {
       <div className="grid grid-cols-3 gap-3">
         <KpiTile label="Metryki rosnące" value={<AnimatedNumber value={summary.up} />} sub="rok do roku" accent="accent" />
         <KpiTile label="Metryki spadające" value={<AnimatedNumber value={summary.down} />} sub="rok do roku" accent="violet" />
-        <KpiTile label="Średnia zmiana" value={<AnimatedNumber value={Math.round(summary.avgRatio * 100)} suffix="%" />} sub="r/r" />
+        <KpiTile label="Średnia zmiana" value={zmianaRr(summary.avgRatio)} sub="r/r" />
       </div>
 
       <BentoCard title="KPI strategiczne" sub="syntetyczne wskaźniki dla pracy Zarządu" span={4}>
@@ -189,7 +190,7 @@ export default function KpiClient() {
                     />
                     <span className={`inline-flex items-center justify-end gap-1 tabular font-semibold ${ratioColor(ratio)}`}>
                       {ratioIcon(ratio)}
-                      {ratio > 0 ? `${Math.round(ratio * 100)}%` : '-'}
+                      {zmianaRr(ratio)}
                     </span>
                   </div>
                 )

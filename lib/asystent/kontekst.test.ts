@@ -54,7 +54,7 @@ describe('zbudujKontekst', () => {
         { id: '2', kategoria: 'SKS', nazwa: 'Listopad', okres: '2025/2026', wartosc: 30, created_at: '' },
       ],
     }), DZIS)
-    expect(k.kpi[0]).toMatchObject({ nazwa: 'Listopad', wartosc: 30, rokDoRoku: 0.6, kierunek: 'spadek' })
+    expect(k.kpi[0]).toMatchObject({ nazwa: 'Listopad', wartosc: 30, zmianaRr: '-40%', kierunek: 'spadek' })
   })
 
   it('skrzynka: obraz bez zmian; niepołączona - null', () => {

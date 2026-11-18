@@ -1,5 +1,6 @@
 import type { Rekrutacja, Kohorta, KpiPeriod, Czlonek, CzlonekStatus, StatResult, RegressionResult, Sezon, SeriaKpi, StrategicKpi, ExecutiveInsight } from '@/types'
 import { ilorazSerii } from '@/lib/kpi/serie'
+import { zmianaRr } from '@/lib/format'
 
 // ─── Podstawowe funkcje ──────────────────────────────────────────────────────
 
@@ -555,7 +556,7 @@ export function buildAlerts(
     const przed = s.punkty[s.punkty.length - 2].wartosc
     const teraz = s.punkty[s.punkty.length - 1].wartosc
     const id = `kpi-${s.kategoria}-${s.nazwa}`
-    const detail = `${przed} → ${teraz} (${Math.round(ratio * 100)}% r/r)`
+    const detail = `${przed} → ${teraz} (${zmianaRr(ratio)} r/r)`
     alerts.push(
       ratio < 0.6
         ? { id, severity: 'critical', title: `${s.kategoria}: ${s.nazwa} - duży spadek`, detail, recommendation: 'Sprawdź przyczyny - priorytet Zarządu.', href: '/analytics/kpi' }
@@ -713,7 +714,7 @@ export function buildStrategicKpis(
     {
       id: 'momentum',
       title: 'Tempo rozwoju',
-      value: `${Math.round(summary.avgRatio * 100)}% r/r`,
+      value: `${zmianaRr(summary.avgRatio)} r/r`,
       score: deliveryMomentum,
       trend: scoreTrend(deliveryMomentum),
       detail: `Średnia zmiana KPI rok do roku; rośnie ${summary.up}, spada ${summary.down}.`,

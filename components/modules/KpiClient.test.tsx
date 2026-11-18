@@ -54,12 +54,12 @@ describe('KpiClient', () => {
     expect(screen.getAllByText('Adapciak')).toHaveLength(1)
   })
 
-  it('procent liczy z dwóch ostatnich punktów', () => {
+  it('zmianę liczy z dwóch ostatnich punktów i podaje ją ze znakiem', () => {
     const { container } = render(<KpiClient />)
-    // Adapciak kończy się na 4 → 6, czyli 150% - a nie 300% z 2 → 6.
-    expect(within(wiersz(container, 'Adapciak')).getByText('150%')).toBeInTheDocument()
-    // Gala to 4 → 2, czyli 50%.
-    expect(within(wiersz(container, 'Gala')).getByText('50%')).toBeInTheDocument()
+    // Adapciak kończy się na 4 → 6, czyli +50% - a nie +200% z 2 → 6.
+    expect(within(wiersz(container, 'Adapciak')).getByText('+50%')).toBeInTheDocument()
+    // Gala to 4 → 2, czyli -50% (iloraz 0,5).
+    expect(within(wiersz(container, 'Gala')).getByText('-50%')).toBeInTheDocument()
   })
 
   it('nagłówek kategorii pokazuje zakres lat, nie pojedynczą parę', () => {
