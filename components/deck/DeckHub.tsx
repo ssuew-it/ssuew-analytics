@@ -256,8 +256,8 @@ function KafelekSesji({ propozycje, najblizsze, span }: { propozycje: number | n
       odznaka={propozycje ? `${propozycje} do decyzji` : undefined}
     >
       <p className="text-[12px] leading-relaxed text-deck-muted">
-        Kalendarz semestru układany razem z zarządem. Ranga kategorii, kolizje osób i sal, propozycje zmian
-        oraz eksport do Excela i CRA.
+        Kalendarz semestru układany razem z zarządem. Ranga kategorii, kolizje osób i sal, propozycje zmian,
+        eksport do Excela i CRA oraz wysyłka do Kalendarza Samorządowicza.
       </p>
       <ul className="mt-3 font-mono text-[11px] text-deck-text">
         {najblizsze === null ? (

@@ -7,7 +7,7 @@ import { useFilters } from '@/lib/useFilters'
 import { applyFilters } from '@/lib/filters'
 import { useAuth } from '@/lib/auth/useAuth'
 import { analyzeRekrutacje, mean, prognozaPrzyjetych } from '@/lib/stats'
-import { chartTheme, axisTick, tooltipStyle } from '@/lib/chartTheme'
+import { chartTheme, axisTick, tooltipStyle, liczbaPl } from '@/lib/chartTheme'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { KpiTile } from '@/components/ui/KpiTile'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
@@ -120,7 +120,7 @@ export default function RekrutacjeClient() {
                 <XAxis dataKey="edycja" tick={axisTick} />
                 <YAxis yAxisId="l" tick={axisTick} />
                 <YAxis yAxisId="r" orientation="right" tick={axisTick} tickFormatter={(v) => `${v}%`} domain={[0, 120]} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} formatter={liczbaPl} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar yAxisId="l" dataKey="zgłoszenia" fill={chartTheme.series[2]} radius={[3, 3, 0, 0]} />
                 <Bar yAxisId="l" dataKey="przyjęci" fill={chartTheme.accent} radius={[3, 3, 0, 0]} />
@@ -139,7 +139,7 @@ export default function RekrutacjeClient() {
                   <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
                   <XAxis type="number" dataKey="x" name="zgłoszenia" tick={axisTick} />
                   <YAxis type="number" dataKey="y" name="przyjęci" tick={axisTick} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ strokeDasharray: '3 3' }} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={liczbaPl} cursor={{ strokeDasharray: '3 3' }} />
                   <Scatter data={scatterData} fill={chartTheme.accent} />
                 </ScatterChart>
               </ResponsiveContainer>
@@ -172,7 +172,7 @@ export default function RekrutacjeClient() {
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
                 <XAxis dataKey="label" tick={axisTick} />
                 <YAxis tick={axisTick} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} formatter={liczbaPl} />
                 <Area dataKey="band" stroke="none" fill={chartTheme.accent} fillOpacity={0.15} />
                 <Line dataKey="hist" stroke={chartTheme.accent} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                 <Line dataKey="yhat" stroke={chartTheme.accent} strokeWidth={2} strokeDasharray="4 3" dot={{ r: 3 }} connectNulls />

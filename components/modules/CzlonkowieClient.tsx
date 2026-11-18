@@ -36,7 +36,14 @@ export default function CzlonkowieClient() {
     () => kohorty.map((k) => ({ edycja: k.edycja, sezon: k.sezon, rok: k.rok })),
     [kohorty],
   )
-  const edycja = wybranaEdycja || cohortList[0]?.edycja || ''
+  // Domyślnie najnowsza kohorta, która ma kogoś w siatce - pierwsza z listy
+  // (J'22) bywała pusta i wejście kończyło się samymi zerami.
+  const domyslna = useMemo(() => {
+    const zLudzmi = new Set(czlonkowie.map((c) => c.kohorta_edycja))
+    const posortowane = [...cohortList].sort((a, b) => a.rok - b.rok || (a.sezon === b.sezon ? 0 : a.sezon === 'wiosna' ? -1 : 1))
+    return [...posortowane].reverse().find((k) => zLudzmi.has(k.edycja))?.edycja ?? posortowane.at(-1)?.edycja ?? ''
+  }, [cohortList, czlonkowie])
+  const edycja = wybranaEdycja || domyslna
 
   // `rows` to lokalna kopia pod optymistyczne kliknięcia w siatce. Wraca do
   // stanu z serwera, gdy przyjdą nowe dane albo zmieni się kohorta - liczone

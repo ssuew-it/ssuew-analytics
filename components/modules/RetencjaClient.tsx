@@ -6,7 +6,7 @@ import { useFilters } from '@/lib/useFilters'
 import { applyFilters } from '@/lib/filters'
 import { useAuth } from '@/lib/auth/useAuth'
 import { survivalCurve, analyzeRetention } from '@/lib/stats'
-import { chartTheme, axisTick, tooltipStyle } from '@/lib/chartTheme'
+import { chartTheme, axisTick, tooltipStyle, liczbaPl } from '@/lib/chartTheme'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
 import { EditableCell } from '@/components/ui/EditableCell'
@@ -123,7 +123,7 @@ export default function RetencjaClient() {
               <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
               <XAxis dataKey="sem" tick={axisTick} label={{ value: 'semestr', position: 'insideBottom', offset: -2, fontSize: 10, fill: chartTheme.axis }} />
               <YAxis tick={axisTick} tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${v}%`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${liczbaPl(v)}%`} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {koh.map((k, i) => (
                 <Line

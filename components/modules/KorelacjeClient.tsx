@@ -5,7 +5,7 @@ import { useAnalyticsData } from '@/lib/useAnalyticsData'
 import { useFilters } from '@/lib/useFilters'
 import { applyFilters } from '@/lib/filters'
 import { correlationMatrix } from '@/lib/stats'
-import { chartTheme, axisTick, tooltipStyle } from '@/lib/chartTheme'
+import { chartTheme, axisTick, tooltipStyle, liczbaPl } from '@/lib/chartTheme'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
 import { Heatmap } from '@/components/ui/Heatmap'
@@ -60,7 +60,7 @@ export default function KorelacjeClient() {
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
                 <XAxis type="number" dataKey="x" name={pair.a} tick={axisTick} />
                 <YAxis type="number" dataKey="y" name={pair.b} tick={axisTick} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ strokeDasharray: '3 3' }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={liczbaPl} cursor={{ strokeDasharray: '3 3' }} />
                 <Scatter data={scatterData} fill={chartTheme.accent} />
               </ScatterChart>
             </ResponsiveContainer>

@@ -1,5 +1,5 @@
 'use client'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ArrowDownRight, ArrowUpRight, Gauge, Sparkles } from 'lucide-react'
 import { useAnalyticsData } from '@/lib/useAnalyticsData'
 import { useFilters } from '@/lib/useFilters'
@@ -8,7 +8,7 @@ import { computeOverview } from '@/lib/overview'
 import { buildExecutiveInsights, buildStrategicKpis, kpiSummary } from '@/lib/stats'
 import { ilorazSerii } from '@/lib/kpi/serie'
 import { zmianaRr } from '@/lib/format'
-import { chartTheme, axisTick, tooltipStyle } from '@/lib/chartTheme'
+import { chartTheme, axisTick, tooltipStyle, liczbaPl } from '@/lib/chartTheme'
 import { KpiTile } from '@/components/ui/KpiTile'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
@@ -139,7 +139,8 @@ export default function OverviewClient() {
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
                 <XAxis dataKey="edycja" tick={axisTick} />
                 <YAxis tick={axisTick} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={liczbaPl} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="zgłoszenia" fill={chartTheme.series[2]} radius={[5, 5, 0, 0]} />
                 <Bar dataKey="przyjęci" fill={chartTheme.accent} radius={[5, 5, 0, 0]} />
               </BarChart>

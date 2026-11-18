@@ -78,7 +78,7 @@ export default function LejekClient() {
                   style={{ width: `${s.pct}%` }}
                 />
                 <span className="absolute inset-0 flex items-center px-2 text-[11px] text-deck-text tabular-nums">
-                  {s.count} · {s.pct}%{i === worstIdx && <span className="ml-2 text-deck-warn">· największy ubytek</span>}
+                  {s.count} · {String(s.pct).replace('.', ',')}%{i === worstIdx && <span className="ml-2 text-deck-warn">· największy ubytek</span>}
                 </span>
               </div>
             </div>

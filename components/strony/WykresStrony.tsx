@@ -1,5 +1,5 @@
 'use client'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { axisTick, chartTheme, tooltipStyle } from '@/lib/chartTheme'
 import { dataKrotka } from '@/lib/strony/okresy'
 import type { StatystykiStrony } from '@/lib/strony/model'
@@ -15,30 +15,44 @@ export function WykresStrony({ dzienne }: { dzienne: Dzienne }) {
   const dane = dzienne.map((d) => ({ ...d, dzien: dataKrotka(d.data) }))
   return (
     <div className="grid gap-4">
-      <Seria dane={dane} klucz="klikniecia" tytul="Kliknięcia dziennie" kolor={chartTheme.accent} />
+      {/* Kliknięć bywa 0-4 dziennie: gładka krzywa rysowała ułamki, których nie ma. */}
+      <Seria dane={dane} klucz="klikniecia" tytul="Kliknięcia dziennie" kolor={chartTheme.accent} slupki />
       <Seria dane={dane} klucz="wyswietlenia" tytul="Wyświetlenia dziennie" kolor={chartTheme.violet} />
     </div>
   )
 }
 
-function Seria({ dane, klucz, tytul, kolor }: {
+function Seria({ dane, klucz, tytul, kolor, slupki = false }: {
   dane: (Dzienne[number] & { dzien: string })[]
   klucz: 'klikniecia' | 'wyswietlenia'
   tytul: string
   kolor: string
+  slupki?: boolean
 }) {
+  const wspolne = (
+    <>
+      <CartesianGrid stroke={chartTheme.grid} vertical={false} />
+      <XAxis dataKey="dzien" tick={axisTick} interval="preserveStartEnd" minTickGap={28} />
+      <YAxis tick={axisTick} allowDecimals={false} width={44} />
+      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v) => [Number(v).toLocaleString('pl-PL'), tytul]} />
+    </>
+  )
   return (
     <figure aria-label={tytul}>
       <figcaption className="mb-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-deck-muted/70">{tytul}</figcaption>
       <div className="h-[130px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={dane} margin={{ top: 4, right: 8, bottom: 0, left: -12 }}>
-            <CartesianGrid stroke={chartTheme.grid} vertical={false} />
-            <XAxis dataKey="dzien" tick={axisTick} interval="preserveStartEnd" minTickGap={28} />
-            <YAxis tick={axisTick} allowDecimals={false} width={44} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [Number(v).toLocaleString('pl-PL'), tytul]} />
-            <Line type="monotone" dataKey={klucz} stroke={kolor} strokeWidth={2} dot={false} isAnimationActive={false} />
-          </LineChart>
+          {slupki ? (
+            <BarChart data={dane} margin={{ top: 4, right: 8, bottom: 0, left: -12 }}>
+              {wspolne}
+              <Bar dataKey={klucz} fill={kolor} radius={[2, 2, 0, 0]} isAnimationActive={false} />
+            </BarChart>
+          ) : (
+            <LineChart data={dane} margin={{ top: 4, right: 8, bottom: 0, left: -12 }}>
+              {wspolne}
+              <Line type="monotone" dataKey={klucz} stroke={kolor} strokeWidth={2} dot={false} isAnimationActive={false} />
+            </LineChart>
+          )}
         </ResponsiveContainer>
       </div>
     </figure>

@@ -17,3 +17,13 @@ export const tooltipStyle = {
   fontSize: 12,
   color: '#E6EDF3',
 } as const
+
+/**
+ * Wartość w dymku wykresu po polsku: przecinek dziesiętny, pas prognozy
+ * („[lo, hi]”) jako „lo - hi”. Recharts sam pokazuje surowe „46.4”.
+ */
+export function liczbaPl(v: unknown): string {
+  const jedna = (x: unknown) =>
+    typeof x === 'number' ? x.toLocaleString('pl-PL', { maximumFractionDigits: 2 }) : String(x)
+  return Array.isArray(v) ? v.map(jedna).join(' - ') : jedna(v)
+}

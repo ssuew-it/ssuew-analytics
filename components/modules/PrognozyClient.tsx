@@ -4,7 +4,7 @@ import { useAnalyticsData } from '@/lib/useAnalyticsData'
 import { useFilters } from '@/lib/useFilters'
 import { applyFilters } from '@/lib/filters'
 import { prognozaPrzyjetych, prognozaRetencji } from '@/lib/stats'
-import { chartTheme, axisTick, tooltipStyle } from '@/lib/chartTheme'
+import { chartTheme, axisTick, tooltipStyle, liczbaPl } from '@/lib/chartTheme'
 import { BentoCard } from '@/components/ui/BentoCard'
 import { ModuleSkeleton } from '@/components/ui/ModuleSkeleton'
 import Symulator from './Symulator'
@@ -51,7 +51,7 @@ export default function PrognozyClient() {
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
                 <XAxis dataKey="label" tick={axisTick} />
                 <YAxis tick={axisTick} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} formatter={liczbaPl} />
                 <Area dataKey="band" stroke="none" fill={chartTheme.accent} fillOpacity={0.15} />
                 <Line dataKey="hist" stroke={chartTheme.accent} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                 <Line dataKey="yhat" stroke={chartTheme.accent} strokeWidth={2} strokeDasharray="4 3" dot={{ r: 3 }} connectNulls />
@@ -69,7 +69,7 @@ export default function PrognozyClient() {
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
                 <XAxis dataKey="label" tick={axisTick} />
                 <YAxis tick={axisTick} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} formatter={liczbaPl} />
                 <Area dataKey="band" stroke="none" fill={chartTheme.violet} fillOpacity={0.15} />
                 <Line dataKey="hist" stroke={chartTheme.violet} strokeWidth={2} dot={{ r: 3 }} connectNulls />
                 <Line dataKey="yhat" stroke={chartTheme.violet} strokeWidth={2} strokeDasharray="4 3" dot={{ r: 3 }} connectNulls />
