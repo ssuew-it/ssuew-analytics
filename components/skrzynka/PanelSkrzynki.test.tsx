@@ -85,7 +85,7 @@ describe('PanelSkrzynki', () => {
     panel()
     const stan = screen.getByRole('region', { name: 'Stan skrzynki' })
     expect(stan).toHaveTextContent('Do odpowiedzi w terminie5')
-    expect(stan).toHaveTextContent('Po terminie2')
+    expect(stan).toHaveTextContent('Po terminie, ze starszymi2')
     fireEvent.click(screen.getByRole('tab', { name: 'Kontakty' }))
     expect(screen.getByText('Wybierz osobę z listy.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Organizacje' }))

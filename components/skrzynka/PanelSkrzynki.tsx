@@ -50,7 +50,7 @@ function Podsumowanie({ l }: { l: LicznikiSkrzynki }) {
   const wTerminie = Math.max(0, l.doOdpowiedzi - l.poTerminie)
   const pozycje = [
     { nazwa: 'Do odpowiedzi w terminie', ile: wTerminie, ton: 'text-deck-text' },
-    { nazwa: 'Po terminie', ile: l.poTerminie, ton: l.poTerminie ? 'text-deck-warn' : 'text-deck-text' },
+    { nazwa: 'Po terminie, ze starszymi', ile: l.poTerminie, ton: l.poTerminie ? 'text-deck-warn' : 'text-deck-text' },
     { nazwa: 'Do przejrzenia', ile: l.doPrzejrzenia, ton: 'text-deck-text' },
     { nazwa: 'Czeka na ich odpowiedź', ile: l.czekaNaNich, ton: 'text-deck-muted' },
   ]
