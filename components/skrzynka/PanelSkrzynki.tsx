@@ -5,6 +5,7 @@ import { RefreshCw, Search, Settings } from 'lucide-react'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
 import { ETYKIETY_STATUSOW, ZAKLADKI } from '@/lib/skrzynka/widok'
 import type { LicznikiSkrzynki, PostepImportu, Status } from '@/lib/skrzynka/typy'
+import { DNI_ALARMU } from '@/lib/skrzynka/statusy'
 import { ImportSkrzynki } from './ImportSkrzynki'
 import { Kontakty } from './Kontakty'
 import { ListaSpraw } from './ListaSpraw'
@@ -39,6 +40,38 @@ const LICZBA: Record<Status, (l: LicznikiSkrzynki) => number> = {
   'do-przejrzenia': (l) => l.doPrzejrzenia,
   zalatwiona: (l) => l.zalatwione,
   pominieta: (l) => l.pominiete,
+}
+
+/**
+ * Prawy panel, zanim wybierze się sprawę: stan skrzynki w liczbach i co z nim
+ * zrobić - zamiast pustej połowy ekranu z jednym zdaniem.
+ */
+function Podsumowanie({ l }: { l: LicznikiSkrzynki }) {
+  const wTerminie = Math.max(0, l.doOdpowiedzi - l.poTerminie)
+  const pozycje = [
+    { nazwa: 'Do odpowiedzi w terminie', ile: wTerminie, ton: 'text-deck-text' },
+    { nazwa: 'Po terminie', ile: l.poTerminie, ton: l.poTerminie ? 'text-deck-warn' : 'text-deck-text' },
+    { nazwa: 'Do przejrzenia', ile: l.doPrzejrzenia, ton: 'text-deck-text' },
+    { nazwa: 'Czeka na ich odpowiedź', ile: l.czekaNaNich, ton: 'text-deck-muted' },
+  ]
+  return (
+    <section aria-label="Stan skrzynki" className="hidden rounded-lg border border-white/8 bg-white/[0.02] p-5 lg:block">
+      <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-deck-muted">Stan skrzynki</h2>
+      <dl className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {pozycje.map((p) => (
+          <div key={p.nazwa} className="rounded-md border border-white/8 bg-white/[0.02] px-3 py-2">
+            <dt className="text-[11px] text-deck-muted">{p.nazwa}</dt>
+            <dd className={`mt-1 font-mono text-2xl ${p.ton}`}>{p.ile}</dd>
+          </div>
+        ))}
+      </dl>
+      <ul className="mt-4 space-y-1.5 text-[12px] leading-relaxed text-deck-muted">
+        <li>Kliknij sprawę po lewej, żeby zobaczyć cały wątek i odpowiedzieć stąd.</li>
+        <li>Termin to {DNI_ALARMU} dni robocze od pierwszej wiadomości, na którą nikt nie odpisał.</li>
+        <li>Sprawy sprzed ponad 30 dni są zwinięte na dole listy - zwykle można je przenieść do Załatwionych.</li>
+      </ul>
+    </section>
+  )
 }
 
 const kiedy = (ms: number) =>
@@ -233,9 +266,10 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
                     <WidokSprawy key={wybrana} id={wybrana} sklad={sklad} email={email} onZmiana={poZmianie} onZamknij={() => setWybrana(null)} />
                   )}
                   {!czyStatus(zakladka) && !szukane && <div ref={setPanel} hidden={!!wybrana} />}
-                  {!wybrana && (szukane || czyStatus(zakladka) || !kartaOtwarta) && (
+                  {!wybrana && !szukane && czyStatus(zakladka) && <Podsumowanie l={liczniki} />}
+                  {!wybrana && (szukane || (!czyStatus(zakladka) && !kartaOtwarta)) && (
                     <p className="hidden text-[12.5px] text-deck-muted lg:block">
-                      {szukane || czyStatus(zakladka) ? 'Wybierz sprawę z listy.' : zakladka === 'kontakty' ? 'Wybierz osobę z listy.' : 'Wybierz organizację z listy.'}
+                      {szukane ? 'Wybierz sprawę z listy.' : zakladka === 'kontakty' ? 'Wybierz osobę z listy.' : 'Wybierz organizację z listy.'}
                     </p>
                   )}
                 </div>

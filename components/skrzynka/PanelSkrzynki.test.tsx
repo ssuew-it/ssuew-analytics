@@ -81,9 +81,11 @@ describe('PanelSkrzynki', () => {
     expect(screen.getByText('ustawienia skrzynki z kalendarzem')).toBeInTheDocument()
   })
 
-  it('prawy panel podpowiada, co wybrać - w Kontaktach osobę, w Organizacjach organizację', () => {
+  it('prawy panel: stan skrzynki przy sprawach, podpowiedź w Kontaktach i Organizacjach', () => {
     panel()
-    expect(screen.getByText('Wybierz sprawę z listy.')).toBeInTheDocument()
+    const stan = screen.getByRole('region', { name: 'Stan skrzynki' })
+    expect(stan).toHaveTextContent('Do odpowiedzi w terminie5')
+    expect(stan).toHaveTextContent('Po terminie2')
     fireEvent.click(screen.getByRole('tab', { name: 'Kontakty' }))
     expect(screen.getByText('Wybierz osobę z listy.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Organizacje' }))
