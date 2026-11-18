@@ -9,7 +9,7 @@ import type { Sprawa } from '@/lib/skrzynka/typy'
  * - na karcie osoby albo organizacji, gdzie sprawy mają różne statusy.
  * `akcje` stoją obok przycisku, nie w nim - przycisk w przycisku jest niepoprawny.
  */
-export function WierszSprawy({ s, teraz, wybrana, onWybierz, zStatusem = false, akcje, zaznaczenie }: {
+export function WierszSprawy({ s, teraz, wybrana, onWybierz, zStatusem = false, akcje, zaznaczenie, bezTerminu = false }: {
   s: Sprawa
   teraz: number
   wybrana: boolean
@@ -18,8 +18,10 @@ export function WierszSprawy({ s, teraz, wybrana, onWybierz, zStatusem = false, 
   akcje?: ReactNode
   /** Pole wyboru do zbiorczej zmiany statusu. */
   zaznaczenie?: { zaznaczona: boolean; onPrzelacz: () => void }
+  /** Lista już jest pogrupowana po terminie - znacznik w każdym wierszu tylko by szumiał. */
+  bezTerminu?: boolean
 }) {
-  const poCzasie = poTerminie(s.oczekujeOd, teraz)
+  const poCzasie = !bezTerminu && poTerminie(s.oczekujeOd, teraz)
   return (
     <li className="flex items-stretch gap-1.5">
       {zaznaczenie && (

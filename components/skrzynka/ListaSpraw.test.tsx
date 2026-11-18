@@ -31,7 +31,7 @@ beforeEach(() => Object.values(klient).forEach((f) => f.mockReset()))
 describe('ListaSpraw', () => {
   it('wiersze: nadawca, organizacja, temat, fragment i znaczniki', async () => {
     klient.sprawy.mockResolvedValue({
-      sprawy: [S('t1', { status: 'do-odpowiedzi', oczekujeOd: Date.UTC(2020, 0, 1), nowa: true, przypisana: 'Jula' })],
+      sprawy: [S('t1', { status: 'do-odpowiedzi', oczekujeOd: Date.now() - 86_400_000, nowa: true, przypisana: 'Jula' })],
       nastepna: null,
     })
     await lista({ status: 'do-odpowiedzi' })
@@ -39,7 +39,6 @@ describe('ListaSpraw', () => {
     const wiersz = screen.getByRole('button', { name: /Temat t1/ })
     expect(wiersz).toHaveTextContent('anna@firma.pl · firma.pl')
     expect(wiersz).toHaveTextContent('Dzień dobry')
-    expect(wiersz).toHaveTextContent(/po terminie/i)
     expect(wiersz).toHaveTextContent(/nowa/i)
     expect(wiersz).toHaveTextContent('Jula')
   })
@@ -71,6 +70,41 @@ describe('ListaSpraw', () => {
     klient.sprawy.mockRejectedValue(new Error('Gmail nie odpowiedział - spróbuj ponownie.'))
     await lista()
     expect(screen.getByRole('alert')).toHaveTextContent('Gmail nie odpowiedział')
+  })
+})
+
+describe('ListaSpraw - Do odpowiedzi w grupach', () => {
+  const dzien = 86_400_000
+  const teraz = Date.now()
+  const D = (id: string, dniTemu: number) =>
+    S(id, { status: 'do-odpowiedzi', oczekujeOd: teraz - dniTemu * dzien, ostatnia: { kiedy: teraz - dniTemu * dzien, kierunek: 'oni', fragment: '' } })
+
+  it('w terminie, po terminie od najnowszej, starsze zwinięte', async () => {
+    klient.sprawy.mockResolvedValue({ sprawy: [D('wrzesien', 60), D('pazdziernik', 40), D('stara', 20), D('swieza', 10), D('dzis', 0)], nastepna: null })
+    await lista({ status: 'do-odpowiedzi' })
+    const wTerminie = screen.getByRole('list', { name: 'Sprawy: w terminie' })
+    expect(wTerminie).toHaveTextContent('Temat dzis')
+    const po = screen.getByRole('list', { name: 'Sprawy: po terminie' })
+    expect(po.textContent?.indexOf('Temat swieza')).toBeLessThan(po.textContent?.indexOf('Temat stara') ?? -1)
+    expect(po).not.toHaveTextContent(/po terminie/i)
+    expect(screen.queryByRole('button', { name: /Temat wrzesien/ })).toBeNull()
+    expect(screen.getByText(/Starsze niż 30 dni · 2/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż' }))
+    const starsze = screen.getByRole('list', { name: 'Sprawy starsze' })
+    expect(starsze.textContent?.indexOf('Temat pazdziernik')).toBeLessThan(starsze.textContent?.indexOf('Temat wrzesien') ?? -1)
+  })
+
+  it('starsze jednym kliknięciem do zaznaczenia i do Załatwionych', async () => {
+    klient.sprawy.mockResolvedValue({ sprawy: [D('wrzesien', 60), D('pazdziernik', 40), D('swieza', 10)], nastepna: null })
+    klient.zmienWiele.mockResolvedValue({})
+    await lista({ status: 'do-odpowiedzi' })
+    fireEvent.click(screen.getByRole('button', { name: 'Zaznacz wszystkie starsze' }))
+    expect(screen.getByText('Zaznaczone: 2')).toBeInTheDocument()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Załatwione \(2\)/ }))
+    })
+    expect(klient.zmienWiele).toHaveBeenCalledWith(['wrzesien', 'pazdziernik'], 'zalatwiona')
+    expect(screen.queryByText(/Starsze niż/)).toBeNull()
   })
 })
 

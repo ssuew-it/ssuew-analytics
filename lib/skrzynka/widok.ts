@@ -1,5 +1,6 @@
 import { dzisWarszawa } from '@/lib/czas'
-import type { Status, TypOrganizacji, Zalacznik } from './typy'
+import { poTerminie } from './statusy'
+import type { Sprawa, Status, TypOrganizacji, Zalacznik } from './typy'
 
 export const ETYKIETY_STATUSOW: Record<Status, string> = {
   'do-odpowiedzi': 'Do odpowiedzi',
@@ -28,6 +29,35 @@ const tenSamDzien = (a: { rok: number; miesiac: number; dzien: number }, b: type
   a.rok === b.rok && a.miesiac === b.miesiac && a.dzien === b.dzien
 
 /** Na listę: dziś - godzina, wczoraj, w tym roku DD.MM, starsze DD.MM.RRRR. */
+/** Po tylu dniach czekania sprawa ląduje w zwiniętej grupie „starsze” - zwykle już nieaktualna. */
+export const DNI_STAREJ = 30
+
+export interface GrupyDoOdpowiedzi {
+  wTerminie: Sprawa[]
+  poTerminie: Sprawa[]
+  starsze: Sprawa[]
+}
+
+/**
+ * „Do odpowiedzi” w trzech grupach. W terminie - od najdłużej czekającej, bo ta
+ * pierwsza przekroczy termin. Po terminie i starsze - od najnowszej: świeża
+ * zaległość jest jeszcze do uratowania, wrześniowa zwykle już nie.
+ */
+export function grupyDoOdpowiedzi(sprawy: Sprawa[], teraz: number): GrupyDoOdpowiedzi {
+  const czeka = (s: Sprawa) => s.oczekujeOd ?? s.ostatnia.kiedy
+  const granica = teraz - DNI_STAREJ * 86_400_000
+  const g: GrupyDoOdpowiedzi = { wTerminie: [], poTerminie: [], starsze: [] }
+  for (const s of sprawy) {
+    if (!poTerminie(s.oczekujeOd, teraz)) g.wTerminie.push(s)
+    else if (czeka(s) < granica) g.starsze.push(s)
+    else g.poTerminie.push(s)
+  }
+  g.wTerminie.sort((a, b) => czeka(a) - czeka(b))
+  g.poTerminie.sort((a, b) => czeka(b) - czeka(a))
+  g.starsze.sort((a, b) => czeka(b) - czeka(a))
+  return g
+}
+
 export function kiedyKrotko(ms: number, teraz: number): string {
   const d = dzisWarszawa(new Date(ms))
   const dzis = dzisWarszawa(new Date(teraz))

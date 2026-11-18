@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { klientSkrzynki } from '@/lib/skrzynka/klient'
-import { ETYKIETY_STATUSOW } from '@/lib/skrzynka/widok'
-import type { Status, StronaSpraw } from '@/lib/skrzynka/typy'
+import { DNI_STAREJ, ETYKIETY_STATUSOW, grupyDoOdpowiedzi } from '@/lib/skrzynka/widok'
+import type { Sprawa, Status, StronaSpraw } from '@/lib/skrzynka/typy'
 
 /** Dokąd można przenieść zaznaczone sprawy jednym kliknięciem. */
 const ZBIORCZO: Status[] = ['zalatwiona', 'pominieta', 'do-przejrzenia']
@@ -29,6 +29,7 @@ export function ListaSpraw({ status, szukane, wybrana, onWybierz, wersja, onZmia
   const [laduje, setLaduje] = useState(false)
   const [zaznaczone, setZaznaczone] = useState<Set<string>>(new Set())
   const [zmienia, setZmienia] = useState(false)
+  const [pokazStarsze, setPokazStarsze] = useState(false)
 
   useEffect(() => {
     let aktywny = true
@@ -116,6 +117,31 @@ export function ListaSpraw({ status, szukane, wybrana, onWybierz, wersja, onZmia
   const widoczne = strona.sprawy
   const ileZaznaczonych = widoczne.filter((x) => zaznaczone.has(x.id)).length
   const wszystkie = ileZaznaczonych === widoczne.length
+  const grupy = status === 'do-odpowiedzi' && !szukane ? grupyDoOdpowiedzi(strona.sprawy, teraz) : null
+
+  const wiersz = (s: Sprawa) => (
+    <WierszSprawy
+      key={s.id}
+      s={s}
+      teraz={teraz}
+      wybrana={s.id === wybrana}
+      onWybierz={wybierz}
+      bezTerminu={!!grupy}
+      zaznaczenie={zZaznaczaniem ? { zaznaczona: zaznaczone.has(s.id), onPrzelacz: () => przelacz(s.id) } : undefined}
+      akcje={
+        szybkie && (
+          <>
+            <button type="button" aria-label={`Do odpowiedzi: ${s.temat}`} onClick={() => przenies(s.id, 'do-odpowiedzi')} className={maly}>
+              Do odpowiedzi
+            </button>
+            <button type="button" aria-label={`Pomiń: ${s.temat}`} onClick={() => przenies(s.id, 'pominieta')} className={maly}>
+              Pomiń
+            </button>
+          </>
+        )
+      }
+    />
+  )
 
   return (
     <div className="space-y-2">
@@ -138,30 +164,44 @@ export function ListaSpraw({ status, szukane, wybrana, onWybierz, wersja, onZmia
             ))}
         </div>
       )}
-      <ul aria-label="Sprawy" className="space-y-1.5">
-        {strona.sprawy.map((s) => (
-          <WierszSprawy
-            key={s.id}
-            s={s}
-            teraz={teraz}
-            wybrana={s.id === wybrana}
-            onWybierz={wybierz}
-            zaznaczenie={zZaznaczaniem ? { zaznaczona: zaznaczone.has(s.id), onPrzelacz: () => przelacz(s.id) } : undefined}
-            akcje={
-              szybkie && (
-                <>
-                  <button type="button" aria-label={`Do odpowiedzi: ${s.temat}`} onClick={() => przenies(s.id, 'do-odpowiedzi')} className={maly}>
-                    Do odpowiedzi
-                  </button>
-                  <button type="button" aria-label={`Pomiń: ${s.temat}`} onClick={() => przenies(s.id, 'pominieta')} className={maly}>
-                    Pomiń
-                  </button>
-                </>
-              )
-            }
-          />
-        ))}
-      </ul>
+      {grupy ? (
+        <>
+          {grupy.wTerminie.length > 0 && <Grupa tytul="W terminie" ile={grupy.wTerminie.length}>{grupy.wTerminie.map(wiersz)}</Grupa>}
+          {grupy.poTerminie.length > 0 && (
+            <Grupa tytul="Po terminie" ile={grupy.poTerminie.length} ton="uwaga">
+              {grupy.poTerminie.map(wiersz)}
+            </Grupa>
+          )}
+          {grupy.starsze.length > 0 && (
+            <section aria-label={`Starsze niż ${DNI_STAREJ} dni`} className="space-y-1.5 pt-1">
+              <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-2">
+                <h3 className="font-mono text-[10px] uppercase tracking-[0.14em] text-deck-muted">
+                  Starsze niż {DNI_STAREJ} dni · {grupy.starsze.length}
+                </h3>
+                <button type="button" aria-expanded={pokazStarsze} onClick={() => setPokazStarsze((p) => !p)} className={maly}>
+                  {pokazStarsze ? 'Zwiń' : 'Pokaż'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZaznaczone((z) => new Set([...z, ...grupy.starsze.map((x) => x.id)]))}
+                  className={maly}
+                >
+                  Zaznacz wszystkie starsze
+                </button>
+              </div>
+              {pokazStarsze ? (
+                <ul aria-label="Sprawy starsze" className="space-y-1.5">{grupy.starsze.map(wiersz)}</ul>
+              ) : (
+                <p className="text-[11.5px] text-deck-muted">
+                  Zwykle już nieaktualne. Jeśli tak, zaznacz je i przenieś do Załatwionych.
+                </p>
+              )}
+            </section>
+          )}
+        </>
+      ) : (
+        <ul aria-label="Sprawy" className="space-y-1.5">{strona.sprawy.map(wiersz)}</ul>
+      )}
       {alert}
       {strona.nastepna && (
         <button type="button" onClick={wiecej} disabled={laduje} className="deck-button rounded-md px-3 py-1 text-[11.5px] disabled:opacity-50">
@@ -169,5 +209,16 @@ export function ListaSpraw({ status, szukane, wybrana, onWybierz, wersja, onZmia
         </button>
       )}
     </div>
+  )
+}
+
+function Grupa({ tytul, ile, ton, children }: { tytul: string; ile: number; ton?: 'uwaga'; children: ReactNode }) {
+  return (
+    <section aria-label={tytul} className="space-y-1.5">
+      <h3 className={`font-mono text-[10px] uppercase tracking-[0.14em] ${ton === 'uwaga' ? 'text-deck-warn' : 'text-deck-muted'}`}>
+        {tytul} · {ile}
+      </h3>
+      <ul aria-label={`Sprawy: ${tytul.toLowerCase()}`} className="space-y-1.5">{children}</ul>
+    </section>
   )
 }
