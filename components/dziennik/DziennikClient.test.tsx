@@ -77,11 +77,11 @@ describe('DziennikClient', () => {
 
   it('nieudana kopia pokazuje komunikat i link do pobrania pliku', async () => {
     k.ksiega.mockResolvedValue(OTWARTA)
-    k.kopia.mockRejectedValue(new Error('Połącz Dysk w Skrzynka → Ustawienia albo pobierz plik'))
+    k.kopia.mockRejectedValue(new Error('Dysk nie jest połączony - połącz go w Skrzynka → Ustawienia'))
     await pokaz()
     await klik(screen.getByRole('button', { name: 'Zapisz kopię' }))
-    expect(screen.getByText('Połącz Dysk w Skrzynka → Ustawienia albo pobierz plik')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Pobierz plik' })).toHaveAttribute('href', '/api/dziennik/kopia')
+    expect(screen.getByText(/Dysk nie jest połączony - połącz go w Skrzynka → Ustawienia. Możesz też/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'pobrać plik' })).toHaveAttribute('href', '/api/dziennik/kopia')
   })
 
   it('błąd wczytania - komunikat i ponowienie', async () => {

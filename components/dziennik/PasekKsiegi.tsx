@@ -86,8 +86,8 @@ export function PasekKsiegi({ ksiega, onZmiana }: { ksiega: Ksiega; onZmiana: ()
 
       {blad && (
         <p role="alert" className="rounded-lg border border-deck-danger-border bg-deck-danger-bg px-4 py-3 text-[12.5px] text-deck-danger">
-          {blad}{' '}
-          <a href="/api/dziennik/kopia" className="underline underline-offset-2">Pobierz plik</a>
+          {blad}. Możesz też{' '}
+          <a href="/api/dziennik/kopia" className="underline underline-offset-2">pobrać plik</a>.
         </p>
       )}
       {link && (

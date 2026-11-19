@@ -28,7 +28,7 @@ describe('zrobKopie', () => {
   it('bez zgody na Dysk - brak-dysku, Google nie wołany', async () => {
     m.czytajStan.mockResolvedValue({ polaczona: true, dysk: false, token: 'enc' })
     const w = await zrobKopie(TERAZ)
-    expect(w).toEqual({ ok: false, powod: 'brak-dysku', komunikat: 'Połącz Dysk w Skrzynka → Ustawienia albo pobierz plik' })
+    expect(w).toEqual({ ok: false, powod: 'brak-dysku', komunikat: 'Dysk nie jest połączony - połącz go w Skrzynka → Ustawienia' })
     expect(m.zapiszNaDysku).not.toHaveBeenCalled()
     m.czytajStan.mockResolvedValue(null)
     expect((await zrobKopie(TERAZ)).ok).toBe(false)
@@ -53,7 +53,7 @@ describe('zrobKopie', () => {
       ['api-wylaczone', 'Włącz Google Drive API w projekcie deck-samorzad'],
       ['brak-zgody', 'Połącz Dysk ponownie w Ustawieniach Skrzynki'],
       ['limit', 'Google chwilowo odmawia - spróbuj za minutę'],
-      ['za-duzy', 'Księga przekracza 4 MB - pobierz plik'],
+      ['za-duzy', 'Księga przekracza 4 MB i nie zmieści się na Dysku'],
       ['google', 'Dysk nie odpowiedział - spróbuj ponownie'],
     ]
     for (const [rodzaj, komunikat] of przypadki) {

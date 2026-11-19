@@ -61,7 +61,7 @@ describe('/api/dziennik/przekaz i /kopia', () => {
 
   it('kopia na żądanie: sukces 200 z linkiem, brak Dysku 409 z powodem', async () => {
     expect(await (await kopia(zadanie())).json()).toEqual({ link: 'https://docs.google.com/document/d/f' })
-    m.zrobKopie.mockResolvedValue({ ok: false, powod: 'brak-dysku', komunikat: 'Połącz Dysk w Skrzynka → Ustawienia albo pobierz plik' })
+    m.zrobKopie.mockResolvedValue({ ok: false, powod: 'brak-dysku', komunikat: 'Dysk nie jest połączony - połącz go w Skrzynka → Ustawienia' })
     const r = await kopia(zadanie())
     expect(r.status).toBe(409)
     expect((await r.json()).powod).toBe('brak-dysku')

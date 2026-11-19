@@ -12,11 +12,11 @@ export type WynikKopii =
   | { ok: false; powod: 'brak-dysku' | RodzajBleduDysku; komunikat: string }
 
 const KOMUNIKATY: Record<'brak-dysku' | RodzajBleduDysku, string> = {
-  'brak-dysku': 'Połącz Dysk w Skrzynka → Ustawienia albo pobierz plik',
+  'brak-dysku': 'Dysk nie jest połączony - połącz go w Skrzynka → Ustawienia',
   'api-wylaczone': 'Włącz Google Drive API w projekcie deck-samorzad',
   'brak-zgody': 'Połącz Dysk ponownie w Ustawieniach Skrzynki',
   limit: 'Google chwilowo odmawia - spróbuj za minutę',
-  'za-duzy': 'Księga przekracza 4 MB - pobierz plik',
+  'za-duzy': 'Księga przekracza 4 MB i nie zmieści się na Dysku',
   google: 'Dysk nie odpowiedział - spróbuj ponownie',
 }
 

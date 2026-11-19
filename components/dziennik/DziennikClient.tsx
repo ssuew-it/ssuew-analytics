@@ -76,7 +76,7 @@ export function DziennikClient({ dzis, komunikat, dzialStartowy, renderDzial }: 
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-deck-muted">Wczytuję księgę…</p>
         ) : (
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-            <nav aria-label="Działy księgi" className="-mx-1 overflow-x-auto lg:mx-0 lg:w-52 lg:shrink-0">
+            <nav aria-label="Działy księgi" className="-mx-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:w-52 lg:shrink-0">
               <div role="tablist" aria-orientation="vertical" className="flex gap-1 px-1 lg:flex-col lg:px-0">
                 {ZAKLADKI.map((z) => (
                   <button
