@@ -1,5 +1,6 @@
 import { porownajDaty, przesunDate, type Data } from '@/lib/planer/trwanie'
 import { DNI_NAJBLIZSZYCH, type Wpis, type WpisCyklu } from './typy'
+import { otwarty, stanWpisu } from './stan'
 
 const dniWMiesiacu = (rok: number, miesiac: number) => new Date(Date.UTC(rok, miesiac, 0)).getUTCDate()
 
@@ -27,18 +28,11 @@ export interface PozycjaNajblizsza {
   trwa: boolean
 }
 
-// Zadanie 2 podmieni na stanWpisu z lib/dziennik/stan.ts.
-function otwartyWpis(w: Wpis): boolean {
-  const zeStanem = w.adnotacje.filter((a) => a.stan !== null).sort((a, b) => a.kiedy - b.kiedy)
-  const stan = zeStanem.at(-1)?.stan ?? 'aktualne'
-  return stan !== 'zamkniete' && stan !== 'nieaktualne'
-}
-
 /** Wpisy kalendarza pracy, których okno przygotowań [od, termin] zahacza o najbliższe `dni` dni. */
 export function najblizsze(wpisy: Wpis[], dzis: Data, dni = DNI_NAJBLIZSZYCH): PozycjaNajblizsza[] {
   const koniecOkna = przesunDate(dzis, dni - 1)
   return wpisy
-    .filter((w): w is WpisCyklu => w.dzial === 'cykl' && otwartyWpis(w))
+    .filter((w): w is WpisCyklu => w.dzial === 'cykl' && otwarty(stanWpisu(w)))
     .map((wpis) => {
       const termin = najblizszyTermin(wpis, dzis)
       const od = poczatekPrzygotowan(termin, wpis.wyprzedzenieTygodni)
