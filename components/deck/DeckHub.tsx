@@ -15,6 +15,7 @@ import type { Rola } from '@/lib/auth/role'
 import { DNI_OKRESU, opisZmiany } from '@/lib/strony/okresy'
 import type { PodsumowanieStron } from '@/lib/strony/model'
 import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
+import type { PozycjaDziennikaAsystenta } from '@/lib/dziennik/obraz'
 import { CzatDeck } from './CzatDeck'
 import { DeckTile } from './DeckTile'
 import { MatrixRain } from './MatrixRain'
@@ -35,6 +36,12 @@ export interface DanePlanera {
   najblizsze: NajblizszeWydarzenie[]
   /** Firestore odpowiedział - do paska statusu. */
   ok: boolean
+}
+
+/** Kafelek Dziennika Stratega: czy kadencja jest otwarta i najbliższe terminy kalendarza pracy. */
+export interface DaneDziennika {
+  otwarta: boolean
+  pozycje: PozycjaDziennikaAsystenta[]
 }
 
 /**
@@ -58,9 +65,11 @@ type Props = {
   strony: Promise<PodsumowanieStron | null> | null
   /** Liczniki skrzynki kontakt@. Zarząd dostaje `null`; wewnętrzne `null` - odczyt zawiódł. */
   skrzynka: Promise<LicznikiSkrzynki | null> | null
+  /** Dziennik Stratega. Zarząd dostaje `null`; wewnętrzne `null` - księgi nie dało się odczytać. */
+  dziennik: Promise<DaneDziennika | null> | null
 }
 
-export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty, odprawa, strony, skrzynka }: Props) {
+export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty, odprawa, strony, skrzynka, dziennik }: Props) {
   const router = useRouter()
   const { wyloguj } = useAuth()
 
@@ -140,9 +149,11 @@ export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty,
             <KafelekAnalyticsZDanymi analityka={analityka} />
           </Suspense>
 
-          {/* Siatka ma 4 kolumny: zarząd nie widzi Orbity, Stron ani Skrzynki - Sesja dopełnia wtedy rząd. */}
-          <Suspense fallback={<KafelekSesji propozycje={null} najblizsze={null} span={rola === 'owner' ? 1 : 2} />}>
-            <KafelekSesjiZDanymi planer={planer} span={rola === 'owner' ? 1 : 2} />
+          {/* Siatka ma 4 kolumny, a każdy kafelek zajmuje pół rzędu: u właściciela
+              to 3 pełne rzędy (Analityka, Sesja / Orbita, Dziennik / Strony, Skrzynka),
+              u zarządu jeden (Analityka, Sesja). */}
+          <Suspense fallback={<KafelekSesji propozycje={null} najblizsze={null} span={2} />}>
+            <KafelekSesjiZDanymi planer={planer} span={2} />
           </Suspense>
 
           {rola === 'owner' && (
@@ -152,9 +163,16 @@ export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty,
               etykieta="moduł 03 · zadania"
               tytul="Orbita"
               wkrotce="etap 2"
+              span={2}
             >
               <p className="text-[12px] leading-relaxed">Radar zadań - bliżej środka znaczy pilniej.</p>
             </DeckTile>
+          )}
+
+          {rola === 'owner' && dziennik && (
+            <Suspense fallback={<KafelekDziennika dane={undefined} />}>
+              <KafelekDziennikaZDanymi dziennik={dziennik} />
+            </Suspense>
           )}
 
           {rola === 'owner' && strony && (
@@ -316,6 +334,49 @@ function KafelekStron({ dane }: { dane: PodsumowanieStron | null | undefined }) 
             )}
           </div>
         </div>
+      )}
+    </DeckTile>
+  )
+}
+
+function KafelekDziennikaZDanymi({ dziennik }: { dziennik: Promise<DaneDziennika | null> }) {
+  return <KafelekDziennika dane={use(dziennik)} />
+}
+
+/** `undefined` - księga jeszcze płynie; `null` - odczyt zawiódł. */
+function KafelekDziennika({ dane }: { dane: DaneDziennika | null | undefined }) {
+  const obowiazkowe = dane?.pozycje.filter((p) => p.obowiazkowe).length ?? 0
+  const tekst = 'text-[12px] leading-relaxed text-deck-muted'
+  return (
+    <DeckTile
+      stan="zywy"
+      href="/dziennik"
+      etykieta="moduł 06 · dla następcy"
+      tytul="Dziennik Stratega"
+      span={2}
+      odznaka={obowiazkowe > 0 ? odmiana(obowiazkowe, ['obowiązkowy', 'obowiązkowe', 'obowiązkowych']) : undefined}
+      odznakaTon="uwaga"
+    >
+      {dane === undefined ? (
+        <Brak />
+      ) : dane === null ? (
+        <p className={tekst}>Księgi nie dało się odczytać.</p>
+      ) : !dane.otwarta ? (
+        <p className={tekst}>Rozpocznij kadencję, żeby zacząć księgę.</p>
+      ) : dane.pozycje.length === 0 ? (
+        <p className={tekst}>Nic z kalendarza pracy w 30 dniach.</p>
+      ) : (
+        <ul className="space-y-2">
+          {dane.pozycje.slice(0, 2).map((p) => (
+            <li key={`${p.tytul}-${p.termin}`}>
+              <div className="text-[13px] font-medium leading-snug">{p.tytul}</div>
+              <div className="font-mono text-[10.5px] text-deck-muted">
+                do {p.termin.slice(0, 5)}
+                {p.obowiazkowe && <span className="text-deck-warn"> · OBOWIĄZKOWE{p.rozlicza.length > 0 && ` · ${p.rozlicza.join(' · ')}`}</span>}
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </DeckTile>
   )

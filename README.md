@@ -14,6 +14,7 @@ działającym modułem jest **SSUEW Analytics** - dashboard analityczny samorzą
 | **Orbita** | Prywatna tablica zadań jako radar: bliżej środka znaczy pilniej | etap 2 |
 | **Planer semestru** | Kalendarz semestru, kolizje osób i sal, propozycje zmian od zarządu, tryb wspólnej sesji, rozmowa przy wydarzeniu i podgląd obecności | działa |
 | **Strony** | Kliknięcia, wyświetlenia i pozycje nadzorowanych witryn z Search Console | etap 4 |
+| **Dziennik Stratega** | Księga przechodnia funkcji: kalendarz obowiązków, luki, wątki w toku, pole do innowacji, strategie, przemyślenia - dopisywana przez kolejne kadencje | działa |
 
 Analytics liczy statystyki **bez zewnętrznych bibliotek matematycznych** - korelacja Pearsona,
 test t Welcha, regresja wieloraka OLS i z-score są zaimplementowane od zera
@@ -98,6 +99,20 @@ Jednorazowo:
 1. `deck-samorzad` → APIs & Services → Library: włącz **Google Calendar API**.
 2. OAuth consent screen: dodaj zakres `calendar.events` (sam kalendarz i jego udostępnienie zostają nietknięte).
 3. D.E.C.K. jako kontakt@ → Skrzynka → Ustawienia → **Połącz kalendarz**. Ten sam adres powrotu co skrzynka; zgoda dokłada kalendarz do zgody Gmaila (`include_granted_scopes`), skrzynka nie łączy się od nowa. Zgoda bez uprawnień Gmaila jest odrzucana, żeby skrzynka nie straciła dostępu.
+
+## Dziennik Stratega
+
+Strona `/dziennik` (tylko właściciel, czyli konto kontakt@) to księga, którą każda kolejna osoba na funkcji przejmuje i dopisuje. Działy: **Najbliższe** (kalendarz pracy w oknie 30 dni), **Kalendarz pracy** (obowiązki z terminem rocznym, kto z nich rozlicza, ile tygodni wcześniej zacząć), **Luki**, **Wątki w toku**, **Pole do innowacji**, **Strategie** (dokument, okres, status, uchwała, cele) i **Przemyślenia**.
+
+- Konto jest wspólne, więc autor przedstawia się przy **Rozpocznij kadencję**. Wpisy otwartej kadencji można poprawiać i usuwać; wpisy kadencji zamkniętych tylko komentować (stan: aktualne / przejmuję / zamknięte / nieaktualne, przy strategii stan każdego celu). Nic nie znika - zamknięte lądują zwinięte.
+- **Przekaż księgę** zapisuje kopię na Dysku i dopiero wtedy zamyka kadencję (bez udanej kopii nic się nie zamyka; nie da się tego cofnąć). **Zapisz kopię** działa w każdej chwili; gdy Dysku nie ma, **Pobierz plik** daje tę samą księgę jako HTML.
+- Dane: `dziennikKadencje`, `dziennikWpisy`, wskaźnik `dziennik/stan` - tylko przez Admin SDK; otwarcie i zamknięcie kadencji to transakcja, więc otwarta jest najwyżej jedna. Asystent dostaje wyłącznie terminy kalendarza pracy z 30 dni (bez treści wpisów).
+
+Jednorazowo, dla kopii na Dysku:
+
+1. `deck-samorzad` → APIs & Services → Library: włącz **Google Drive API**.
+2. OAuth consent screen: dodaj zakres `drive.file` (D.E.C.K. widzi tylko pliki, które sam utworzył).
+3. D.E.C.K. jako kontakt@ → Skrzynka → Ustawienia → **Połącz Dysk**. Jak przy kalendarzu: ten sam adres powrotu, zgoda dokładana do zgody Gmaila (`include_granted_scopes`), zgoda bez uprawnień Gmaila odrzucana. Po zgodzie wracasz do Dziennika.
 
 ## Uruchomienie
 

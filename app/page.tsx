@@ -4,7 +4,7 @@ import { ktoNaStronie } from '@/lib/auth/naStronie'
 import { naAnalityke } from '@/lib/kokpit/analityka'
 import { buildAlerts } from '@/lib/stats'
 import { serieZWierszy } from '@/lib/kpi/serie'
-import { DeckHub, type DanePlanera } from '@/components/deck/DeckHub'
+import { DeckHub, type DaneDziennika, type DanePlanera } from '@/components/deck/DeckHub'
 import { biezacySemestr } from '@/lib/planer/semestry'
 import { dzisWarszawa, godzinaWarszawa } from '@/lib/czas'
 import { faktyKokpitu, najblizszeWydarzenia } from '@/lib/asystent/fakty'
@@ -12,7 +12,6 @@ import {
   czytajOdprawe,
   odswiezOdpraweWTle,
   pobierzArkusz,
-  pobierzObrazDziennika,
   pobierzObrazSkrzynki,
   pobierzPlaner,
 } from '@/lib/asystent/dane'
@@ -22,6 +21,8 @@ import { statystykiStron } from '@/lib/strony/dane'
 import { podsumujStrony, type PodsumowanieStron, type WynikStrony } from '@/lib/strony/model'
 import { liczniki as licznikiSkrzynki } from '@/lib/skrzynka/dane'
 import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
+import { czytajKsiege } from '@/lib/dziennik/dane'
+import { obrazDziennika } from '@/lib/dziennik/obraz'
 
 /** Zapas na odprawę generowaną w tle po wysłaniu strony (Gemini do 25 s). */
 export const maxDuration = 60
@@ -64,6 +65,7 @@ export default async function KokpitPage() {
   let odprawa: Promise<ZapisanaOdprawa | null> | null = null
   let strony: Promise<PodsumowanieStron | null> | null = null
   let skrzynka: Promise<LicznikiSkrzynki | null> | null = null
+  let dziennik: Promise<DaneDziennika | null> | null = null
   if (kto.rola === 'owner') {
     const zapisana = czytajOdprawe().catch(() => null)
     odprawa = zapisana
@@ -78,11 +80,19 @@ export default async function KokpitPage() {
       console.error('[skrzynka] kokpit:', e)
       return null
     })
+    // Księga raz na wejście - kafelek i odprawa biorą z tej samej obietnicy.
+    dziennik = czytajKsiege()
+      .then((k) => ({ otwarta: k.otwartaKadencjaId !== null, pozycje: obrazDziennika(k, dzis) }))
+      .catch((e) => {
+        console.error('[asystent] dziennik:', e)
+        return null
+      })
+    const doOdprawy = dziennik.then((d) => d?.pozycje ?? null)
     after(() => odswiezOdpraweWTle({
       arkusz, planer, zapisana, notatki: tresciNotatek().catch(() => []), strony: wynikiStron.then((w) => w ?? []),
       // `skrzynka` (wyżej) to obietnica liczników kafelka, ustawiana zawsze w tym bloku właściciela.
       skrzynka: () => pobierzObrazSkrzynki(teraz.getTime(), skrzynka ?? undefined),
-      dziennik: pobierzObrazDziennika(dzis),
+      dziennik: doOdprawy,
       semestr: { id: semestr.id, nazwa: semestr.nazwa }, teraz,
     }))
   }
@@ -99,6 +109,7 @@ export default async function KokpitPage() {
       odprawa={odprawa}
       strony={strony}
       skrzynka={skrzynka}
+      dziennik={dziennik}
     />
   )
 }

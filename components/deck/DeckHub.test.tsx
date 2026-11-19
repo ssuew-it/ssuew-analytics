@@ -1,7 +1,7 @@
 import { act, cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
-import { DeckHub, type DaneAnalityki, type DanePlanera } from '@/components/deck/DeckHub'
+import { DeckHub, type DaneAnalityki, type DaneDziennika, type DanePlanera } from '@/components/deck/DeckHub'
 import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import type { Fakt } from '@/lib/asystent/fakty'
 import type { PodsumowanieStron } from '@/lib/strony/model'
@@ -30,6 +30,14 @@ const STRONY: PodsumowanieStron = {
 const SKRZYNKA: LicznikiSkrzynki = {
   stan: 'polaczona', doOdpowiedzi: 7, poTerminie: 2, doPrzejrzenia: 4, czekaNaNich: 3, wToku: 1, zalatwione: 0, pominiete: 0, ostatniaSynchronizacja: 1,
 }
+const DZIENNIK: DaneDziennika = {
+  otwarta: true,
+  pozycje: [
+    { tytul: 'Sprawozdanie dla KR', termin: '15.12.2026', przygotowaniaOd: '01.12.2026', obowiazkowe: true, rozlicza: ['KR'] },
+    { tytul: 'Budżet na lato', termin: '20.12.2026', przygotowaniaOd: '06.12.2026', obowiazkowe: false, rozlicza: [] },
+    { tytul: 'Trzecia sprawa', termin: '21.12.2026', przygotowaniaOd: '07.12.2026', obowiazkowe: true, rozlicza: ['RUSS'] },
+  ],
+}
 const ZAPIS: ZapisanaOdprawa = {
   slad: 's', dzien: '02.10.2026', utworzono: Date.UTC(2026, 9, 2, 12, 32), model: 'm',
   odprawa: { podsumowanie: 'Rekrutacja trzyma poziom, retencja słabnie.', zagrozenia: [], dzis: [] },
@@ -50,6 +58,7 @@ async function hub(nadpisz: {
   odprawa?: ZapisanaOdprawa | null | Promise<ZapisanaOdprawa | null>
   strony?: PodsumowanieStron | null | Promise<PodsumowanieStron | null>
   skrzynka?: LicznikiSkrzynki | null | Promise<LicznikiSkrzynki | null>
+  dziennik?: DaneDziennika | null | Promise<DaneDziennika | null>
 } = {}) {
   const rola = nadpisz.rola ?? 'owner'
   const analityka = nadpisz.analityka instanceof Promise ? nadpisz.analityka : Promise.resolve({ ...ANALITYKA, ...nadpisz.analityka })
@@ -57,6 +66,7 @@ async function hub(nadpisz: {
   const odprawa = rola === 'owner' ? obietnica(nadpisz.odprawa === undefined ? ZAPIS : nadpisz.odprawa) : null
   const strony = rola === 'owner' ? obietnica(nadpisz.strony === undefined ? STRONY : nadpisz.strony) : null
   const skrzynka = rola === 'owner' ? obietnica(nadpisz.skrzynka === undefined ? SKRZYNKA : nadpisz.skrzynka) : null
+  const dziennik = rola === 'owner' ? obietnica(nadpisz.dziennik === undefined ? DZIENNIK : nadpisz.dziennik) : null
   // Dane ze strumienia (use + Suspense) dopływają w mikrozadaniach - bez
   // asynchronicznego act React nie zdąży podmienić wersji zastępczej.
   return act(async () => {
@@ -72,6 +82,7 @@ async function hub(nadpisz: {
         odprawa={odprawa}
         strony={strony}
         skrzynka={skrzynka}
+        dziennik={dziennik}
       />,
     )
   })
@@ -125,12 +136,14 @@ describe('DeckHub', () => {
     expect(screen.getByText('/ 20 porównywalnych')).toBeInTheDocument()
   })
 
-  it('siatka bez dziur: właściciel - Strony i Skrzynka po pół rzędu; zarząd - Sesja obok Analityki na pół', async () => {
+  it('siatka bez dziur: u właściciela każdy kafelek po pół rzędu (3 pełne rzędy); zarząd - Sesja obok Analityki na pół', async () => {
     const szeroki = (nazwa: RegExp) => screen.getByRole('link', { name: nazwa }).className.includes('sm:col-span-2')
     await hub()
     expect(szeroki(/Strony/)).toBe(true)
     expect(szeroki(/Skrzynka/)).toBe(true)
-    expect(szeroki(/Sesja Operacyjna/)).toBe(false)
+    expect(szeroki(/Sesja Operacyjna/)).toBe(true)
+    expect(szeroki(/Dziennik Stratega/)).toBe(true)
+    expect(screen.getByRole('heading', { name: 'Orbita' }).closest('section')!.className).toContain('sm:col-span-2')
     cleanup()
     await hub({ rola: 'board' })
     expect(szeroki(/Sesja Operacyjna/)).toBe(true)
@@ -241,5 +254,32 @@ describe('DeckHub', () => {
   it('zarząd nie widzi kafelka Skrzynki', async () => {
     await hub({ rola: 'board', email: 'Jula' })
     expect(screen.queryByRole('heading', { name: 'Skrzynka' })).toBeNull()
+  })
+
+  it('kafelek Dziennika: najwyżej dwie pozycje, obowiązkowe z podmiotem, odznaka liczby obowiązkowych', async () => {
+    await hub()
+    const kafelek = screen.getByRole('link', { name: /Dziennik Stratega/ })
+    expect(kafelek).toHaveAttribute('href', '/dziennik')
+    expect(await screen.findByText('Sprawozdanie dla KR')).toBeInTheDocument()
+    expect(screen.getByText('Budżet na lato')).toBeInTheDocument()
+    expect(screen.queryByText('Trzecia sprawa')).toBeNull()
+    expect(kafelek).toHaveTextContent('OBOWIĄZKOWE · KR')
+    expect(kafelek).toHaveTextContent('2 obowiązkowe')
+  })
+
+  it('kafelek Dziennika bez kadencji, pusty i po błędzie', async () => {
+    await hub({ dziennik: { otwarta: false, pozycje: [] } })
+    expect(await screen.findByText('Rozpocznij kadencję, żeby zacząć księgę.')).toBeInTheDocument()
+    cleanup()
+    await hub({ dziennik: { otwarta: true, pozycje: [] } })
+    expect(await screen.findByText('Nic z kalendarza pracy w 30 dniach.')).toBeInTheDocument()
+    cleanup()
+    await hub({ dziennik: null })
+    expect(await screen.findByText('Księgi nie dało się odczytać.')).toBeInTheDocument()
+  })
+
+  it('zarząd nie widzi kafelka Dziennika', async () => {
+    await hub({ rola: 'board', email: 'Jula' })
+    expect(screen.queryByRole('heading', { name: 'Dziennik Stratega' })).toBeNull()
   })
 })
