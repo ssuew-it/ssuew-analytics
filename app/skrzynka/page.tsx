@@ -51,6 +51,7 @@ export default async function SkrzynkaPage({ searchParams }: { searchParams: Pro
         sklad={sklad}
         email={stan?.email ?? ''}
         kalendarz={stan?.kalendarz === true}
+        dysk={stan?.dysk === true}
         kalendarzPolaczony={kalendarz === 'ok'}
         otworzUstawienia={ustawienia === '1'}
       />

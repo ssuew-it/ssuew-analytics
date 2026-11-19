@@ -19,6 +19,7 @@ describe('stan zgody Google', () => {
       .setIssuedAt().setExpirationTime('10m').sign(new TextEncoder().encode(SEKRET))
     expect(await celStanu(stary, 'u1')).toBe('skrzynka')
 
+    expect(await celStanu(await podpiszStan('u1', 'dysk'), 'u1')).toBe('dysk')
     expect(await celStanu(kalendarz, 'u2')).toBeNull()
     expect(await celStanu('zepsuty', 'u1')).toBeNull()
   })

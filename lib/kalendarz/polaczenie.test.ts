@@ -36,8 +36,14 @@ describe('polaczKalendarz', () => {
     expect(await polaczKalendarz('KOD')).toBe('ok')
     expect(wymienKod).toHaveBeenCalledWith('KOD')
     expect(dane.zapiszStan).toHaveBeenCalledTimes(1)
-    expect(dane.zapiszStan).toHaveBeenCalledWith({ token: 'enc:nowy', kalendarz: true })
+    expect(dane.zapiszStan).toHaveBeenCalledWith({ token: 'enc:nowy', kalendarz: true, dysk: false })
     expect(obserwuj).not.toHaveBeenCalled()
+  })
+
+  it('token obejmujący Dysk (include_granted_scopes) zachowuje flagę dysk', async () => {
+    wymienKod.mockResolvedValue({ refreshToken: 'nowy', dostep: 'd', zakresy: [...GMAIL, KALENDARZ, 'https://www.googleapis.com/auth/drive.file'] })
+    expect(await polaczKalendarz('KOD')).toBe('ok')
+    expect(dane.zapiszStan).toHaveBeenCalledWith({ token: 'enc:nowy', kalendarz: true, dysk: true })
   })
 
   it('zgoda bez zakresów Gmaila - token skrzynki nienadpisany', async () => {

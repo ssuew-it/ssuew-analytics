@@ -5,6 +5,8 @@ export const ZAKRES_WYSYLKI = 'https://www.googleapis.com/auth/gmail.send'
 export const ZAKRESY_GMAILA = ['https://www.googleapis.com/auth/gmail.readonly', ZAKRES_WYSYLKI]
 /** Tylko wydarzenia - D.E.C.K. nie może zmienić ustawień ani udostępnienia samego kalendarza. */
 export const ZAKRES_KALENDARZA = 'https://www.googleapis.com/auth/calendar.events'
+/** Dysk tylko dla plików, które D.E.C.K. sam utworzy - kopie Dziennika Stratega. */
+export const ZAKRES_DYSKU = 'https://www.googleapis.com/auth/drive.file'
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me'
 const WYSYLKA = 'https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=multipart'
@@ -76,12 +78,21 @@ export function adresZgody(stan: string, email: string): string {
  * sprawia, że nowy refresh token obejmuje też Gmaila. Ten sam adres powrotu co skrzynka.
  */
 export function adresZgodyKalendarza(stan: string, email: string): string {
+  return adresDolozonejZgody(ZAKRES_KALENDARZA, stan, email)
+}
+
+/** Zgoda na Dysk (kopie Dziennika) - tak samo dołożona do zgody skrzynki. */
+export function adresZgodyDysku(stan: string, email: string): string {
+  return adresDolozonejZgody(ZAKRES_DYSKU, stan, email)
+}
+
+function adresDolozonejZgody(zakres: string, stan: string, email: string): string {
   const k = konfiguracja()
   const p = new URLSearchParams({
     client_id: k.id,
     redirect_uri: k.przekierowanie,
     response_type: 'code',
-    scope: ZAKRES_KALENDARZA,
+    scope: zakres,
     include_granted_scopes: 'true',
     access_type: 'offline',
     prompt: 'consent',

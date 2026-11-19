@@ -77,7 +77,7 @@ function Podsumowanie({ l }: { l: LicznikiSkrzynki }) {
 const kiedy = (ms: number) =>
   new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', dateStyle: 'short', timeStyle: 'short' }).format(ms)
 
-export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz = false, kalendarzPolaczony = false, otworzUstawienia = false }: {
+export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz = false, dysk = false, kalendarzPolaczony = false, otworzUstawienia = false }: {
   liczniki: LicznikiSkrzynki | null
   postep: PostepImportu | null
   blad: string | null
@@ -85,6 +85,8 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
   email: string
   /** Token obejmuje kalendarz - Ustawienia pokażą „Połączony”. */
   kalendarz?: boolean
+  /** Token obejmuje Dysk - Ustawienia pokażą „Połączony”. */
+  dysk?: boolean
   /** Powrót ze zgody na kalendarz (`?kalendarz=ok`). */
   kalendarzPolaczony?: boolean
   /** `?ustawienia=1` - odnośnik z Planera prowadzi prosto do Ustawień. */
@@ -200,7 +202,7 @@ export function PanelSkrzynki({ liczniki, postep, blad, sklad, email, kalendarz 
           </div>
 
           {ustawienia ? (
-            <UstawieniaSkrzynki kalendarz={kalendarz} />
+            <UstawieniaSkrzynki kalendarz={kalendarz} dysk={dysk} />
           ) : (
             <>
               {szukane ? (

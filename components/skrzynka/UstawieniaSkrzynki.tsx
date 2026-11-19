@@ -17,7 +17,7 @@ function wycinekSchowka(html: string): string {
  * Stopka odpowiedzi, listy „zawsze pomijaj” i „Rozłącz”. Każda zmiana listy
  * zapisuje się od razu - serwer sprawdza adresy i nie przyjmie domeny gmail.com.
  */
-export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean }) {
+export function UstawieniaSkrzynki({ kalendarz = false, dysk = false }: { kalendarz?: boolean; dysk?: boolean }) {
   const router = useRouter()
   const [u, setU] = useState<Ustawienia | null>(null)
   const [stopka, setStopka] = useState('')
@@ -204,6 +204,24 @@ export function UstawieniaSkrzynki({ kalendarz = false }: { kalendarz?: boolean 
           </div>
         ) : (
           <a href="/api/skrzynka/kalendarz" className={`${przycisk} inline-flex`}>Połącz kalendarz</a>
+        )}
+      </section>
+
+      <section aria-label="Dysk" className="space-y-2">
+        <h3 className={naglowek}>Dysk (kopie Dziennika Stratega)</h3>
+        <p className="text-deck-muted">
+          Dziennik zapisuje kopię całej księgi jako dokument Google na Dysku kontakt@ - przy przekazaniu kadencji i na żądanie. D.E.C.K. widzi tylko pliki, które sam utworzył.
+        </p>
+        {dysk ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-deck-text">Połączony - kopię zapisuje przycisk w Dzienniku.</p>
+            <a href="/api/skrzynka/dysk" className={`${przycisk} inline-flex`}>Połącz ponownie</a>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-deck-muted">Najpierw włącz Google Drive API i dodaj zakres drive.file na ekranie zgody w projekcie deck-samorzad.</p>
+            <a href="/api/skrzynka/dysk" className={`${przycisk} inline-flex`}>Połącz Dysk</a>
+          </div>
         )}
       </section>
 

@@ -14,9 +14,9 @@ vi.mock('@/lib/skrzynka/klient', () => ({
 }))
 
 const U = { stopka: '-- \nSamorząd', pomijaneAdresy: ['news@sklep.pl'], pomijaneDomeny: ['reklama.pl'] }
-const pokaz = (kalendarz = false) =>
+const pokaz = (kalendarz = false, dysk = false) =>
   act(async () => {
-    render(<UstawieniaSkrzynki kalendarz={kalendarz} />)
+    render(<UstawieniaSkrzynki kalendarz={kalendarz} dysk={dysk} />)
   })
 const klik = (nazwa: string) =>
   act(async () => {
@@ -110,5 +110,18 @@ describe('UstawieniaSkrzynki', () => {
     expect(polaczony).toHaveTextContent('Połączony')
     expect(within(polaczony).queryByRole('link', { name: 'Połącz kalendarz' })).toBeNull()
     expect(within(polaczony).getByRole('link', { name: 'Połącz ponownie' })).toHaveAttribute('href', '/api/skrzynka/kalendarz')
+  })
+
+  it('dysk niepołączony - link Połącz Dysk z instrukcją; połączony - napis Połączony', async () => {
+    await pokaz(false, false)
+    const sekcja = screen.getByRole('region', { name: 'Dysk' })
+    expect(within(sekcja).getByRole('link', { name: 'Połącz Dysk' })).toHaveAttribute('href', '/api/skrzynka/dysk')
+    expect(sekcja).toHaveTextContent('Google Drive API')
+    expect(sekcja).toHaveTextContent('drive.file')
+    cleanup()
+    await pokaz(false, true)
+    const polaczony = screen.getByRole('region', { name: 'Dysk' })
+    expect(polaczony).toHaveTextContent('Połączony')
+    expect(within(polaczony).queryByRole('link', { name: 'Połącz Dysk' })).toBeNull()
   })
 })

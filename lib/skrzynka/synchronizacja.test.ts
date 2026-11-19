@@ -287,6 +287,15 @@ describe('polaczSkrzynke', () => {
     await polaczSkrzynke('KOD')
     expect(dane.zapiszStan).toHaveBeenLastCalledWith(expect.objectContaining({ kalendarz: true }))
   })
+
+  it('ponowne połączenie samej skrzynki - dysk zaznaczony tylko, gdy nowy token go obejmuje', async () => {
+    g.profil.mockResolvedValue({ emailAddress: NASZ, historyId: '1' })
+    await polaczSkrzynke('KOD')
+    expect(dane.zapiszStan).toHaveBeenLastCalledWith(expect.objectContaining({ dysk: false }))
+    wymienKod.mockResolvedValue({ refreshToken: 'r', dostep: 'd', zakresy: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/drive.file'] })
+    await polaczSkrzynke('KOD')
+    expect(dane.zapiszStan).toHaveBeenLastCalledWith(expect.objectContaining({ dysk: true }))
+  })
 })
 
 describe('odnowObserwacje', () => {

@@ -1,5 +1,5 @@
 import { czytajStan, zapiszStan } from '@/lib/skrzynka/dane'
-import { ZAKRES_KALENDARZA, ZAKRESY_GMAILA, gmail as utworzGmail, wymienKod } from '@/lib/skrzynka/google'
+import { ZAKRES_DYSKU, ZAKRES_KALENDARZA, ZAKRESY_GMAILA, gmail as utworzGmail, wymienKod } from '@/lib/skrzynka/google'
 import { zaszyfruj } from '@/lib/skrzynka/szyfr'
 import { nasz } from '@/lib/skrzynka/synchronizacja'
 
@@ -18,6 +18,7 @@ export async function polaczKalendarz(kod: string): Promise<WynikPolaczeniaKalen
   if (!ZAKRESY_GMAILA.every((z) => zakresy.includes(z))) return 'niepelna-zgoda'
   const profil = await utworzGmail(refreshToken, dostep).profil()
   if (profil.emailAddress.toLowerCase() !== nasz()) return 'inne-konto'
-  await zapiszStan({ token: zaszyfruj(refreshToken), kalendarz: true })
+  // include_granted_scopes: nowy token niesie też wcześniejszą zgodę na Dysk - flaga musi to powiedzieć.
+  await zapiszStan({ token: zaszyfruj(refreshToken), kalendarz: true, dysk: zakresy.includes(ZAKRES_DYSKU) })
   return 'ok'
 }

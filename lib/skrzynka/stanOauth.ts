@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify } from 'jose'
 const CEL = 'skrzynka-oauth'
 
 /** Po co była zgoda - oba cele wracają tym samym adresem `/api/skrzynka/oauth`. */
-export type CelOauth = 'skrzynka' | 'kalendarz'
+export type CelOauth = 'skrzynka' | 'kalendarz' | 'dysk'
 
 function sekret(): Uint8Array {
   const s = process.env.DECK_SESSION_SECRET ?? ''
@@ -21,7 +21,7 @@ export async function celStanu(stan: string, uid: string): Promise<CelOauth | nu
   try {
     const { payload } = await jwtVerify(stan, sekret(), { audience: CEL })
     if (payload.uid !== uid) return null
-    return payload.cel === 'kalendarz' ? 'kalendarz' : 'skrzynka'
+    return payload.cel === 'kalendarz' || payload.cel === 'dysk' ? payload.cel : 'skrzynka'
   } catch {
     return null
   }
