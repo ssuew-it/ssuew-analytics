@@ -56,6 +56,20 @@ export function rozmowyRef() {
   return bazaAdmin().collection('asystentRozmowy')
 }
 
+/** Dziennik Stratega - tylko serwer; reguła końcowa zamyka kolekcje przed przeglądarką. */
+export function dziennikKadencjeRef() {
+  return bazaAdmin().collection('dziennikKadencje')
+}
+
+export function dziennikWpisyRef() {
+  return bazaAdmin().collection('dziennikWpisy')
+}
+
+/** Wskaźnik otwartej kadencji - otwarcie i zamknięcie to transakcja na nim. */
+export function dziennikStanRef() {
+  return bazaAdmin().collection('dziennik').doc('stan')
+}
+
 /** Notatki asystenta - tylko serwer; reguła końcowa zamyka je przed przeglądarką. */
 export function notatkiRef() {
   return bazaAdmin().collection('asystentNotatki')
