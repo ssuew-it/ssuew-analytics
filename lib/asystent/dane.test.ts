@@ -8,10 +8,12 @@ vi.mock('@/lib/firebase/admin', () => ({
 }))
 const skrzynka = vi.hoisted(() => ({ liczniki: vi.fn(), obrazSkrzynki: vi.fn() }))
 vi.mock('@/lib/skrzynka/dane', () => skrzynka)
+const dziennik = vi.hoisted(() => ({ czytajKsiege: vi.fn() }))
+vi.mock('@/lib/dziennik/dane', () => dziennik)
 const gemini = vi.hoisted(() => ({ zapytajGemini: vi.fn() }))
 vi.mock('@/lib/asystent/gemini', async (oryginal) => ({ ...(await oryginal<object>()), zapytajGemini: gemini.zapytajGemini }))
 
-import { daneProjektu, odswiezOdpraweWTle, pobierzObrazSkrzynki } from '@/lib/asystent/dane'
+import { daneProjektu, odswiezOdpraweWTle, pobierzObrazDziennika, pobierzObrazSkrzynki } from '@/lib/asystent/dane'
 import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 
 describe('daneProjektu', () => {
@@ -24,9 +26,31 @@ describe('daneProjektu', () => {
       [],
       [{ ok: true, dane: strona }, { ok: false, witryna: 'x', nazwa: 'x', blad: 'inny', komunikat: '' }],
       null,
+      null,
     )
     expect(d.strony).toEqual([strona])
     expect(d.skrzynka).toBeNull()
+    expect(d.dziennik).toBeNull()
+  })
+})
+
+describe('pobierzObrazDziennika', () => {
+  const DZIS = { rok: 2026, miesiac: 11, dzien: 19 }
+
+  it('obowiązki z księgi w oknie 30 dni', async () => {
+    dziennik.czytajKsiege.mockResolvedValue({ otwartaKadencjaId: 'k', kadencje: [], wpisy: [{
+      id: 'c', dzial: 'cykl', kadencjaId: 'k', tytul: 'Sprawozdanie', tresc: '', utworzono: 1, zmieniono: 1, adnotacje: [],
+      miesiac: 12, dzien: 1, wyprzedzenieTygodni: 0, obowiazkowe: true, rozlicza: ['RUSS'],
+    }] })
+    expect(await pobierzObrazDziennika(DZIS)).toEqual([{ tytul: 'Sprawozdanie', termin: '01.12.2026', przygotowaniaOd: '01.12.2026', obowiazkowe: true, rozlicza: ['RUSS'] }])
+  })
+
+  it('błąd odczytu księgi - null z logiem, bez wyjątku', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    dziennik.czytajKsiege.mockRejectedValue(new Error('firestore'))
+    expect(await pobierzObrazDziennika(DZIS)).toBeNull()
+    expect(log).toHaveBeenCalledWith('[asystent] dziennik:', expect.any(Error))
+    log.mockRestore()
   })
 })
 
@@ -66,6 +90,7 @@ describe('odswiezOdpraweWTle - obraz skrzynki tylko przed możliwą nową odpraw
       notatki: Promise.resolve([]),
       strony: Promise.resolve([]),
       skrzynka: obraz,
+      dziennik: Promise.resolve(null),
       semestr: { id: '2026Z', nazwa: 'Z' },
       teraz: TERAZ,
     })

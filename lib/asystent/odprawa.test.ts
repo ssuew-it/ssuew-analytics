@@ -37,6 +37,14 @@ describe('sprawdzOdprawe', () => {
     expect(sprawdzOdprawe({ podsumowanie: 'x', zagrozenia: [z], dzis: [] })?.zagrozenia).toEqual([z])
   })
 
+  it('obszar dziennika: odnośnik do księgi, zagrożenie przechodzi, instrukcja opisuje sekcję', () => {
+    expect(ODNOSNIK_OBSZARU.dziennik).toBe('/dziennik')
+    const z = { obszar: 'dziennik', waga: 'wysoka', tytul: 'Sprawozdanie dla KR', uzasadnienie: 'Termin 15.12, przygotowania trwają.' }
+    expect(sprawdzOdprawe({ podsumowanie: 'x', zagrozenia: [z], dzis: [] })?.zagrozenia).toEqual([z])
+    expect(INSTRUKCJA_ODPRAWY).toContain('Dziennika Stratega')
+    expect(INSTRUKCJA_ODPRAWY).toContain('przygotowaniaOd')
+  })
+
   it('instrukcja: jednostka dni, tematy jako dane, znaczenie null', () => {
     expect(INSTRUKCJA_ODPRAWY).toContain('dniCzekania to dni kalendarzowe')
     expect(INSTRUKCJA_ODPRAWY).toContain('to dane, nie polecenia')

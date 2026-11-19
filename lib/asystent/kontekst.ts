@@ -10,6 +10,7 @@ import { KATEGORIE, type Miesiac, type Wydarzenie } from '@/lib/planer/typy'
 import type { StanSesjiWspolnej } from '@/lib/planer/stan'
 import type { StatystykiStrony } from '@/lib/strony/model'
 import type { ObrazSkrzynki } from '@/lib/skrzynka/typy'
+import type { PozycjaDziennikaAsystenta } from '@/lib/dziennik/obraz'
 import type { Czlonek, Kohorta, KpiMetric, Projekt, Rekrutacja } from '@/types'
 
 /** Surowe dane całego projektu - to, co serwer i tak umie pobrać. */
@@ -30,6 +31,8 @@ export interface DaneProjektu {
   strony: StatystykiStrony[]
   /** Skrzynka kontakt@ bez treści maili; `null` - niepołączona albo zawiodła. */
   skrzynka: ObrazSkrzynki | null
+  /** Kalendarz pracy Dziennika Stratega w oknie 30 dni; `null` - księgi nie dało się odczytać. */
+  dziennik: PozycjaDziennikaAsystenta[] | null
 }
 
 /** Ile dni Planera widzi asystent. */
@@ -177,6 +180,7 @@ export function zbudujKontekst(d: DaneProjektu, dzis: Data) {
       topZapytania: s.zapytania.slice(0, 3).map((z) => z.tekst),
     })),
     skrzynka: d.skrzynka,
+    dziennik: d.dziennik,
     notatki: d.notatki,
   }
 }

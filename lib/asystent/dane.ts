@@ -9,6 +9,9 @@ import type { Rola } from '@/lib/auth/role'
 import type { WynikStrony } from '@/lib/strony/model'
 import { liczniki, obrazSkrzynki } from '@/lib/skrzynka/dane'
 import type { LicznikiSkrzynki, ObrazSkrzynki } from '@/lib/skrzynka/typy'
+import { czytajKsiege } from '@/lib/dziennik/dane'
+import { obrazDziennika, type PozycjaDziennikaAsystenta } from '@/lib/dziennik/obraz'
+import type { Data } from '@/lib/planer/trwanie'
 import { zbudujKontekst, type DaneProjektu, type KontekstProjektu } from './kontekst'
 import { INSTRUKCJA_ODPRAWY, SCHEMAT_ODPRAWY, sprawdzOdprawe, wiadomoscOdprawy, type ZapisanaOdprawa } from './odprawa'
 import { BladAsystenta, zapytajGemini } from './gemini'
@@ -70,13 +73,25 @@ export function daneProjektu(
   notatki: string[],
   strony: WynikStrony[],
   skrzynka: ObrazSkrzynki | null,
+  dziennik: PozycjaDziennikaAsystenta[] | null,
 ): DaneProjektu {
   return {
     rekrutacje: a.rekrutacje, kohorty: a.kohorty, punkty: a.punkty, projekty: a.projekty, czlonkowie: a.czlonkowie,
     semestr, wydarzenia: p.wydarzenia, sesja: p.sesja, sklad: p.sklad, propozycje: p.propozycje, notatki,
     strony: strony.flatMap((w) => (w.ok ? [w.dane] : [])),
     skrzynka,
+    dziennik,
   }
+}
+
+/** Kalendarz pracy Dziennika do obrazu projektu - nigdy nie rzuca, błąd = `null` w logach. */
+export function pobierzObrazDziennika(dzis: Data): Promise<PozycjaDziennikaAsystenta[] | null> {
+  return czytajKsiege()
+    .then((k) => obrazDziennika(k, dzis))
+    .catch((e) => {
+      console.error('[asystent] dziennik:', e)
+      return null
+    })
 }
 
 /**
@@ -138,6 +153,8 @@ export async function odswiezOdpraweWTle(w: {
    * odprawa ostatecznie nie powstanie, bo dane się nie zmieniły.
    */
   skrzynka: () => Promise<ObrazSkrzynki | null>
+  /** Kalendarz pracy Dziennika - jedno odczytanie księgi, wspólne z kafelkiem kokpitu. */
+  dziennik: Promise<PozycjaDziennikaAsystenta[] | null>
   semestr: { id: string; nazwa: string }
   teraz: Date
 }): Promise<void> {
@@ -150,8 +167,8 @@ export async function odswiezOdpraweWTle(w: {
     const [a, p, notatki, strony] = await Promise.all([w.arkusz, w.planer, w.notatki, w.strony])
     // Odprawa z pustego arkusza albo bez Planera byłaby o niczym - poczekamy.
     if (a.czasMs === null || !p.ok) return
-    const skrzynka = await w.skrzynka()
-    const k = zbudujKontekst(daneProjektu(a, p, w.semestr, notatki, strony, skrzynka), dzisWarszawa(w.teraz))
+    const [skrzynka, dziennik] = await Promise.all([w.skrzynka(), w.dziennik])
+    const k = zbudujKontekst(daneProjektu(a, p, w.semestr, notatki, strony, skrzynka, dziennik), dzisWarszawa(w.teraz))
     if (!czyOdswiezyc(zapisana, sladKontekstu(k), k.meta.data, w.teraz.getTime())) return
     await generujOdprawe(k, w.teraz.getTime())
   } catch (e) {

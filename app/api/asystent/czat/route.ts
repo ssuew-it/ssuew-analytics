@@ -3,7 +3,7 @@ import { biezacySemestr } from '@/lib/planer/semestry'
 import { dzisWarszawa } from '@/lib/czas'
 import { BladAsystenta, komunikatBledu, zapytajGemini } from '@/lib/asystent/gemini'
 import { INSTRUKCJA_CZATU, rozmowaDlaGemini, sprawdzZapytanie } from '@/lib/asystent/czat'
-import { czytajOdprawe, daneProjektu, pobierzArkusz, pobierzObrazSkrzynki, pobierzPlaner, zbudujKontekst } from '@/lib/asystent/dane'
+import { czytajOdprawe, daneProjektu, pobierzArkusz, pobierzObrazDziennika, pobierzObrazSkrzynki, pobierzPlaner, zbudujKontekst } from '@/lib/asystent/dane'
 import { czytajRozmowe, tresciNotatek, zapiszRozmowe } from '@/lib/asystent/pamiecDane'
 import { dopiszPytanie, odczytajOdpowiedzCzatu, SCHEMAT_CZATU, tytulRozmowy } from '@/lib/asystent/pamiec'
 import { tylkoWlasciciel } from '@/lib/asystent/tylkoWlasciciel'
@@ -37,16 +37,17 @@ export async function POST(req: NextRequest) {
 
   const semestr = biezacySemestr(new Date(teraz))
   try {
-    const [a, p, notatki, zapisana, strony, skrzynka] = await Promise.all([
+    const [a, p, notatki, zapisana, strony, skrzynka, dziennik] = await Promise.all([
       pobierzArkusz(),
       pobierzPlaner(semestr.id, kto.rola),
       tresciNotatek().catch(() => []),
       czytajOdprawe().catch(() => null),
       statystykiStron().catch(() => []),
       pobierzObrazSkrzynki(teraz),
+      pobierzObrazDziennika(dzisWarszawa(new Date(teraz))),
     ])
     const k = zbudujKontekst(
-      daneProjektu(a, p, { id: semestr.id, nazwa: semestr.nazwa }, notatki, strony, skrzynka),
+      daneProjektu(a, p, { id: semestr.id, nazwa: semestr.nazwa }, notatki, strony, skrzynka, dziennik),
       dzisWarszawa(new Date(teraz)),
     )
     const { tekst } = await zapytajGemini({

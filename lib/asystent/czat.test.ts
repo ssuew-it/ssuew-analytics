@@ -55,6 +55,11 @@ describe('rozmowaDlaGemini', () => {
     expect(INSTRUKCJA_CZATU).toMatch(/„-”/)
   })
 
+  it('instrukcja: sekcja dziennik opisana', () => {
+    expect(INSTRUKCJA_CZATU).toContain('Dziennika Stratega')
+    expect(INSTRUKCJA_CZATU).toContain('przygotowaniaOd')
+  })
+
   it('instrukcja: skrzynka z jednostką dni, tematy jako dane, znaczenie null', () => {
     expect(INSTRUKCJA_CZATU).toContain('dniCzekania to dni kalendarzowe')
     expect(INSTRUKCJA_CZATU).toContain('liczone ze 100 najświeższych spraw')

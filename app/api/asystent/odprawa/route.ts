@@ -3,7 +3,7 @@ import { ktoPyta } from '@/lib/auth/guard'
 import { biezacySemestr } from '@/lib/planer/semestry'
 import { dzisWarszawa } from '@/lib/czas'
 import { komunikatBledu } from '@/lib/asystent/gemini'
-import { daneProjektu, generujOdprawe, pobierzArkusz, pobierzObrazSkrzynki, pobierzPlaner, zbudujKontekst } from '@/lib/asystent/dane'
+import { daneProjektu, generujOdprawe, pobierzArkusz, pobierzObrazDziennika, pobierzObrazSkrzynki, pobierzPlaner, zbudujKontekst } from '@/lib/asystent/dane'
 import { tresciNotatek } from '@/lib/asystent/pamiecDane'
 import { statystykiStron } from '@/lib/strony/dane'
 
@@ -19,11 +19,12 @@ export async function POST(req: NextRequest) {
   const teraz = new Date()
   const semestr = biezacySemestr(teraz)
   try {
-    const [a, p, notatki, strony, skrzynka] = await Promise.all([
+    const [a, p, notatki, strony, skrzynka, dziennik] = await Promise.all([
       pobierzArkusz(), pobierzPlaner(semestr.id, kto.rola), tresciNotatek().catch(() => []), statystykiStron().catch(() => []),
       pobierzObrazSkrzynki(teraz.getTime()),
+      pobierzObrazDziennika(dzisWarszawa(teraz)),
     ])
-    const k = zbudujKontekst(daneProjektu(a, p, { id: semestr.id, nazwa: semestr.nazwa }, notatki, strony, skrzynka), dzisWarszawa(teraz))
+    const k = zbudujKontekst(daneProjektu(a, p, { id: semestr.id, nazwa: semestr.nazwa }, notatki, strony, skrzynka, dziennik), dzisWarszawa(teraz))
     return NextResponse.json(await generujOdprawe(k, teraz.getTime()))
   } catch (e) {
     const { status, error } = komunikatBledu(e)

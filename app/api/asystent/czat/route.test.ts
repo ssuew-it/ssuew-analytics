@@ -19,6 +19,7 @@ vi.mock('@/lib/asystent/dane', () => ({
   zbudujKontekst: (d: { notatki: string[]; skrzynka: object }) => ({
     meta: { data: '02.10.2026', dzienTygodnia: 'piątek' }, notatki: d.notatki, skrzynka: d.skrzynka,
   }),
+  pobierzObrazDziennika: async () => [{ tytul: 'Sprawozdanie dla KR', termin: '15.12.2026', przygotowaniaOd: '01.12.2026', obowiazkowe: true, rozlicza: ['KR'] }],
   pobierzObrazSkrzynki: async () => ({ liczby: { doOdpowiedzi: 7 }, poTerminie: [{ temat: 'Sponsoring', organizacja: 'firma.pl', dniCzekania: 5 }], aktywneOrganizacje: [] }),
   czytajOdprawe: async () => ({ odprawa: { podsumowanie: 'Retencja słabnie.', zagrozenia: [], dzis: [] } }),
 }))

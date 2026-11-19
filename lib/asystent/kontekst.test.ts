@@ -16,7 +16,7 @@ function dane(nadpisz: Partial<DaneProjektu> = {}): DaneProjektu {
   return {
     rekrutacje: [], kohorty: [], punkty: [], projekty: [], czlonkowie: [],
     semestr: { id: '2026Z', nazwa: 'Zimowy 2026/2027' },
-    wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, notatki: [], strony: [], skrzynka: null,
+    wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, notatki: [], strony: [], skrzynka: null, dziennik: null,
     ...nadpisz,
   }
 }
@@ -110,5 +110,11 @@ describe('zbudujKontekst', () => {
       ],
     }), DZIS)
     expect(k.czlonkowie).toEqual([{ kohorta: "J'25", statusy: { aktywny: 2, nieaktywny: 1 } }])
+  })
+
+  it('dziennik: obowiązki z kalendarza pracy przechodzą bez zmian; null zostaje null', () => {
+    const poz = [{ tytul: 'Sprawozdanie', termin: '15.12.2026', przygotowaniaOd: '01.12.2026', obowiazkowe: true, rozlicza: ['KR'] }]
+    expect(zbudujKontekst(dane({ dziennik: poz }), { rok: 2026, miesiac: 11, dzien: 19 }).dziennik).toEqual(poz)
+    expect(zbudujKontekst(dane(), { rok: 2026, miesiac: 11, dzien: 19 }).dziennik).toBeNull()
   })
 })

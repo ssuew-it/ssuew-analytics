@@ -10,6 +10,7 @@ vi.mock('@/lib/asystent/dane', () => ({
   pobierzPlaner: async () => ({ wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, ok: true }),
   daneProjektu: (a: object, p: object, _s: object, _n: object, _st: object, skrzynka: object) => ({ ...a, ...p, skrzynka, semestr: { id: '2026Z', nazwa: 'Z' } }),
   zbudujKontekst: (d: { skrzynka: object }) => ({ meta: { data: '02.10.2026', dzienTygodnia: 'piątek' }, skrzynka: d.skrzynka }),
+  pobierzObrazDziennika: async () => [{ tytul: 'Sprawozdanie dla KR', termin: '15.12.2026', przygotowaniaOd: '01.12.2026', obowiazkowe: true, rozlicza: ['KR'] }],
   pobierzObrazSkrzynki: async () => ({ liczby: { doOdpowiedzi: 2 }, poTerminie: [], aktywneOrganizacje: [] }),
   generujOdprawe: (...a: unknown[]) => generujOdprawe(...a),
 }))

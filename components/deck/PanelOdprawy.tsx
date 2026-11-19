@@ -10,6 +10,7 @@ import { ListaFaktow, SzkieletFaktow } from './PanelFaktow'
 const ETYKIETA_OBSZARU: Record<Obszar, string> = {
   kpi: 'KPI', rekrutacja: 'Rekrutacja', retencja: 'Retencja', projekty: 'Projekty', planer: 'Sesja Operacyjna', zespol: 'Zespół', strony: 'Strony',
   skrzynka: 'Skrzynka',
+  dziennik: 'Dziennik',
 }
 
 const STYL_WAGI: Record<Waga, string> = {
