@@ -120,7 +120,7 @@ Stan wpisu na liście = `stan` ostatniej adnotacji z niepustym `stan` (brak = �
 - Serwer egzekwuje to po `kadencjaId` (nie tylko interfejs): wpis lub adnotacja jest „własna”, gdy jej `kadencjaId` = `dziennik/stan.otwartaKadencjaId`. Konto jest wspólne, a w kadencji pisze jedna osoba, więc pole autora przy adnotacji nie jest potrzebne.
 - Cele strategii: dodawanie, poprawianie i usuwanie tylko we wpisie kadencji bieżącej. Strategia z kadencji zamkniętej ma cele zamrożone - następca dodaje adnotacje (`celId` + `stanCelu`), a gdy strategię trzeba przepisać, dodaje nową ze statusem poprzedniej „zastąpiona”.
 
-**Daty.** `najblizszyTermin` przyjmuje i zwraca daty `"RRRR-MM-DD"`; „dziś” liczone helperem z `lib/czas.ts` (Europe/Warsaw), jak w odprawie i Skrzynce.
+**Daty.** `najblizszyTermin` przyjmuje i zwraca `Data` (`{ rok, miesiac, dzien }` z `lib/planer/trwanie.ts`, ten sam typ co Planer i odprawa); „dziś” liczone `dzisWarszawa` z `lib/czas.ts` (Europe/Warsaw).
 
 **Okno przygotowania (kalendarz pracy).** Najbliższe wystąpienie terminu = najbliższa data `miesiac`/`dzien` dziś lub później (dla `dzien: null` - ostatni dzień miesiąca). Okno zaczyna się `wyprzedzenieTygodni` tygodni wcześniej. Czysta funkcja `najblizszyTermin(wpis, dzis)` w `lib/dziennik/terminy.ts`; `dzien` 31 w miesiącu krótszym = ostatni dzień miesiąca; 29 lutego w roku nieprzestępnym = 28. Daty w strefie Europe/Warsaw, dni kalendarzowe (jak w odprawie).
 
