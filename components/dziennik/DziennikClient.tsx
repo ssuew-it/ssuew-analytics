@@ -5,6 +5,7 @@ import { ETYKIETY_DZIALOW } from '@/lib/dziennik/etykiety'
 import { klientDziennika } from '@/lib/dziennik/klient'
 import { DZIALY, type Dzial, type Ksiega } from '@/lib/dziennik/typy'
 import type { Data } from '@/lib/planer/trwanie'
+import { Dzial as WidokDzialu } from './Dzial'
 import { Najblizsze } from './Najblizsze'
 import { PasekKsiegi } from './PasekKsiegi'
 import { RozpocznijKadencje } from './RozpocznijKadencje'
@@ -98,7 +99,7 @@ export function DziennikClient({ dzis, komunikat, dzialStartowy, renderDzial }: 
               {zakladka === 'najblizsze' ? (
                 <Najblizsze ksiega={ksiega} dzis={dzis} onIdzDo={wybierz} />
               ) : (
-                renderDzial?.(zakladka, ksiega, odswiez)
+                (renderDzial ?? ((d, k, o) => <WidokDzialu key={d} dzial={d} ksiega={k} odswiez={o} dzis={dzis} />))(zakladka, ksiega, odswiez)
               )}
             </section>
           </div>
