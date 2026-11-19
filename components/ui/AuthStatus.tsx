@@ -27,13 +27,14 @@ export function AuthStatus() {
   }
 
   return (
-    <div className="deck-chip flex h-9 items-center gap-2 rounded-lg px-2">
+    <div className="deck-chip flex h-9 items-center gap-2 rounded-lg px-2" title={kto ?? undefined}>
       {sposob === 'kod' ? (
         <KeyRound size={15} className="text-deck-accent" />
       ) : (
         <UserCircle size={15} className="text-deck-accent" />
       )}
-      <span className="max-w-[110px] truncate text-[10px] text-deck-muted sm:max-w-[150px]">{kto}</span>
+      {/* Na telefonie adres zajmował cały wiersz nagłówka; jest w podpowiedzi. */}
+      <span className="hidden max-w-[150px] truncate text-[10px] text-deck-muted sm:inline">{kto}</span>
       <span className="rounded border border-deck-accent/30 bg-deck-accent/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-deck-accent">
         {rola}
       </span>

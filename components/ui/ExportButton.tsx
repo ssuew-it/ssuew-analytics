@@ -59,7 +59,7 @@ export function ExportButton() {
   // Podpisy zamiast samych ikon - bez najechania nie było wiadomo, co robią.
   return (
     <div className="deck-chip flex items-center gap-1 rounded-lg p-1" role="group" aria-label="Pobierz widok">
-      <span className="flex items-center gap-1 pl-1.5 pr-0.5 text-[11px] text-deck-muted">
+      <span className="hidden items-center gap-1 pl-1.5 pr-0.5 text-[11px] text-deck-muted sm:flex">
         <Download size={13} className="text-deck-accent" aria-hidden="true" />
         Pobierz
       </span>

@@ -14,7 +14,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="deck-shell flex min-h-screen">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="deck-glow-line sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3 bg-deck-bg-deep/62 backdrop-blur-2xl md:px-6 md:py-4">
+        {/* Na telefonie nagłówek odjeżdża z treścią - przyklejony zajmował ćwierć ekranu. */}
+        <header className="deck-glow-line relative z-20 md:sticky md:top-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3 bg-deck-bg-deep/62 backdrop-blur-2xl md:px-6 md:py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-deck-muted">
               <ShieldCheck size={13} className="text-deck-accent" />
