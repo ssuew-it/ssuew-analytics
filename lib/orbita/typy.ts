@@ -37,6 +37,13 @@ export interface Zadanie {
   zamkniete: number | null
 }
 
+/** Obowiązek Dziennika, który już jest w otwartym zadaniu (`GET /api/orbita/zrodla`). */
+export interface ZrodloOtwarte {
+  wpisId: string
+  termin: string
+  zadanieId: string
+}
+
 export type PolaZadania = Pick<Zadanie, 'tytul' | 'kontekst' | 'termin' | 'zrodlo' | 'etapy'>
 
 export const LIMITY = {

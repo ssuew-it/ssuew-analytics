@@ -5,6 +5,7 @@ import { MIESIACE } from '@/lib/dziennik/etykiety'
 import { klientDziennika } from '@/lib/dziennik/klient'
 import { otwarty, stanWpisu } from '@/lib/dziennik/stan'
 import type { Dzial as TypDzialu, Ksiega, Wpis } from '@/lib/dziennik/typy'
+import type { ZrodloOtwarte } from '@/lib/orbita/typy'
 import type { Data } from '@/lib/planer/trwanie'
 import { FormularzWpisu } from './FormularzWpisu'
 import { KartaWpisu } from './KartaWpisu'
@@ -19,9 +20,9 @@ const PODPOWIEDZ: Record<TypDzialu, string> = {
   przemyslenie: 'Myśli o Samorządzie, ludziach i przyszłości - dla następców.',
 }
 
-type Props = { dzial: TypDzialu; ksiega: Ksiega; odswiez: () => void; dzis: Data }
+type Props = { dzial: TypDzialu; ksiega: Ksiega; odswiez: () => void; dzis: Data; zrodla?: ZrodloOtwarte[] | null }
 
-export function Dzial({ dzial, ksiega, odswiez, dzis }: Props) {
+export function Dzial({ dzial, ksiega, odswiez, dzis, zrodla = null }: Props) {
   const [dodaje, setDodaje] = useState(false)
   const [poprawia, setPoprawia] = useState<string | null>(null)
   const wpisy = uporzadkuj(ksiega.wpisy.filter((w) => w.dzial === dzial))
@@ -42,7 +43,7 @@ export function Dzial({ dzial, ksiega, odswiez, dzis }: Props) {
           poZapisie()
         }} />
     ) : (
-      <KartaWpisu key={w.id} wpis={w} ksiega={ksiega} odswiez={odswiez} onPopraw={() => setPoprawia(w.id)} />
+      <KartaWpisu key={w.id} wpis={w} ksiega={ksiega} odswiez={odswiez} onPopraw={() => setPoprawia(w.id)} orbita={{ dzis, zrodla }} />
     )
 
   // Kalendarz pracy jako oś roku od bieżącego miesiąca - widać też miesiące bez niczego.

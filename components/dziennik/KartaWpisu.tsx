@@ -4,7 +4,10 @@ import { ETYKIETY_STANU, ETYKIETY_STANU_CELU, ETYKIETY_STATUSU, opisTerminu } fr
 import { klientDziennika } from '@/lib/dziennik/klient'
 import { stanCelu, stanWpisu } from '@/lib/dziennik/stan'
 import type { Ksiega, Wpis } from '@/lib/dziennik/typy'
+import type { ZrodloOtwarte } from '@/lib/orbita/typy'
+import type { Data } from '@/lib/planer/trwanie'
 import { Adnotacje } from './Adnotacje'
+import { WezDoOrbity } from './WezDoOrbity'
 import { TekstZLinkami } from './TekstZLinkami'
 import { PRZYCISK_CICHY, PRZYCISK_GROZNY } from './style'
 
@@ -52,7 +55,14 @@ function Pola({ wpis }: { wpis: Wpis }) {
   }
 }
 
-export function KartaWpisu({ wpis, ksiega, odswiez, onPopraw }: { wpis: Wpis; ksiega: Ksiega; odswiez: () => void; onPopraw: () => void }) {
+export function KartaWpisu({ wpis, ksiega, odswiez, onPopraw, orbita }: {
+  wpis: Wpis
+  ksiega: Ksiega
+  odswiez: () => void
+  onPopraw: () => void
+  /** Przejście do Orbity przy wpisach kalendarza pracy; bez tego - brak przycisku. */
+  orbita?: { dzis: Data; zrodla: ZrodloOtwarte[] | null }
+}) {
   const kadencja = ksiega.kadencje.find((k) => k.id === wpis.kadencjaId)
   const wlasny = ksiega.otwartaKadencjaId !== null && wpis.kadencjaId === ksiega.otwartaKadencjaId
   const stan = stanWpisu(wpis)
@@ -95,6 +105,7 @@ export function KartaWpisu({ wpis, ksiega, odswiez, onPopraw }: { wpis: Wpis; ks
       </div>
       <div className="mt-2 space-y-2">
         <Pola wpis={wpis} />
+        {wpis.dzial === 'cykl' && orbita && <WezDoOrbity wpis={wpis} dzis={orbita.dzis} zrodla={orbita.zrodla} />}
         <TekstZLinkami tekst={wpis.tresc} />
         {wpis.dzial === 'watek' && wpis.zostalo && (
           <div className="text-deck-muted">

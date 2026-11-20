@@ -4,9 +4,17 @@ import { dzienIMiesiac, opisTerminu } from '@/lib/dziennik/etykiety'
 import { otwarty, stanWpisu } from '@/lib/dziennik/stan'
 import { najblizsze } from '@/lib/dziennik/terminy'
 import type { Dzial, Ksiega } from '@/lib/dziennik/typy'
+import type { ZrodloOtwarte } from '@/lib/orbita/typy'
 import type { Data } from '@/lib/planer/trwanie'
+import { WezDoOrbity } from './WezDoOrbity'
 
-export function Najblizsze({ ksiega, dzis, onIdzDo }: { ksiega: Ksiega; dzis: Data; onIdzDo: (d: Dzial) => void }) {
+export function Najblizsze({ ksiega, dzis, onIdzDo, zrodla = null }: {
+  ksiega: Ksiega
+  dzis: Data
+  onIdzDo: (d: Dzial) => void
+  /** Obowiązki już w Orbicie; `null` - nie wiadomo (błąd odczytu). */
+  zrodla?: ZrodloOtwarte[] | null
+}) {
   const pozycje = najblizsze(ksiega.wpisy, dzis)
   const otwarte = (d: Dzial) => ksiega.wpisy.filter((w) => w.dzial === d && otwarty(stanWpisu(w))).length
 
@@ -31,6 +39,7 @@ export function Najblizsze({ ksiega, dzis, onIdzDo }: { ksiega: Ksiega; dzis: Da
                 )}
                 <span className="text-[14px] font-medium text-deck-text">{wpis.tytul}</span>
                 {trwa && <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-deck-accent">trwa</span>}
+                <span className="ml-auto"><WezDoOrbity wpis={wpis} dzis={dzis} zrodla={zrodla} /></span>
               </div>
               <p className="mt-1 font-mono text-[11px] text-deck-muted">
                 do {wpis.dzien === null ? opisTerminu(wpis) : dzienIMiesiac(termin)} · przygotuj od {dzienIMiesiac(od)}

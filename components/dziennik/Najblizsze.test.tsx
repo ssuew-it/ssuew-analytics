@@ -32,6 +32,19 @@ describe('Najblizsze', () => {
     expect(screen.getByText('W toku: 1 wątek, 1 luka')).toBeInTheDocument()
   })
 
+  it('każda pozycja ma przejście do Orbity', () => {
+    render(
+      <Najblizsze
+        ksiega={ksiega([cykl('A', {}), cykl('B', { dzien: 12 })])}
+        dzis={DZIS}
+        onIdzDo={vi.fn()}
+        zrodla={[{ wpisId: 'A', termin: '2026-12-10', zadanieId: 'z' }]}
+      />,
+    )
+    expect(screen.getByRole('link', { name: 'w Orbicie' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Weź do Orbity' })).toHaveAttribute('href', '/orbita?zDziennika=B')
+  })
+
   it('pusto - zdanie i przejście do kalendarza pracy', () => {
     const onIdzDo = vi.fn()
     render(<Najblizsze ksiega={ksiega([])} dzis={DZIS} onIdzDo={onIdzDo} />)
