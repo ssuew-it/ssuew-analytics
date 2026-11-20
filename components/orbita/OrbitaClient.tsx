@@ -12,6 +12,7 @@ import { PRZYCISK, PRZYCISK_CICHY } from '@/components/dziennik/style'
 import { Dzis } from './Dzis'
 import { NoweZadanie } from './FormularzZadania'
 import { Lista } from './Lista'
+import { WidokRadaru } from './WidokRadaru'
 
 export type Widok = 'dzis' | 'radar' | 'lista'
 
@@ -36,7 +37,8 @@ export function OrbitaClient({ dzis, widok: widokStartowy, zDziennika, renderWid
   const [blad, setBlad] = useState<string | null>(null)
   const [widok, setWidok] = useState<Widok>(widokStartowy)
   const [nowe, setNowe] = useState(zDziennika !== null)
-  const widokDomyslny: RenderWidok = (_, z, o) => <Lista zadania={z} dzis={dzis} odswiez={o} />
+  const widokDomyslny: RenderWidok = (w, z, o) =>
+    w === 'radar' ? <WidokRadaru zadania={z} dzis={dzis} odswiez={o} /> : <Lista zadania={z} dzis={dzis} odswiez={o} />
   const formularzDomyslny: RenderFormularz = (p) => <NoweZadanie dzis={dzis} {...p} />
   const pokazWidok = renderWidok ?? widokDomyslny
   const pokazFormularz = renderFormularz ?? formularzDomyslny

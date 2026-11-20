@@ -7,7 +7,10 @@ import { PRZYCISK, PRZYCISK_CICHY } from '@/components/dziennik/style'
 import { ZamknijEtap } from './ZamknijEtap'
 
 /** Karta bieżącego etapu: od czego zacząć, kopiowanie wstępu do Claude, zamknięcie. */
-export function KartaEtapu({ pozycja, odswiez }: { pozycja: PozycjaDnia; odswiez: () => void }) {
+/** `zapas: null` - zadanie bez terminu (z radaru albo listy „kiedyś”). */
+type Pozycja = Omit<PozycjaDnia, 'zapas'> & { zapas: number | null }
+
+export function KartaEtapu({ pozycja, odswiez }: { pozycja: Pozycja; odswiez: () => void }) {
   const { zadanie: z, etap: k, zapas, poCzekaniu } = pozycja
   const e = z.etapy[k]
   const [skopiowano, setSkopiowano] = useState(false)
@@ -35,7 +38,9 @@ export function KartaEtapu({ pozycja, odswiez }: { pozycja: PozycjaDnia; odswiez
           {z.zrodlo && <>{' '}<span className="text-deck-muted">(z Dziennika)</span></>}
           {' '}<span className="text-deck-muted">· etap {k + 1}/{z.etapy.length} {e.nazwa}</span>
         </h3>
-        <span className={`font-mono text-[11px] ${zapas < 0 ? 'text-deck-danger' : 'text-deck-accent'}`}>{opisZapasu(zapas)}</span>
+        <span className={`font-mono text-[11px] ${zapas !== null && zapas < 0 ? 'text-deck-danger' : 'text-deck-accent'}`}>
+          {zapas === null ? 'kiedyś' : opisZapasu(zapas)}
+        </span>
       </div>
       {poCzekaniu && <p className="mt-1 text-[12px] text-deck-warn">Termin konsultacji minął - zamknij etap albo przedłuż</p>}
       {e.cel && <p className="mt-1 text-[12.5px] text-deck-muted">Cel: {e.cel}</p>}
