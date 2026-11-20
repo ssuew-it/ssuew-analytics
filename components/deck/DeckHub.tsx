@@ -16,6 +16,8 @@ import { DNI_OKRESU, opisZmiany } from '@/lib/strony/okresy'
 import type { PodsumowanieStron } from '@/lib/strony/model'
 import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
 import type { PozycjaDziennikaAsystenta } from '@/lib/dziennik/obraz'
+import type { ObrazOrbity } from '@/lib/orbita/obraz'
+import { opisZapasu } from '@/lib/orbita/format'
 import { CzatDeck } from './CzatDeck'
 import { DeckTile } from './DeckTile'
 import { MatrixRain } from './MatrixRain'
@@ -67,9 +69,11 @@ type Props = {
   skrzynka: Promise<LicznikiSkrzynki | null> | null
   /** Dziennik Stratega. Zarząd dostaje `null`; wewnętrzne `null` - księgi nie dało się odczytać. */
   dziennik: Promise<DaneDziennika | null> | null
+  /** Orbita - etapy na dziś. Zarząd dostaje `null`; wewnętrzne `null` - zadań nie dało się odczytać. */
+  orbita: Promise<ObrazOrbity | null> | null
 }
 
-export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty, odprawa, strony, skrzynka, dziennik }: Props) {
+export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty, odprawa, strony, skrzynka, dziennik, orbita }: Props) {
   const router = useRouter()
   const { wyloguj } = useAuth()
 
@@ -156,17 +160,10 @@ export function DeckHub({ rola, email, kodem, godzina, analityka, planer, fakty,
             <KafelekSesjiZDanymi planer={planer} span={2} />
           </Suspense>
 
-          {rola === 'owner' && (
-            <DeckTile
-              stan="zablokowany"
-              href="/orbita"
-              etykieta="moduł 03 · zadania"
-              tytul="Orbita"
-              wkrotce="etap 2"
-              span={2}
-            >
-              <p className="text-[12px] leading-relaxed">Radar zadań - bliżej środka znaczy pilniej.</p>
-            </DeckTile>
+          {rola === 'owner' && orbita && (
+            <Suspense fallback={<KafelekOrbity dane={undefined} />}>
+              <KafelekOrbityZDanymi orbita={orbita} />
+            </Suspense>
           )}
 
           {rola === 'owner' && dziennik && (
@@ -333,6 +330,47 @@ function KafelekStron({ dane }: { dane: PodsumowanieStron | null | undefined }) 
               <div className="mt-1 text-deck-danger">{odmiana(dane.bledy, ['strona z błędem', 'strony z błędem', 'stron z błędem'])}</div>
             )}
           </div>
+        </div>
+      )}
+    </DeckTile>
+  )
+}
+
+function KafelekOrbityZDanymi({ orbita }: { orbita: Promise<ObrazOrbity | null> }) {
+  return <KafelekOrbity dane={use(orbita)} />
+}
+
+/** `undefined` - zadania jeszcze płyną; `null` - odczyt zawiódł. */
+function KafelekOrbity({ dane }: { dane: ObrazOrbity | null | undefined }) {
+  const spoznione = dane?.dzis.filter((p) => p.zapasDni < 0).length ?? 0
+  const pierwsza = dane?.dzis[0]
+  const tekst = 'text-[12px] leading-relaxed text-deck-muted'
+  return (
+    <DeckTile
+      stan="zywy"
+      href="/orbita"
+      etykieta="moduł 03 · zadania"
+      tytul="Orbita"
+      span={2}
+      odznaka={spoznione > 0 ? odmiana(spoznione, ['spóźnione', 'spóźnione', 'spóźnionych']) : undefined}
+      odznakaTon="uwaga"
+    >
+      {dane === undefined ? (
+        <Brak />
+      ) : dane === null ? (
+        <p className={tekst}>Zadań nie dało się odczytać.</p>
+      ) : !pierwsza && dane.czekam.length === 0 ? (
+        <p className={tekst}>Nic na dziś. Dodaj zadanie, które czeka na pierwszy krok.</p>
+      ) : (
+        <div className="space-y-2">
+          {pierwsza && (
+            <div>
+              {dane.podpowiedz && <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-deck-muted">najbliżej:</div>}
+              <div className="text-[13px] font-medium leading-snug">{pierwsza.zadanie} · {pierwsza.etap}</div>
+              <div className={`font-mono text-[10.5px] ${pierwsza.zapasDni < 0 ? 'text-deck-warn' : 'text-deck-muted'}`}>{opisZapasu(pierwsza.zapasDni)}</div>
+            </div>
+          )}
+          {dane.czekam.length > 0 && <div className="font-mono text-[10.5px] text-deck-muted">czeka: {dane.czekam.length}</div>}
         </div>
       )}
     </DeckTile>

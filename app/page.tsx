@@ -24,7 +24,7 @@ import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
 import { czytajKsiege } from '@/lib/dziennik/dane'
 import { obrazDziennika } from '@/lib/dziennik/obraz'
 import { czytajZadania } from '@/lib/orbita/dane'
-import { obrazOrbity } from '@/lib/orbita/obraz'
+import { obrazOrbity, type ObrazOrbity } from '@/lib/orbita/obraz'
 
 /** Zapas na odprawę generowaną w tle po wysłaniu strony (Gemini do 25 s). */
 export const maxDuration = 60
@@ -68,6 +68,7 @@ export default async function KokpitPage() {
   let strony: Promise<PodsumowanieStron | null> | null = null
   let skrzynka: Promise<LicznikiSkrzynki | null> | null = null
   let dziennik: Promise<DaneDziennika | null> | null = null
+  let orbita: Promise<ObrazOrbity | null> | null = null
   if (kto.rola === 'owner') {
     const zapisana = czytajOdprawe().catch(() => null)
     odprawa = zapisana
@@ -97,6 +98,7 @@ export default async function KokpitPage() {
         console.error('[asystent] orbita:', e)
         return null
       })
+    orbita = zadania
     after(() => odswiezOdpraweWTle({
       arkusz, planer, zapisana, notatki: tresciNotatek().catch(() => []), strony: wynikiStron.then((w) => w ?? []),
       // `skrzynka` (wyżej) to obietnica liczników kafelka, ustawiana zawsze w tym bloku właściciela.
@@ -120,6 +122,7 @@ export default async function KokpitPage() {
       strony={strony}
       skrzynka={skrzynka}
       dziennik={dziennik}
+      orbita={orbita}
     />
   )
 }

@@ -6,6 +6,7 @@ import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 import type { Fakt } from '@/lib/asystent/fakty'
 import type { PodsumowanieStron } from '@/lib/strony/model'
 import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
+import type { ObrazOrbity } from '@/lib/orbita/obraz'
 
 vi.mock('next/link', () => ({
   default: ({ children, href, ...rest }: { children: ReactNode; href: string }) => (
@@ -38,6 +39,11 @@ const DZIENNIK: DaneDziennika = {
     { tytul: 'Trzecia sprawa', termin: '21.12.2026', przygotowaniaOd: '07.12.2026', obowiazkowe: true, rozlicza: ['RUSS'] },
   ],
 }
+const ORBITA: ObrazOrbity = {
+  dzis: [{ zadanie: 'Zarządzenie ws. uchwał', etap: 'Koncepcja', zapasDni: -2, termin: '10.12.2026' }],
+  podpowiedz: false,
+  czekam: [{ zadanie: 'Standard Workspace', etap: 'Konsultacje', czekaNa: ['RUSS', 'KR'], do: '28.11.2026' }],
+}
 const ZAPIS: ZapisanaOdprawa = {
   slad: 's', dzien: '02.10.2026', utworzono: Date.UTC(2026, 9, 2, 12, 32), model: 'm',
   odprawa: { podsumowanie: 'Rekrutacja trzyma poziom, retencja słabnie.', zagrozenia: [], dzis: [] },
@@ -59,6 +65,7 @@ async function hub(nadpisz: {
   strony?: PodsumowanieStron | null | Promise<PodsumowanieStron | null>
   skrzynka?: LicznikiSkrzynki | null | Promise<LicznikiSkrzynki | null>
   dziennik?: DaneDziennika | null | Promise<DaneDziennika | null>
+  orbita?: ObrazOrbity | null | Promise<ObrazOrbity | null>
 } = {}) {
   const rola = nadpisz.rola ?? 'owner'
   const analityka = nadpisz.analityka instanceof Promise ? nadpisz.analityka : Promise.resolve({ ...ANALITYKA, ...nadpisz.analityka })
@@ -67,6 +74,7 @@ async function hub(nadpisz: {
   const strony = rola === 'owner' ? obietnica(nadpisz.strony === undefined ? STRONY : nadpisz.strony) : null
   const skrzynka = rola === 'owner' ? obietnica(nadpisz.skrzynka === undefined ? SKRZYNKA : nadpisz.skrzynka) : null
   const dziennik = rola === 'owner' ? obietnica(nadpisz.dziennik === undefined ? DZIENNIK : nadpisz.dziennik) : null
+  const orbita = rola === 'owner' ? obietnica(nadpisz.orbita === undefined ? ORBITA : nadpisz.orbita) : null
   // Dane ze strumienia (use + Suspense) dopływają w mikrozadaniach - bez
   // asynchronicznego act React nie zdąży podmienić wersji zastępczej.
   return act(async () => {
@@ -83,6 +91,7 @@ async function hub(nadpisz: {
         strony={strony}
         skrzynka={skrzynka}
         dziennik={dziennik}
+        orbita={orbita}
       />,
     )
   })
@@ -143,7 +152,7 @@ describe('DeckHub', () => {
     expect(szeroki(/Skrzynka/)).toBe(true)
     expect(szeroki(/Sesja Operacyjna/)).toBe(true)
     expect(szeroki(/Dziennik Stratega/)).toBe(true)
-    expect(screen.getByRole('heading', { name: 'Orbita' }).closest('section')!.className).toContain('sm:col-span-2')
+    expect(szeroki(/Orbita/)).toBe(true)
     cleanup()
     await hub({ rola: 'board' })
     expect(szeroki(/Sesja Operacyjna/)).toBe(true)
@@ -276,6 +285,30 @@ describe('DeckHub', () => {
     cleanup()
     await hub({ dziennik: null })
     expect(await screen.findByText('Księgi nie dało się odczytać.')).toBeInTheDocument()
+  })
+
+  it('kafelek Orbity: pierwsza pozycja na dziś, spóźnienie, czekające i odznaka', async () => {
+    await hub()
+    const kafelek = screen.getByRole('link', { name: /Orbita/ })
+    expect(kafelek).toHaveAttribute('href', '/orbita')
+    expect(await screen.findByText('Zarządzenie ws. uchwał · Koncepcja')).toBeInTheDocument()
+    expect(kafelek).toHaveTextContent('spóźnione o 2 dni')
+    expect(kafelek).toHaveTextContent('czeka: 1')
+    expect(kafelek).toHaveTextContent('1 spóźnione')
+  })
+
+  it('kafelek Orbity: podpowiedź, pusto i błąd', async () => {
+    await hub({ orbita: { dzis: [{ zadanie: 'Strategia', etap: 'Projekt', zapasDni: 4, termin: '30.12.2026' }], podpowiedz: true, czekam: [] } })
+    const kafelek = screen.getByRole('link', { name: /Orbita/ })
+    expect(await screen.findByText(/najbliżej:/)).toBeInTheDocument()
+    expect(kafelek).toHaveTextContent('zapas 4 dni')
+    expect(kafelek).not.toHaveTextContent('spóźnione')
+    cleanup()
+    await hub({ orbita: { dzis: [], podpowiedz: false, czekam: [] } })
+    expect(await screen.findByText('Nic na dziś. Dodaj zadanie, które czeka na pierwszy krok.')).toBeInTheDocument()
+    cleanup()
+    await hub({ orbita: null })
+    expect(await screen.findByText('Zadań nie dało się odczytać.')).toBeInTheDocument()
   })
 
   it('zarząd nie widzi kafelka Dziennika', async () => {

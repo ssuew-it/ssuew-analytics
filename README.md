@@ -11,7 +11,7 @@ działającym modułem jest **SSUEW Analytics** - dashboard analityczny samorzą
 | Kafelek | Co robi | Stan |
 |---|---|---|
 | **SSUEW Analytics** | Rekrutacje, retencja kohort, KPI rok-do-roku, lejek, korelacje, prognozy, alerty | działa |
-| **Orbita** | Prywatna tablica zadań jako radar: bliżej środka znaczy pilniej | etap 2 |
+| **Orbita** | Co dziś jest priorytetem i od czego zacząć: zadania z etapami, „dziś” liczone wstecz od terminu, gotowy wstęp do rozmowy z Claude | działa |
 | **Planer semestru** | Kalendarz semestru, kolizje osób i sal, propozycje zmian od zarządu, tryb wspólnej sesji, rozmowa przy wydarzeniu i podgląd obecności | działa |
 | **Strony** | Kliknięcia, wyświetlenia i pozycje nadzorowanych witryn z Search Console | etap 4 |
 | **Dziennik Stratega** | Księga przechodnia funkcji: kalendarz obowiązków, luki, wątki w toku, pole do innowacji, strategie, przemyślenia - dopisywana przez kolejne kadencje | działa |
@@ -113,6 +113,17 @@ Jednorazowo, dla kopii na Dysku:
 1. `deck-samorzad` → APIs & Services → Library: włącz **Google Drive API**.
 2. OAuth consent screen: dodaj zakres `drive.file` (D.E.C.K. widzi tylko pliki, które sam utworzył).
 3. D.E.C.K. jako kontakt@ → Skrzynka → Ustawienia → **Połącz Dysk**. Jak przy kalendarzu: ten sam adres powrotu, zgoda dokładana do zgody Gmaila (`include_granted_scopes`), zgoda bez uprawnień Gmaila odrzucana. Po zgodzie wracasz do Dziennika.
+
+## Orbita
+
+Strona `/orbita` (tylko właściciel, konto kontakt@) odpowiada rano na dwa pytania: co dziś jest priorytetem i od czego zacząć. Zadanie ma termin (albo „kiedyś”) i etapy; każdy etap ma cel, punkt startu („zacznij od”), materiały, warunek „gotowe”, długość w dniach i rodzaj: praca albo czekanie na innych (np. konsultacje RUSS i KR).
+
+- **Dziś** liczy się wstecz od terminu: zapas = dni do ostatniego bezpiecznego startu bieżącego etapu. Na „dziś” trafia to, czemu zapas się skończył (najwyżej 3 widoczne); gdy nic się nie pali - najbliższy etap jako podpowiedź. Konsultacje w toku są w „Czekam”, nie w zaległościach.
+- **Dokument normatywny** daje gotowy szkielet: Koncepcja 3 dni, Projekt 7, Konsultacje 14 (czekanie), Poprawki 3, Przyjęcie 7. Gdy etapy nie mieszczą się przed terminem, formularz ostrzega, a **Dopasuj** skraca pracę, nie ruszając konsultacji.
+- **Kopiuj do Claude** składa z pól zadania wstęp do rozmowy w claude.ai (cel, kontekst, ustalenia z poprzednich etapów, materiały, warunek „gotowe”). **Zamknij etap** zapisuje wynik (link, ustalenia), który trafia do wstępu następnych etapów.
+- Widoki: Dziś, Radar (odległość od środka = zapas; na telefonie lista), Lista (edycja, ponowne otwarcie ostatniego zamkniętego etapu, usuwanie).
+- Z Dziennika: przy obowiązkach kalendarza pracy **Weź do Orbity** tworzy zadanie z najbliższym terminem; gdy jest już otwarte zadanie na to wystąpienie - „w Orbicie”.
+- Dane: kolekcja `orbitaZadania` (etapy w dokumencie) tylko przez Admin SDK. Zamknięte etapy zawsze stoją na początku listy - pilnuje tego serwer. Asystent dostaje etapy na dziś i czekające (bez kontekstu, materiałów i wyników).
 
 ## Uruchomienie
 
