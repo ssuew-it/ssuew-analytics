@@ -18,7 +18,7 @@ export function WidokRadaru({ zadania, dzis, odswiez }: { zadania: Zadanie[]; dz
       <div className="hidden space-y-4 sm:block">
         <Radar plan={planDnia(zadania, dzis)} dzis={dzis} onWybierz={setWybrane} />
         {z && k !== null && (
-          <KartaEtapu key={z.id} pozycja={{ zadanie: z, etap: k, zapas: zapas(z, dzis), poCzekaniu: false }} odswiez={odswiez} />
+          <KartaEtapu key={`${z.id}-${z.etapy[k].id}`} pozycja={{ zadanie: z, etap: k, zapas: zapas(z, dzis), poCzekaniu: false }} odswiez={odswiez} />
         )}
       </div>
       <div className="sm:hidden">

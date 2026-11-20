@@ -23,7 +23,7 @@ function WierszKiedys({ z, odswiez }: { z: Zadanie; odswiez: () => void }) {
       </button>
       {otwarte && k !== null && (
         <div className="mt-2">
-          <KartaEtapu pozycja={{ zadanie: z, etap: k, zapas: null, poCzekaniu: false }} odswiez={odswiez} />
+          <KartaEtapu key={z.etapy[k].id} pozycja={{ zadanie: z, etap: k, zapas: null, poCzekaniu: false }} odswiez={odswiez} />
         </div>
       )}
     </li>
@@ -49,7 +49,8 @@ export function Dzis({ plan, odswiez }: { plan: PlanDnia; odswiez: () => void })
         {plan.podpowiedz && <p className="text-[12.5px] text-deck-muted">Nic nie musi ruszyć dziś - najbliżej:</p>}
         {plan.dzis.length === 0 && <p className="text-[12.5px] text-deck-muted">Nic na dziś.</p>}
         {widoczne.map((p) => (
-          <KartaEtapu key={p.zadanie.id} pozycja={p} odswiez={odswiez} />
+          // Klucz z etapem: po zamknięciu etapu karta zaczyna od zera (bez „Skopiowano” z poprzedniego).
+          <KartaEtapu key={`${p.zadanie.id}-${p.zadanie.etapy[p.etap].id}`} pozycja={p} odswiez={odswiez} />
         ))}
         {ukryte > 0 && (
           <button type="button" className="text-[12.5px] text-deck-accent underline-offset-2 hover:underline" onClick={() => setWszystkie(true)}>

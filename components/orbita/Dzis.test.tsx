@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { Dzis } from './Dzis'
 import { planDnia } from '@/lib/orbita/zapas'
 import { DZIS, etap, zadanie } from './test-dane'
@@ -37,6 +37,20 @@ describe('Dzis', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pokaż etap: Zadanie E' }))
     expect(screen.getByRole('button', { name: 'Kopiuj do Claude' })).toBeInTheDocument()
     expect(screen.getByText('kiedyś')).toBeInTheDocument()
+  })
+
+  it('po zamknięciu etapu karta następnego nie udaje, że jego wstęp jest już skopiowany', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockResolvedValue(undefined) }, configurable: true })
+    const pierwszy = etap({ nazwa: 'Koncepcja', dni: 10 })
+    const drugi = etap({ nazwa: 'Projekt', dni: 3 })
+    const przed = zadanie('A', '2026-11-28', [pierwszy, drugi])
+    const { rerender } = render(<Dzis plan={planDnia([przed], DZIS)} odswiez={vi.fn()} />)
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Kopiuj do Claude' })))
+    expect(screen.getByText('Skopiowano - wklej w Claude')).toBeInTheDocument()
+    const po = zadanie('A', '2026-11-28', [{ ...pierwszy, zamkniety: 1 }, drugi])
+    rerender(<Dzis plan={planDnia([po], DZIS)} odswiez={vi.fn()} />)
+    expect(screen.getByRole('heading', { name: /etap 2\/2 Projekt/ })).toBeInTheDocument()
+    expect(screen.queryByText('Skopiowano - wklej w Claude')).toBeNull()
   })
 
   it('pusto - zachęta', () => {
