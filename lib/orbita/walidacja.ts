@@ -57,7 +57,7 @@ function etap(x: unknown): Etap {
   const czekanie = rodzaj === 'czekanie'
   return {
     id: tekst(e.id) || crypto.randomUUID(),
-    nazwa: tekstDo(e.nazwa, LIMITY.nazwa, 'Nazwa etapu', true),
+    nazwa: tekst(e.nazwa) ? tekstDo(e.nazwa, LIMITY.nazwa, 'Nazwa etapu') : odrzuc('Każdy etap musi mieć nazwę'),
     rodzaj: rodzaj as RodzajEtapu,
     cel: tekstDo(e.cel, LIMITY.krotkie, 'Cel'),
     zacznijOd: tekstDo(e.zacznijOd, LIMITY.krotkie, '„Zacznij od”'),

@@ -31,6 +31,9 @@ describe('sprawdzZadanie', () => {
     ['kontekst 4001', { kontekst: 'x'.repeat(4001) }],
     ['zły rodzaj', { etapy: [etap({ rodzaj: 'inne' as never })] }],
   ])('odrzuca: %s', (_, zmiany) => expect(blad(pola(zmiany))).toBeTruthy())
+  it('etap bez nazwy - poprawny po polsku komunikat', () => {
+    expect(blad(pola({ etapy: [etap({ nazwa: ' ' })] }))).toBe('Każdy etap musi mieć nazwę')
+  })
   it('etap pracy traci czekaNa i czekamDo', () => {
     const w = sprawdzZadanie(pola({ etapy: [etap({ czekaNa: ['KR'], czekamDo: '2026-12-01' })] }))
     expect(w.ok && w.pola.etapy[0]).toMatchObject({ czekaNa: [], czekamDo: null })

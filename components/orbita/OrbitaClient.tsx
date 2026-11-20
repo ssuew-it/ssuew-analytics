@@ -10,6 +10,8 @@ import { planDnia } from '@/lib/orbita/zapas'
 import type { Data } from '@/lib/planer/trwanie'
 import { PRZYCISK, PRZYCISK_CICHY } from '@/components/dziennik/style'
 import { Dzis } from './Dzis'
+import { NoweZadanie } from './FormularzZadania'
+import { Lista } from './Lista'
 
 export type Widok = 'dzis' | 'radar' | 'lista'
 
@@ -34,6 +36,10 @@ export function OrbitaClient({ dzis, widok: widokStartowy, zDziennika, renderWid
   const [blad, setBlad] = useState<string | null>(null)
   const [widok, setWidok] = useState<Widok>(widokStartowy)
   const [nowe, setNowe] = useState(zDziennika !== null)
+  const widokDomyslny: RenderWidok = (_, z, o) => <Lista zadania={z} dzis={dzis} odswiez={o} />
+  const formularzDomyslny: RenderFormularz = (p) => <NoweZadanie dzis={dzis} {...p} />
+  const pokazWidok = renderWidok ?? widokDomyslny
+  const pokazFormularz = renderFormularz ?? formularzDomyslny
 
   const odswiez = useCallback(() => {
     klientOrbity
@@ -101,7 +107,7 @@ export function OrbitaClient({ dzis, widok: widokStartowy, zDziennika, renderWid
           </div>
         </header>
 
-        {nowe && renderFormularz && <div className="mb-6">{renderFormularz({ zDziennika, onGotowe: () => { zamknijFormularz(); odswiez() }, onAnuluj: zamknijFormularz })}</div>}
+        {nowe && <div className="mb-6">{pokazFormularz({ zDziennika, onGotowe: () => { zamknijFormularz(); odswiez() }, onAnuluj: zamknijFormularz })}</div>}
 
         {blad && !zadania ? (
           <div className="deck-chip rounded-xl p-4 text-[13px]">
@@ -110,10 +116,10 @@ export function OrbitaClient({ dzis, widok: widokStartowy, zDziennika, renderWid
           </div>
         ) : !zadania ? (
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-deck-muted">Wczytuję zadania…</p>
-        ) : widok === 'dzis' || !renderWidok ? (
+        ) : widok === 'dzis' ? (
           <Dzis plan={planDnia(zadania, dzis)} odswiez={odswiez} />
         ) : (
-          renderWidok(widok, zadania, odswiez)
+          pokazWidok(widok, zadania, odswiez)
         )}
       </main>
     </>
