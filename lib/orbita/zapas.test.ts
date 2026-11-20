@@ -123,4 +123,8 @@ describe('ileBrakuje i dopasuj', () => {
     expect(dopasuj(s, '2026-11-25', DZIS).etapy.map((e) => e.dni)).toEqual([30, 5])
   })
   it('bez terminu nic nie brakuje', () => expect(ileBrakuje(szkieletDokumentu(), null, DZIS)).toBe(0))
+  it('etap zerowy zostaje zerowy', () => {
+    const w = dopasuj([etap('praca', 0), etap('praca', 10)], '2026-11-25', DZIS)
+    expect(w.etapy.map((e) => e.dni)).toEqual([0, 5])
+  })
 })

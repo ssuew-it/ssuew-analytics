@@ -51,12 +51,29 @@ describe('wstepDoClaude', () => {
     expect(wstepDoClaude(zadanie([{ ...k, zamkniety: 1 }, p]))).toContain('Ustalenia z poprzednich etapów:\nbrak')
   })
 
-  it('zamknięte zadanie - wstęp dla ostatniego etapu', () => {
-    const s = szkieletDokumentu().map((e) => ({ ...e, zamkniety: 1 }))
-    expect(wstepDoClaude(zadanie(s, { zamkniete: 1 }))).toContain('Teraz etap 5 z 5: Przyjęcie')
-  })
-
   it('bez długich myślników', () => {
     expect(wstepDoClaude(zadanie(szkieletDokumentu()))).not.toMatch(/[—–]/)
+  })
+})
+
+describe('wstepDoClaude - zamknięte i ponownie otwarte', () => {
+  it('zamknięte zadanie: bez udawania bieżącego etapu, z wynikiem ostatniego', () => {
+    const s = szkieletDokumentu().map((e, i) => ({ ...e, zamkniety: 1, wynik: i === 4 ? 'Opublikowane: https://a.pl' : '' }))
+    const w = wstepDoClaude(zadanie(s, { zamkniete: 1 }))
+    expect(w).toContain('Wszystkie etapy zamknięte (5 z 5).')
+    expect(w).not.toContain('Teraz etap')
+    expect(w).toContain('- Przyjęcie: Opublikowane: https://a.pl')
+  })
+
+  it('ponownie otwarty etap pokazuje swój poprzedni wynik', () => {
+    const [k, p] = szkieletDokumentu()
+    const w = wstepDoClaude(zadanie([{ ...k, wynik: 'Pierwsza wersja koncepcji' }, p]))
+    expect(w).toContain('Poprzedni wynik tego etapu: Pierwsza wersja koncepcji')
+  })
+
+  it('puste linie wyniku bez wiszących spacji', () => {
+    const [k, p] = szkieletDokumentu()
+    const w = wstepDoClaude(zadanie([{ ...k, zamkniety: 1, wynik: 'a\n\nb' }, p]))
+    expect(w).toContain('- Koncepcja: a\n\n  b')
   })
 })

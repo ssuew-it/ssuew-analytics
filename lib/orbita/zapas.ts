@@ -118,7 +118,8 @@ export function dopasuj(etapy: Etap[], termin: string, dzis: Data): { etapy: Eta
   const cel = dostepne - czekanie
   if (sumaPracy <= cel) return { etapy, brakuje: 0 }
   const nowe = etapy.map((e) =>
-    e.zamkniety === null && e.rodzaj === 'praca' ? { ...e, dni: Math.max(1, Math.floor((e.dni * Math.max(cel, 0)) / sumaPracy)) } : e,
+    // Etap zerowy zostaje zerowy - skracanie nie może go wydłużyć.
+    e.zamkniety === null && e.rodzaj === 'praca' && e.dni > 0 ? { ...e, dni: Math.max(1, Math.floor((e.dni * Math.max(cel, 0)) / sumaPracy)) } : e,
   )
   return { etapy: nowe, brakuje: Math.max(0, suma(otwarte(nowe)) - dostepne) }
 }

@@ -1,13 +1,14 @@
 'use client'
 import Link from 'next/link'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { MatrixRain } from '@/components/deck/MatrixRain'
 import { klientOrbity } from '@/lib/orbita/klient'
 import { naglowekDnia } from '@/lib/orbita/format'
 import type { Zadanie } from '@/lib/orbita/typy'
 import { planDnia } from '@/lib/orbita/zapas'
-import type { Data } from '@/lib/planer/trwanie'
+import { dzisWarszawa } from '@/lib/czas'
+import { porownajDaty, type Data } from '@/lib/planer/trwanie'
 import { PRZYCISK, PRZYCISK_CICHY } from '@/components/dziennik/style'
 import { Dzis } from './Dzis'
 import { NoweZadanie } from './FormularzZadania'
@@ -26,7 +27,7 @@ export type RenderWidok = (widok: Exclude<Widok, 'dzis'>, zadania: Zadanie[], od
 /** Formularz nowego zadania; `szkicZ` - id wpisu Dziennika, z którego zadanie powstaje. */
 export type RenderFormularz = (p: { zDziennika: string | null; onGotowe: () => void; onAnuluj: () => void }) => ReactNode
 
-export function OrbitaClient({ dzis, widok: widokStartowy, zDziennika, renderWidok, renderFormularz }: {
+export function OrbitaClient({ dzis: dzisStartowy, widok: widokStartowy, zDziennika, renderWidok, renderFormularz }: {
   dzis: Data
   widok: Widok
   zDziennika: string | null
@@ -54,6 +55,26 @@ export function OrbitaClient({ dzis, widok: widokStartowy, zDziennika, renderWid
   }, [])
 
   useEffect(odswiez, [odswiez])
+
+  // Karta otwarta przez noc: po powrocie do niej liczymy dzień od nowa i odświeżamy zadania.
+  const [dzis, setDzis] = useState<Data>(dzisStartowy)
+  const dzisRef = useRef(dzisStartowy)
+  useEffect(() => {
+    const sprawdz = () => {
+      if (document.visibilityState === 'hidden') return
+      const teraz = dzisWarszawa(new Date())
+      if (porownajDaty(dzisRef.current, teraz) === 0) return
+      dzisRef.current = teraz
+      setDzis(teraz)
+      odswiez()
+    }
+    document.addEventListener('visibilitychange', sprawdz)
+    window.addEventListener('focus', sprawdz)
+    return () => {
+      document.removeEventListener('visibilitychange', sprawdz)
+      window.removeEventListener('focus', sprawdz)
+    }
+  }, [odswiez])
 
   function wybierz(w: Widok) {
     setWidok(w)
