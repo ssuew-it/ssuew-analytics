@@ -16,7 +16,7 @@ vi.mock('@/lib/strony/google', async (oryginal) => ({
   zapytanie: (...a: unknown[]) => zapytanie(...a),
 }))
 
-import { dodajStrone, listaStron, statystykiStron, usunStrone } from '@/lib/strony/dane'
+import { dodajStrone, listaStron, przesunStrone, statystykiStron, usunStrone, ustawSezonowa } from '@/lib/strony/dane'
 import { BladGoogle } from '@/lib/strony/google'
 
 beforeEach(() => {
@@ -42,6 +42,37 @@ describe('lista stron', () => {
     expect((await listaStron()).map((s) => s.witryna)).toEqual(['sc-domain:jwk26.pl', 'https://samorzad.ue.wroc.pl/'])
     await usunStrone('sc-domain:jwk26.pl')
     expect(await listaStron()).toEqual([{ witryna: 'https://samorzad.ue.wroc.pl/', nazwa: 'Samorząd' }])
+  })
+})
+
+describe('kolejność i sezonowość', () => {
+  const A = 'sc-domain:dniadaptacyjne.pl'
+  const B = 'https://samorzad.ue.wroc.pl/'
+  const C = 'sc-domain:jwk26.pl'
+  beforeEach(() => {
+    zapisane = { witryny: [{ witryna: A, nazwa: 'DA' }, { witryna: B, nazwa: 'Samorząd' }, { witryna: C, nazwa: 'JWK' }] }
+  })
+
+  it('przesuwa wcześniej i później; na brzegu nic nie robi', async () => {
+    await przesunStrone(B, -1)
+    expect((await listaStron()).map((s) => s.witryna)).toEqual([B, A, C])
+    await przesunStrone(B, -1)
+    expect((await listaStron()).map((s) => s.witryna)).toEqual([B, A, C])
+    await przesunStrone(A, 1)
+    expect((await listaStron()).map((s) => s.witryna)).toEqual([B, C, A])
+  })
+
+  it('oznacza i odznacza sezonową; reszta wpisu bez zmian', async () => {
+    await ustawSezonowa(A, true)
+    expect((await listaStron())[0]).toEqual({ witryna: A, nazwa: 'DA', sezonowa: true })
+    await ustawSezonowa(A, false)
+    expect((await listaStron())[0]).toEqual({ witryna: A, nazwa: 'DA' })
+  })
+
+  it('nieznana witryna - bez zmian', async () => {
+    await przesunStrone('x', 1)
+    await ustawSezonowa('x', true)
+    expect((await listaStron()).map((s) => s.witryna)).toEqual([A, B, C])
   })
 })
 

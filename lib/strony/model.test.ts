@@ -35,6 +35,16 @@ describe('zlozStatystyki', () => {
     expect(s.dzienne[1]).toEqual({ data: '2026-09-05', klikniecia: 4, wyswietlenia: 90 })
   })
 
+  it('strona sezonowa: spadek poza sezonem bez alertu, oznaczenie przechodzi dalej', () => {
+    const s = zlozStatystyki({
+      strona: { ...STRONA, sezonowa: true }, okres: OKRES, dzienne: pusta, zapytania: pusta, podstrony: pusta,
+      suma: { rows: [{ clicks: 5, impressions: 100, ctr: 0.05, position: 9 }] },
+      sumaPoprzednia: { rows: [{ clicks: 400, impressions: 5000, ctr: 0.08, position: 5 }] },
+    })
+    expect(s.alert).toBe(false)
+    expect(s.sezonowa).toBe(true)
+  })
+
   it('pusta odpowiedź - zera, zmiana null, bez alertu, puste listy', () => {
     const s = zlozStatystyki({ strona: STRONA, okres: OKRES, suma: pusta, sumaPoprzednia: pusta, dzienne: pusta, zapytania: pusta, podstrony: pusta })
     expect(s.biezace).toEqual({ klikniecia: 0, wyswietlenia: 0, ctr: 0, pozycja: 0 })
@@ -60,13 +70,23 @@ describe('podsumujStrony', () => {
       { ok: false, witryna: 'x', nazwa: 'x', blad: 'brak-dostepu', komunikat: '...' },
     ]
     expect(podsumujStrony(wyniki)).toEqual({
-      stron: 3, klikniecia: 100, wyswietlenia: 1000, poprzednieKlikniecia: 120, poprzednieWyswietlenia: 1200, alerty: 1, bledy: 1,
+      stron: 3, klikniecia: 100, wyswietlenia: 1000, poprzednieKlikniecia: 120, poprzednieWyswietlenia: 1200, alerty: 1, bledy: 1, sezonowe: 0,
+    })
+  })
+
+  it('strony sezonowe nie liczą się do sum ani alertów, ale do liczby stron tak', () => {
+    const wyniki: WynikStrony[] = [
+      { ok: true, dane: stat(60, 100) },
+      { ok: true, dane: { ...stat(5, 400), sezonowa: true } },
+    ]
+    expect(podsumujStrony(wyniki)).toEqual({
+      stron: 2, klikniecia: 60, wyswietlenia: 600, poprzednieKlikniecia: 100, poprzednieWyswietlenia: 1000, alerty: 0, bledy: 0, sezonowe: 1,
     })
   })
 
   it('pusta lista', () => {
     expect(podsumujStrony([])).toEqual({
-      stron: 0, klikniecia: 0, wyswietlenia: 0, poprzednieKlikniecia: 0, poprzednieWyswietlenia: 0, alerty: 0, bledy: 0,
+      stron: 0, klikniecia: 0, wyswietlenia: 0, poprzednieKlikniecia: 0, poprzednieWyswietlenia: 0, alerty: 0, bledy: 0, sezonowe: 0,
     })
   })
 })

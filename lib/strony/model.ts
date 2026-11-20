@@ -16,6 +16,8 @@ export interface Liczby {
 export interface WpisStrony {
   witryna: string
   nazwa: string
+  /** Strona działa w sezonie (np. dni adaptacyjne) - poza sumą, kafelkiem kokpitu i alertami. */
+  sezonowa?: boolean
 }
 
 export interface StatystykiStrony {
@@ -30,13 +32,14 @@ export interface StatystykiStrony {
   zapytania: { tekst: string; klikniecia: number; wyswietlenia: number; pozycja: number }[]
   podstrony: { adres: string; klikniecia: number; wyswietlenia: number; pozycja: number }[]
   alert: boolean
+  sezonowa?: boolean
 }
 
 export type RodzajBledu = 'brak-dostepu' | 'api-wylaczone' | 'inny'
 
 export type WynikStrony =
   | { ok: true; dane: StatystykiStrony }
-  | { ok: false; witryna: string; nazwa: string; blad: RodzajBledu; komunikat: string }
+  | { ok: false; witryna: string; nazwa: string; blad: RodzajBledu; komunikat: string; sezonowa?: boolean }
 
 /** Kafelek w kokpicie i pasek podsumowania w panelu. */
 export interface PodsumowanieStron {
@@ -47,6 +50,8 @@ export interface PodsumowanieStron {
   poprzednieWyswietlenia: number
   alerty: number
   bledy: number
+  /** Ile stron pominięto w sumach jako sezonowe. */
+  sezonowe: number
 }
 
 /** Odpowiedź `/api/strony/dostepne`. `blad` to gotowy komunikat, gdy Search Console zawiódł. */
@@ -115,12 +120,15 @@ export function zlozStatystyki(w: {
     }),
     zapytania: wiersze(w.zapytania).map(({ klucz, ...r }) => ({ tekst: klucz, ...r })),
     podstrony: wiersze(w.podstrony).map(({ klucz, ...r }) => ({ adres: klucz, ...r })),
-    alert: alertSpadku(biezace.klikniecia, poprzednie.klikniecia),
+    // Sezonowa strona poza sezonem zawsze „spada” - alert byłby szumem.
+    alert: !w.strona.sezonowa && alertSpadku(biezace.klikniecia, poprzednie.klikniecia),
+    sezonowa: w.strona.sezonowa === true,
   }
 }
 
 export function podsumujStrony(wyniki: WynikStrony[]): PodsumowanieStron {
-  const dobre = wyniki.flatMap((w) => (w.ok ? [w.dane] : []))
+  const dobre = wyniki.flatMap((w) => (w.ok && !w.dane.sezonowa ? [w.dane] : []))
+  const sezonowe = wyniki.filter((w) => (w.ok ? w.dane.sezonowa : w.sezonowa)).length
   const suma = (f: (s: StatystykiStrony) => number) => dobre.reduce((a, s) => a + f(s), 0)
   return {
     stron: wyniki.length,
@@ -129,7 +137,8 @@ export function podsumujStrony(wyniki: WynikStrony[]): PodsumowanieStron {
     poprzednieKlikniecia: suma((s) => s.poprzednie.klikniecia),
     poprzednieWyswietlenia: suma((s) => s.poprzednie.wyswietlenia),
     alerty: dobre.filter((s) => s.alert).length,
-    bledy: wyniki.length - dobre.length,
+    bledy: wyniki.filter((w) => !w.ok).length,
+    sezonowe,
   }
 }
 

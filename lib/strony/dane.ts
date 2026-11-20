@@ -12,10 +12,10 @@ export async function listaStron(): Promise<WpisStrony[]> {
   const d = (await stronyRef().get()).data()
   const surowe: unknown[] = Array.isArray(d?.witryny) ? d.witryny : []
   return surowe.flatMap((x) => {
-    const w = x as { witryna?: unknown; nazwa?: unknown }
+    const w = x as { witryna?: unknown; nazwa?: unknown; sezonowa?: unknown }
     if (typeof w?.witryna !== 'string' || !w.witryna) return []
     const nazwa = typeof w.nazwa === 'string' && w.nazwa.trim() ? w.nazwa.trim() : nazwaZWitryny(w.witryna)
-    return [{ witryna: w.witryna, nazwa }]
+    return [{ witryna: w.witryna, nazwa, ...(w.sezonowa === true ? { sezonowa: true } : {}) }]
   })
 }
 
@@ -28,6 +28,24 @@ export async function dodajStrone(wpis: WpisStrony): Promise<void> {
 export async function usunStrone(witryna: string): Promise<void> {
   const lista = await listaStron()
   await stronyRef().set({ witryny: lista.filter((s) => s.witryna !== witryna) })
+}
+
+/** Kolejność listy = kolejność zakładek; pierwsza strona otwiera się domyślnie. */
+export async function przesunStrone(witryna: string, kierunek: -1 | 1): Promise<void> {
+  const lista = await listaStron()
+  const i = lista.findIndex((s) => s.witryna === witryna)
+  const j = i + kierunek
+  if (i === -1 || j < 0 || j >= lista.length) return
+  ;[lista[i], lista[j]] = [lista[j], lista[i]]
+  await stronyRef().set({ witryny: lista })
+}
+
+export async function ustawSezonowa(witryna: string, sezonowa: boolean): Promise<void> {
+  const lista = await listaStron()
+  if (!lista.some((s) => s.witryna === witryna)) return
+  await stronyRef().set({
+    witryny: lista.map((s) => (s.witryna === witryna ? { witryna: s.witryna, nazwa: s.nazwa, ...(sezonowa ? { sezonowa: true } : {}) } : s)),
+  })
 }
 
 /**
@@ -62,7 +80,7 @@ export async function statystykiStron(teraz = new Date()): Promise<WynikStrony[]
       } catch (e) {
         console.error('[strony]', strona.witryna, e)
         const blad = e instanceof BladGoogle ? e.rodzaj : 'inny'
-        return { ok: false, witryna: strona.witryna, nazwa: strona.nazwa, blad, komunikat: komunikatStrony(blad, emailKonta()) }
+        return { ok: false, witryna: strona.witryna, nazwa: strona.nazwa, blad, komunikat: komunikatStrony(blad, emailKonta()), ...(strona.sezonowa ? { sezonowa: true } : {}) }
       }
     }),
   )

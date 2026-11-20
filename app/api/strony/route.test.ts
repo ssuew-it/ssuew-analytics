@@ -1,17 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { GET, POST, DELETE } from '@/app/api/strony/route'
+import { GET, POST, DELETE, PATCH } from '@/app/api/strony/route'
 import { GET as dostepne } from '@/app/api/strony/dostepne/route'
 import { BladGoogle } from '@/lib/strony/google'
 
 const ktoPyta = vi.fn()
 const listaWitryn = vi.fn()
-const dane = { statystykiStron: vi.fn(), listaStron: vi.fn(), dodajStrone: vi.fn(), usunStrone: vi.fn() }
+const dane = { statystykiStron: vi.fn(), listaStron: vi.fn(), dodajStrone: vi.fn(), usunStrone: vi.fn(), przesunStrone: vi.fn(), ustawSezonowa: vi.fn() }
 vi.mock('@/lib/auth/guard', () => ({ ktoPyta: (...a: unknown[]) => ktoPyta(...a) }))
 vi.mock('@/lib/strony/dane', () => ({
   statystykiStron: (...a: unknown[]) => dane.statystykiStron(...a),
   listaStron: (...a: unknown[]) => dane.listaStron(...a),
   dodajStrone: (...a: unknown[]) => dane.dodajStrone(...a),
   usunStrone: (...a: unknown[]) => dane.usunStrone(...a),
+  przesunStrone: (...a: unknown[]) => dane.przesunStrone(...a),
+  ustawSezonowa: (...a: unknown[]) => dane.ustawSezonowa(...a),
 }))
 vi.mock('@/lib/strony/google', async (oryginal) => ({
   ...(await oryginal<typeof import('@/lib/strony/google')>()),
@@ -74,6 +76,21 @@ describe('/api/strony', () => {
     expect(res.status).toBe(200)
     expect(dane.usunStrone).toHaveBeenCalledWith('https://samorzad.ue.wroc.pl/')
     expect((await DELETE(zadanie())).status).toBe(400)
+  })
+})
+
+describe('/api/strony PATCH', () => {
+  it('przesuwa i oznacza sezonową; zła treść 400; zarząd 403', async () => {
+    const W = 'https://samorzad.ue.wroc.pl/'
+    expect((await PATCH(zadanie({ witryna: W, przesun: -1 }))).status).toBe(200)
+    expect(dane.przesunStrone).toHaveBeenCalledWith(W, -1)
+    expect((await PATCH(zadanie({ witryna: W, sezonowa: true }))).status).toBe(200)
+    expect(dane.ustawSezonowa).toHaveBeenCalledWith(W, true)
+    expect((await PATCH(zadanie({ witryna: W, przesun: 5 }))).status).toBe(400)
+    expect((await PATCH(zadanie({ przesun: 1 }))).status).toBe(400)
+    expect((await PATCH(zadanie({ witryna: W }))).status).toBe(400)
+    ktoPyta.mockResolvedValue({ uid: 'k', email: 'J', rola: 'board' })
+    expect((await PATCH(zadanie({ witryna: W, przesun: 1 }))).status).toBe(403)
   })
 })
 

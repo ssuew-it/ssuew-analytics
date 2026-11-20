@@ -40,7 +40,12 @@ export function PanelStron({ wyniki, email }: { wyniki: Promise<WynikStrony[] | 
   return (
     <div className="space-y-5">
       <section aria-label="Podsumowanie wszystkich stron" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Liczba etykieta="Kliknięcia razem" wartosc={liczba(p.klikniecia)} zmiana={opisZmiany('klikniecia', p.klikniecia, p.poprzednieKlikniecia)} />
+        <Liczba
+          etykieta="Kliknięcia razem"
+          wartosc={liczba(p.klikniecia)}
+          zmiana={opisZmiany('klikniecia', p.klikniecia, p.poprzednieKlikniecia)}
+          opis={p.sezonowe ? `bez sezonowych (${p.sezonowe})` : undefined}
+        />
         <Liczba etykieta="Wyświetlenia razem" wartosc={liczba(p.wyswietlenia)} zmiana={opisZmiany('wyswietlenia', p.wyswietlenia, p.poprzednieWyswietlenia)} />
         <Liczba etykieta="Alerty spadku" wartosc={String(p.alerty)} opis={p.alerty ? 'spadek ≥ 30%' : 'bez spadków'} />
         <Liczba etykieta="Strony" wartosc={String(p.stron)} opis={p.bledy ? `${p.bledy} z błędem` : 'wszystkie odpowiadają'} />
@@ -63,6 +68,7 @@ export function PanelStron({ wyniki, email }: { wyniki: Promise<WynikStrony[] | 
                 }`}
               >
                 {nazwaWyniku(w)}
+                {(w.ok ? w.dane.sezonowa : w.sezonowa) && <span className="text-deck-muted">· sezonowa</span>}
                 {!w.ok && <span className="text-deck-danger">(błąd)</span>}
                 {w.ok && w.dane.alert && <AlertTriangle size={11} className="text-deck-warn" aria-label="spadek" />}
               </button>
@@ -70,7 +76,11 @@ export function PanelStron({ wyniki, email }: { wyniki: Promise<WynikStrony[] | 
           })}
         </div>
         <div role="tabpanel" aria-label={nazwaWyniku(wynik)}>
-          <ZakladkaStrony key={witrynaWyniku(wynik)} wynik={wynik} />
+          <ZakladkaStrony
+            key={witrynaWyniku(wynik)}
+            wynik={wynik}
+            pozycja={{ pierwsza: lista.indexOf(wynik) === 0, ostatnia: lista.indexOf(wynik) === lista.length - 1 }}
+          />
         </div>
       </div>
     </div>

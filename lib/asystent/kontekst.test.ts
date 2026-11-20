@@ -97,7 +97,7 @@ describe('zbudujKontekst', () => {
     }
     expect(zbudujKontekst(dane({ strony: [strona] }), DZIS).strony).toEqual([{
       strona: 'jwk26.pl', okres: '2026-09-01 - 2026-09-28', klikniecia: 60, wyswietlenia: 2000,
-      sredniaPozycja: 7.3, zmianaKlikniecProc: -40, alertSpadku: true, topZapytania: ['jwk', 'jwk 2026', 'juwenalia'],
+      sredniaPozycja: 7.3, zmianaKlikniecProc: -40, alertSpadku: true, sezonowa: false, topZapytania: ['jwk', 'jwk 2026', 'juwenalia'],
     }])
   })
 

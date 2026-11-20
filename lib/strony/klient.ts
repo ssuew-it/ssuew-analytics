@@ -6,6 +6,8 @@ export const klientStron = {
   dostepne: () => wywolaj<DostepneWitryny>('/api/strony/dostepne'),
   dodaj: (witryna: string, nazwa: string) => wywolaj<WpisStrony>('/api/strony', json('POST', { witryna, nazwa })),
   // Identyfikator ma „:” i „/” - bez kodowania serwer dostałby obcięty adres.
+  ustaw: (witryna: string, zmiana: { przesun: -1 | 1 } | { sezonowa: boolean }) =>
+    wywolaj<{ ok: true }>('/api/strony', json('PATCH', { witryna, ...zmiana })),
   usun: (witryna: string) =>
     wywolaj<{ ok: true }>(`/api/strony?witryna=${encodeURIComponent(witryna)}`, { method: 'DELETE' }),
 }

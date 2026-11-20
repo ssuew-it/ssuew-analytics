@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { tylkoWlasciciel } from '@/lib/asystent/tylkoWlasciciel'
-import { dodajStrone, statystykiStron, usunStrone } from '@/lib/strony/dane'
+import { dodajStrone, przesunStrone, statystykiStron, usunStrone, ustawSezonowa } from '@/lib/strony/dane'
 import { BladGoogle, emailKonta, listaWitryn } from '@/lib/strony/google'
 import { DLUGOSC_NAZWY, TYLKO_WLASCICIEL, komunikatStrony } from '@/lib/strony/model'
 import { nazwaZWitryny } from '@/lib/strony/okresy'
@@ -44,5 +44,18 @@ export async function DELETE(req: NextRequest) {
   const witryna = req.nextUrl.searchParams.get('witryna')
   if (!witryna) return NextResponse.json({ error: 'Brak witryny' }, { status: 400 })
   await usunStrone(witryna)
+  return NextResponse.json({ ok: true })
+}
+
+/** Kolejność (`przesun`: -1 wcześniej, 1 później) albo oznaczenie sezonowej (`sezonowa`). */
+export async function PATCH(req: NextRequest) {
+  const { odmowa } = await tylkoWlasciciel(req, TYLKO_WLASCICIEL)
+  if (odmowa) return odmowa
+  const body = await req.json().catch(() => null)
+  const witryna = typeof body?.witryna === 'string' ? body.witryna : ''
+  if (!witryna) return NextResponse.json({ error: 'Brak witryny' }, { status: 400 })
+  if (body.przesun === -1 || body.przesun === 1) await przesunStrone(witryna, body.przesun)
+  else if (typeof body.sezonowa === 'boolean') await ustawSezonowa(witryna, body.sezonowa)
+  else return NextResponse.json({ error: 'Nieznana zmiana' }, { status: 400 })
   return NextResponse.json({ ok: true })
 }

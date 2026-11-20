@@ -180,6 +180,8 @@ export function zbudujKontekst(d: DaneProjektu, dzis: Data) {
       sredniaPozycja: Math.round(s.biezace.pozycja * 10) / 10,
       zmianaKlikniecProc: s.zmiana.klikniecia === null ? null : Math.round(s.zmiana.klikniecia * 100),
       alertSpadku: s.alert,
+      // Sezonowa strona poza sezonem ma naturalnie mały ruch - nie wnioskuj ze spadku.
+      sezonowa: s.sezonowa === true,
       topZapytania: s.zapytania.slice(0, 3).map((z) => z.tekst),
     })),
     skrzynka: d.skrzynka,

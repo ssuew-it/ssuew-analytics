@@ -3,18 +3,21 @@ import { AlertTriangle } from 'lucide-react'
 import { DNI_OKRESU, opisZmiany, type OpisZmiany } from '@/lib/strony/okresy'
 import type { StatystykiStrony, WynikStrony } from '@/lib/strony/model'
 import { UsunStrone } from './UsunStrone'
+import { UstawieniaStrony } from './UstawieniaStrony'
 import { WykresStrony } from './WykresStrony'
 
 export const liczba = (n: number) => n.toLocaleString('pl-PL')
 const jedno = (n: number) => n.toLocaleString('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
-export function ZakladkaStrony({ wynik }: { wynik: WynikStrony }) {
+/** `pozycja` - miejsce na liście (strzałki kolejności); bez niej ustawień nie ma. */
+export function ZakladkaStrony({ wynik, pozycja }: { wynik: WynikStrony; pozycja?: { pierwsza: boolean; ostatnia: boolean } }) {
   if (!wynik.ok) {
     return (
       <section className="space-y-3">
         <div role="alert" className="rounded-lg border border-deck-danger-border bg-deck-danger-bg px-4 py-3 text-[12.5px] text-deck-danger">
           {wynik.komunikat}
         </div>
+        {pozycja && <UstawieniaStrony witryna={wynik.witryna} nazwa={wynik.nazwa} sezonowa={wynik.sezonowa === true} {...pozycja} />}
         <UsunStrone witryna={wynik.witryna} nazwa={wynik.nazwa} />
       </section>
     )
@@ -52,6 +55,7 @@ export function ZakladkaStrony({ wynik }: { wynik: WynikStrony }) {
           wiersze={s.podstrony.map((p) => ({ ...p, klucz: p.adres, pokaz: p.adres.replace(/^https?:\/\//, '') }))}
         />
       </div>
+      {pozycja && <UstawieniaStrony witryna={s.witryna} nazwa={s.nazwa} sezonowa={s.sezonowa === true} {...pozycja} />}
       <UsunStrone witryna={s.witryna} nazwa={s.nazwa} />
     </section>
   )
@@ -74,7 +78,8 @@ export function Liczba({ etykieta, wartosc, zmiana, opis }: { etykieta: string; 
       <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-deck-muted/70">{etykieta}</div>
       <div className="mt-1.5 text-[24px] font-semibold tabular-nums tracking-[-0.02em] text-deck-text">{wartosc}</div>
       <div className="mt-1">
-        {zmiana ? <Zmiana z={zmiana} /> : <span className="font-mono text-[11px] text-deck-muted">{opis}</span>}
+        {zmiana && <Zmiana z={zmiana} />}
+        {opis && <span className={`font-mono text-[11px] text-deck-muted ${zmiana ? 'mt-0.5 block' : ''}`}>{opis}</span>}
       </div>
     </div>
   )

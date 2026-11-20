@@ -26,7 +26,7 @@ const ANALITYKA: DaneAnalityki = {
 }
 const PLANER: DanePlanera = { propozycje: 0, sesja: { wlaczony: false, od: null, przez: null }, najblizsze: [], ok: true }
 const STRONY: PodsumowanieStron = {
-  stron: 2, klikniecia: 125, wyswietlenia: 4000, poprzednieKlikniecia: 100, poprzednieWyswietlenia: 3000, alerty: 1, bledy: 0,
+  stron: 2, klikniecia: 125, wyswietlenia: 4000, poprzednieKlikniecia: 100, poprzednieWyswietlenia: 3000, alerty: 1, bledy: 0, sezonowe: 0,
 }
 const SKRZYNKA: LicznikiSkrzynki = {
   stan: 'polaczona', doOdpowiedzi: 7, poTerminie: 2, doPrzejrzenia: 4, czekaNaNich: 3, wToku: 1, zalatwione: 0, pominiete: 0, ostatniaSynchronizacja: 1,
