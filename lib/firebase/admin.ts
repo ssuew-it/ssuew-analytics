@@ -70,6 +70,11 @@ export function dziennikStanRef() {
   return bazaAdmin().collection('dziennik').doc('stan')
 }
 
+/** Orbita - zadania z etapami; tylko serwer, reguła końcowa zamyka kolekcję przed przeglądarką. */
+export function orbitaZadaniaRef() {
+  return bazaAdmin().collection('orbitaZadania')
+}
+
 /** Notatki asystenta - tylko serwer; reguła końcowa zamyka je przed przeglądarką. */
 export function notatkiRef() {
   return bazaAdmin().collection('asystentNotatki')
