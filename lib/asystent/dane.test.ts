@@ -10,10 +10,12 @@ const skrzynka = vi.hoisted(() => ({ liczniki: vi.fn(), obrazSkrzynki: vi.fn() }
 vi.mock('@/lib/skrzynka/dane', () => skrzynka)
 const dziennik = vi.hoisted(() => ({ czytajKsiege: vi.fn() }))
 vi.mock('@/lib/dziennik/dane', () => dziennik)
+const orbita = vi.hoisted(() => ({ czytajZadania: vi.fn() }))
+vi.mock('@/lib/orbita/dane', () => orbita)
 const gemini = vi.hoisted(() => ({ zapytajGemini: vi.fn() }))
 vi.mock('@/lib/asystent/gemini', async (oryginal) => ({ ...(await oryginal<object>()), zapytajGemini: gemini.zapytajGemini }))
 
-import { daneProjektu, odswiezOdpraweWTle, pobierzObrazDziennika, pobierzObrazSkrzynki } from '@/lib/asystent/dane'
+import { daneProjektu, odswiezOdpraweWTle, pobierzObrazDziennika, pobierzObrazOrbity, pobierzObrazSkrzynki } from '@/lib/asystent/dane'
 import type { ZapisanaOdprawa } from '@/lib/asystent/odprawa'
 
 describe('daneProjektu', () => {
@@ -27,10 +29,12 @@ describe('daneProjektu', () => {
       [{ ok: true, dane: strona }, { ok: false, witryna: 'x', nazwa: 'x', blad: 'inny', komunikat: '' }],
       null,
       null,
+      null,
     )
     expect(d.strony).toEqual([strona])
     expect(d.skrzynka).toBeNull()
     expect(d.dziennik).toBeNull()
+    expect(d.orbita).toBeNull()
   })
 })
 
@@ -51,6 +55,21 @@ describe('pobierzObrazDziennika', () => {
     expect(await pobierzObrazDziennika(DZIS)).toBeNull()
     expect(log).toHaveBeenCalledWith('[asystent] dziennik:', expect.any(Error))
     log.mockRestore()
+  })
+})
+
+describe('pobierzObrazOrbity', () => {
+  it('błąd odczytu zadań - null z logiem, bez wyjątku', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    orbita.czytajZadania.mockRejectedValue(new Error('firestore'))
+    expect(await pobierzObrazOrbity({ rok: 2026, miesiac: 11, dzien: 20 })).toBeNull()
+    expect(log).toHaveBeenCalledWith('[asystent] orbita:', expect.any(Error))
+    log.mockRestore()
+  })
+
+  it('zadania na obraz', async () => {
+    orbita.czytajZadania.mockResolvedValue([])
+    expect(await pobierzObrazOrbity({ rok: 2026, miesiac: 11, dzien: 20 })).toEqual({ dzis: [], podpowiedz: false, czekam: [] })
   })
 })
 
@@ -91,6 +110,7 @@ describe('odswiezOdpraweWTle - obraz skrzynki tylko przed możliwą nową odpraw
       strony: Promise.resolve([]),
       skrzynka: obraz,
       dziennik: Promise.resolve(null),
+      orbita: Promise.resolve(null),
       semestr: { id: '2026Z', nazwa: 'Z' },
       teraz: TERAZ,
     })

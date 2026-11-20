@@ -25,6 +25,13 @@ describe('sprawdzOdprawe', () => {
     expect(sprawdzOdprawe(null)).toBeNull()
   })
 
+  it('przyjmuje zagrożenie z Orbity z odnośnikiem do modułu, a instrukcja opisuje sekcję', () => {
+    const o = sprawdzOdprawe({ ...DOBRA, zagrozenia: [{ obszar: 'orbita', waga: 'wysoka', tytul: 'Zarządzenie spóźnione', uzasadnienie: 'zapas -2' }] })
+    expect(o?.zagrozenia[0].obszar).toBe('orbita')
+    expect(ODNOSNIK_OBSZARU.orbita).toBe('/orbita')
+    expect(INSTRUKCJA_ODPRAWY).toContain('orbita - etapy zadań na dziś')
+  })
+
   it('każdy obszar ma odnośnik do modułu', () => {
     expect(ODNOSNIK_OBSZARU.retencja).toBe('/analytics/retencja')
     expect(ODNOSNIK_OBSZARU.planer).toBe('/planer')

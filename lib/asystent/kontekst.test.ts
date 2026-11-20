@@ -16,7 +16,7 @@ function dane(nadpisz: Partial<DaneProjektu> = {}): DaneProjektu {
   return {
     rekrutacje: [], kohorty: [], punkty: [], projekty: [], czlonkowie: [],
     semestr: { id: '2026Z', nazwa: 'Zimowy 2026/2027' },
-    wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, notatki: [], strony: [], skrzynka: null, dziennik: null,
+    wydarzenia: [], sesja: { wlaczony: false, od: null, przez: null }, sklad: [], propozycje: 0, notatki: [], strony: [], skrzynka: null, dziennik: null, orbita: null,
     ...nadpisz,
   }
 }
@@ -116,5 +116,11 @@ describe('zbudujKontekst', () => {
     const poz = [{ tytul: 'Sprawozdanie', termin: '15.12.2026', przygotowaniaOd: '01.12.2026', obowiazkowe: true, rozlicza: ['KR'] }]
     expect(zbudujKontekst(dane({ dziennik: poz }), { rok: 2026, miesiac: 11, dzien: 19 }).dziennik).toEqual(poz)
     expect(zbudujKontekst(dane(), { rok: 2026, miesiac: 11, dzien: 19 }).dziennik).toBeNull()
+  })
+
+  it('orbita: etapy na dziś przechodzą bez zmian; null zostaje null', () => {
+    const o = { dzis: [{ zadanie: 'Zarządzenie', etap: 'Koncepcja', zapasDni: 0, termin: '20.12.2026' }], podpowiedz: false, czekam: [] }
+    expect(zbudujKontekst(dane({ orbita: o }), { rok: 2026, miesiac: 11, dzien: 20 }).orbita).toEqual(o)
+    expect(zbudujKontekst(dane(), { rok: 2026, miesiac: 11, dzien: 20 }).orbita).toBeNull()
   })
 })

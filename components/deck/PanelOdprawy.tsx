@@ -11,6 +11,7 @@ const ETYKIETA_OBSZARU: Record<Obszar, string> = {
   kpi: 'KPI', rekrutacja: 'Rekrutacja', retencja: 'Retencja', projekty: 'Projekty', planer: 'Sesja Operacyjna', zespol: 'Zespół', strony: 'Strony',
   skrzynka: 'Skrzynka',
   dziennik: 'Dziennik',
+  orbita: 'Orbita',
 }
 
 const STYL_WAGI: Record<Waga, string> = {

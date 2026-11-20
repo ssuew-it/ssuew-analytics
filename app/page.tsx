@@ -23,6 +23,8 @@ import { liczniki as licznikiSkrzynki } from '@/lib/skrzynka/dane'
 import type { LicznikiSkrzynki } from '@/lib/skrzynka/typy'
 import { czytajKsiege } from '@/lib/dziennik/dane'
 import { obrazDziennika } from '@/lib/dziennik/obraz'
+import { czytajZadania } from '@/lib/orbita/dane'
+import { obrazOrbity } from '@/lib/orbita/obraz'
 
 /** Zapas na odprawę generowaną w tle po wysłaniu strony (Gemini do 25 s). */
 export const maxDuration = 60
@@ -88,11 +90,19 @@ export default async function KokpitPage() {
         return null
       })
     const doOdprawy = dziennik.then((d) => d?.pozycje ?? null)
+    // Zadania raz na wejście - kafelek Orbity i odprawa biorą z tej samej obietnicy.
+    const zadania = czytajZadania()
+      .then((z) => obrazOrbity(z, dzis))
+      .catch((e) => {
+        console.error('[asystent] orbita:', e)
+        return null
+      })
     after(() => odswiezOdpraweWTle({
       arkusz, planer, zapisana, notatki: tresciNotatek().catch(() => []), strony: wynikiStron.then((w) => w ?? []),
       // `skrzynka` (wyżej) to obietnica liczników kafelka, ustawiana zawsze w tym bloku właściciela.
       skrzynka: () => pobierzObrazSkrzynki(teraz.getTime(), skrzynka ?? undefined),
       dziennik: doOdprawy,
+      orbita: zadania,
       semestr: { id: semestr.id, nazwa: semestr.nazwa }, teraz,
     }))
   }
