@@ -6,7 +6,7 @@ import { etapPusty, szkieletDokumentu } from '@/lib/orbita/szkielet'
 import { LIMITY, type Etap, type PolaZadania, type Zadanie } from '@/lib/orbita/typy'
 import { dopasuj, ileBrakuje } from '@/lib/orbita/zapas'
 import { szkicZDziennika } from '@/lib/orbita/zDziennika'
-import type { Data } from '@/lib/planer/trwanie'
+import { naIso, type Data } from '@/lib/planer/trwanie'
 import { POLE, PRZYCISK, PRZYCISK_CICHY } from '@/components/dziennik/style'
 import { EdytorEtapow } from './EdytorEtapow'
 
@@ -34,6 +34,7 @@ export function FormularzZadania({ dzis, zadanie, szkic, onGotowe, onAnuluj }: {
   const [blad, setBlad] = useState<string | null>(null)
 
   const brakuje = ileBrakuje(etapy, termin || null, dzis)
+  const minal = termin !== '' && termin < naIso(dzis)
   const suma = otwarteDni(etapy)
 
   function zmienEtapy(e: Etap[]) {
@@ -102,7 +103,11 @@ export function FormularzZadania({ dzis, zadanie, szkic, onGotowe, onAnuluj }: {
         </div>
       )}
 
-      {brakuje > 0 && (
+      {minal ? (
+        <p className="rounded-lg border border-deck-warn/30 bg-deck-warn/5 px-3 py-2 text-[12.5px] text-deck-warn">
+          Termin już minął - przesuń go albo zapisz zadanie jako spóźnione
+        </p>
+      ) : brakuje > 0 && (
         <div className="rounded-lg border border-deck-warn/30 bg-deck-warn/5 px-3 py-2 text-[12.5px] text-deck-warn">
           <p>Etapy trwają {suma} dni, do terminu zostało {suma - brakuje}</p>
           {poDopasowaniu ? (

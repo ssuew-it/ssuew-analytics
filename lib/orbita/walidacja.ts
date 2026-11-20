@@ -1,4 +1,4 @@
-import { naIso, zIso } from '@/lib/planer/trwanie'
+import { naIso, przesunDate, zIso, type Data } from '@/lib/planer/trwanie'
 import { LIMITY, type Etap, type PolaZadania, type RodzajEtapu, type Zadanie, type ZrodloDziennika } from './typy'
 
 type Wynik<T> = { ok: true; pola: T } | { ok: false; blad: string }
@@ -95,10 +95,21 @@ export function sprawdzZadanie(x: unknown): Wynik<PolaZadania> {
 }
 
 /**
+ * Konsultacje, które są bieżącym etapem, a nie mają `czekamDo` (zadanie od nich
+ * startuje albo etapy przed nimi usunięto), dostają datę od dziś. Bez tego
+ * „czekam do” przesuwałoby się z każdym dniem i nigdy nie wróciło na „Dziś”.
+ */
+export function ustalCzekamDo(etapy: Etap[], dzis: Data): Etap[] {
+  const k = etapy.findIndex((e) => e.zamkniety === null)
+  if (k === -1 || etapy[k].rodzaj !== 'czekanie' || etapy[k].czekamDo) return etapy
+  return etapy.map((e, i) => (i === k ? { ...e, czekamDo: naIso(przesunDate(dzis, e.dni)) } : e))
+}
+
+/**
  * Edycja zadania nie może ruszyć zamkniętych etapów: muszą zostać na początku,
  * w tej samej kolejności, z polami z bazy (poza wynikiem). Zwraca komunikat błędu albo nowe zadanie.
  */
-export function scalEdycje(stare: Zadanie, nowe: PolaZadania, teraz: number): Zadanie | string {
+export function scalEdycje(stare: Zadanie, nowe: PolaZadania, teraz: number, dzis: Data): Zadanie | string {
   if (nowe.etapy.length === 0) return 'Zadanie musi mieć co najmniej jeden etap'
   const zamkniete = stare.etapy.filter((e) => e.zamkniety !== null)
   const poczatek = nowe.etapy.slice(0, zamkniete.length)
@@ -114,7 +125,7 @@ export function scalEdycje(stare: Zadanie, nowe: PolaZadania, teraz: number): Za
   return {
     ...stare,
     ...nowe,
-    etapy,
+    etapy: ustalCzekamDo(etapy, dzis),
     zmieniono: teraz,
     zamkniete: reszta.length === 0 ? teraz : null,
   }

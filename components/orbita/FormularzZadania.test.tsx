@@ -41,6 +41,14 @@ describe('FormularzZadania', () => {
     expect(screen.getByText('Nawet po skróceniu brakuje 8 dni - przesuń termin albo skróć konsultacje')).toBeInTheDocument()
   })
 
+  it('termin w przeszłości - mówi, że minął, bez ujemnej liczby dni', () => {
+    render(<FormularzZadania dzis={DZIS} onGotowe={vi.fn()} onAnuluj={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText('Termin'), { target: { value: '2026-11-15' } })
+    expect(screen.getByText('Termin już minął - przesuń go albo zapisz zadanie jako spóźnione')).toBeInTheDocument()
+    expect(screen.queryByText(/zostało -/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Dopasuj' })).toBeNull()
+  })
+
   it('edycja: kolizja z drugą kartą pokazuje komunikat', async () => {
     k.zmien.mockRejectedValue(new BladKlienta('Zadanie zmieniło się w innej karcie - odśwież', null, 409))
     const z = zadanie('A', null, [etap({ nazwa: 'Koncepcja' })], { zmieniono: 7 })

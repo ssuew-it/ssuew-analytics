@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { scalEdycje, sprawdzZadanie } from '@/lib/orbita/walidacja'
+import { scalEdycje, sprawdzZadanie, ustalCzekamDo } from '@/lib/orbita/walidacja'
 import type { Etap, PolaZadania, Zadanie } from '@/lib/orbita/typy'
 
 const etap = (zmiany: Partial<Etap> = {}): Etap => ({
@@ -7,6 +7,7 @@ const etap = (zmiany: Partial<Etap> = {}): Etap => ({
   czekaNa: [], czekamDo: null, zamkniety: null, wynik: '', ...zmiany,
 })
 const pola = (zmiany: Record<string, unknown> = {}) => ({ tytul: 'Zadanie', kontekst: '', termin: null, zrodlo: null, etapy: [etap()], ...zmiany })
+const DZIS = { rok: 2026, miesiac: 11, dzien: 20 }
 const blad = (x: unknown) => {
   const w = sprawdzZadanie(x)
   return w.ok ? null : w.blad
@@ -65,22 +66,49 @@ describe('scalEdycje', () => {
   const nowe = (etapy: Etap[]): PolaZadania => ({ tytul: 'Z2', kontekst: '', termin: null, zrodlo: null, etapy })
 
   it('przestawienie zamkniętego za otwarty → błąd', () => {
-    expect(typeof scalEdycje(stare, nowe([etap({ id: 'o2' }), etap({ id: 'z1' })]), 50)).toBe('string')
+    expect(typeof scalEdycje(stare, nowe([etap({ id: 'o2' }), etap({ id: 'z1' })]), 50, DZIS)).toBe('string')
   })
   it('usunięcie zamkniętego → błąd', () => {
-    expect(scalEdycje(stare, nowe([etap({ id: 'o2' })]), 50)).toBe('Zamkniętych etapów nie można usuwać ani przestawiać')
+    expect(scalEdycje(stare, nowe([etap({ id: 'o2' })]), 50, DZIS)).toBe('Zamkniętych etapów nie można usuwać ani przestawiać')
   })
   it('zamknięty zachowuje pola, poza wynikiem', () => {
-    const w = scalEdycje(stare, nowe([etap({ id: 'z1', nazwa: 'Podmiana', wynik: 'nowy' }), etap({ id: 'o2', nazwa: 'Projekt' })]), 50) as Zadanie
+    const w = scalEdycje(stare, nowe([etap({ id: 'z1', nazwa: 'Podmiana', wynik: 'nowy' }), etap({ id: 'o2', nazwa: 'Projekt' })]), 50, DZIS) as Zadanie
     expect(w.etapy[0]).toMatchObject({ nazwa: 'Koncepcja', zamkniety: 10, wynik: 'nowy' })
     expect(w.etapy[1]).toMatchObject({ nazwa: 'Projekt', zamkniety: null })
     expect(w).toMatchObject({ tytul: 'Z2', zmieniono: 50, utworzono: 1, id: 'z' })
   })
   it('usunięcie ostatniego otwartego zamyka zadanie', () => {
-    const w = scalEdycje(stare, nowe([etap({ id: 'z1' })]), 50) as Zadanie
+    const w = scalEdycje(stare, nowe([etap({ id: 'z1' })]), 50, DZIS) as Zadanie
     expect(w.zamkniete).toBe(50)
   })
   it('bez etapów → błąd', () => {
-    expect(scalEdycje({ ...stare, etapy: [etap({ id: 'o2' })] }, nowe([]), 50)).toBe('Zadanie musi mieć co najmniej jeden etap')
+    expect(scalEdycje({ ...stare, etapy: [etap({ id: 'o2' })] }, nowe([]), 50, DZIS)).toBe('Zadanie musi mieć co najmniej jeden etap')
+  })
+})
+
+describe('ustalCzekamDo', () => {
+  it('bieżące konsultacje bez daty dostają dziś + dni', () => {
+    const e = ustalCzekamDo([etap({ id: 'k', rodzaj: 'czekanie', dni: 14 }), etap({ id: 'p' })], DZIS)
+    expect(e[0].czekamDo).toBe('2026-12-04')
+  })
+  it('istniejąca data, bieżąca praca i dalsze konsultacje bez zmian', () => {
+    expect(ustalCzekamDo([etap({ rodzaj: 'czekanie', czekamDo: '2026-12-01' })], DZIS)[0].czekamDo).toBe('2026-12-01')
+    const e = ustalCzekamDo([etap({ id: 'p' }), etap({ id: 'k', rodzaj: 'czekanie' })], DZIS)
+    expect(e[1].czekamDo).toBeNull()
+  })
+  it('po zamkniętych etapach patrzy na pierwszy otwarty', () => {
+    const e = ustalCzekamDo([etap({ id: 'a', zamkniety: 1 }), etap({ id: 'k', rodzaj: 'czekanie', dni: 0 })], DZIS)
+    expect(e[1].czekamDo).toBe('2026-11-20')
+  })
+})
+
+describe('scalEdycje - konsultacje stają się bieżące', () => {
+  it('usunięcie etapów przed konsultacjami ustawia czekamDo', () => {
+    const stare: Zadanie = {
+      id: 'z', tytul: 'Z', kontekst: '', termin: null, zrodlo: null, utworzono: 1, zmieniono: 2, zamkniete: null,
+      etapy: [etap({ id: 'a' }), etap({ id: 'k', rodzaj: 'czekanie', dni: 14 })],
+    }
+    const w = scalEdycje(stare, { tytul: 'Z', kontekst: '', termin: null, zrodlo: null, etapy: [etap({ id: 'k', rodzaj: 'czekanie', dni: 14 })] }, 50, DZIS) as Zadanie
+    expect(w.etapy[0].czekamDo).toBe('2026-12-04')
   })
 })

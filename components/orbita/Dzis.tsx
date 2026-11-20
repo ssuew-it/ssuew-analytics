@@ -2,8 +2,33 @@
 import { useState } from 'react'
 import { krotkaData, opisZapasu } from '@/lib/orbita/format'
 import { WIDOCZNE_DZIS } from '@/lib/orbita/typy'
-import type { PlanDnia } from '@/lib/orbita/zapas'
+import type { Zadanie } from '@/lib/orbita/typy'
+import { biezacy, type PlanDnia } from '@/lib/orbita/zapas'
 import { KartaEtapu } from './KartaEtapu'
+
+/** Zadanie bez terminu - rozwijane do karty, żeby dało się nad nim pracować także na telefonie. */
+function WierszKiedys({ z, odswiez }: { z: Zadanie; odswiez: () => void }) {
+  const [otwarte, setOtwarte] = useState(false)
+  const k = biezacy(z)
+  return (
+    <li className="px-4 py-1 text-[13px] text-deck-muted">
+      <button
+        type="button"
+        aria-label={`Pokaż etap: ${z.tytul}`}
+        aria-expanded={otwarte}
+        className="text-left hover:text-deck-text"
+        onClick={() => setOtwarte((x) => !x)}
+      >
+        {z.tytul}
+      </button>
+      {otwarte && k !== null && (
+        <div className="mt-2">
+          <KartaEtapu pozycja={{ zadanie: z, etap: k, zapas: null, poCzekaniu: false }} odswiez={odswiez} />
+        </div>
+      )}
+    </li>
+  )
+}
 
 const NAGLOWEK = 'font-mono text-[10.5px] uppercase tracking-[0.2em] text-deck-muted'
 
@@ -73,7 +98,7 @@ export function Dzis({ plan, odswiez }: { plan: PlanDnia; odswiez: () => void })
           <summary className={`${NAGLOWEK} cursor-pointer`}>Kiedyś ({plan.kiedys.length})</summary>
           <ul className="mt-2 space-y-1">
             {plan.kiedys.map((z) => (
-              <li key={z.id} className="px-4 py-1 text-[13px] text-deck-muted">{z.tytul}</li>
+              <WierszKiedys key={z.id} z={z} odswiez={odswiez} />
             ))}
           </ul>
         </details>

@@ -31,6 +31,14 @@ describe('Dzis', () => {
     expect(screen.getByText(/\(z Dziennika\)/)).toBeInTheDocument()
   })
 
+  it('zadanie bez terminu da się rozwinąć do karty etapu z kopiowaniem', () => {
+    pokaz([zadanie('E', null, [etap({ nazwa: 'Szkic standardu' })])])
+    expect(screen.queryByRole('button', { name: 'Kopiuj do Claude' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż etap: Zadanie E' }))
+    expect(screen.getByRole('button', { name: 'Kopiuj do Claude' })).toBeInTheDocument()
+    expect(screen.getByText('kiedyś')).toBeInTheDocument()
+  })
+
   it('pusto - zachęta', () => {
     pokaz([])
     expect(screen.getByText('Nic tu jeszcze nie ma. Dodaj zadanie, które czeka na pierwszy krok.')).toBeInTheDocument()

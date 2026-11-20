@@ -3,7 +3,7 @@ import type { Data } from '@/lib/planer/trwanie'
 import { orbitaZadaniaRef } from '@/lib/firebase/admin'
 import { BladOrbity, KOMUNIKAT_KOLIZJI, otworzEtap, zamknijEtap } from './etapy'
 import type { Etap, PolaZadania, Zadanie, ZrodloDziennika } from './typy'
-import { scalEdycje } from './walidacja'
+import { scalEdycje, ustalCzekamDo } from './walidacja'
 
 const NIE_MA = 'Nie ma takiego zadania - odśwież'
 
@@ -51,9 +51,9 @@ export async function czytajZadania(): Promise<Zadanie[]> {
   })
 }
 
-export async function dodajZadanie(pola: PolaZadania, teraz: number): Promise<Zadanie> {
+export async function dodajZadanie(pola: PolaZadania, teraz: number, dzis: Data): Promise<Zadanie> {
   const ref = orbitaZadaniaRef().doc()
-  const z: Zadanie = { id: ref.id, ...pola, utworzono: teraz, zmieniono: teraz, zamkniete: null }
+  const z: Zadanie = { id: ref.id, ...pola, etapy: ustalCzekamDo(pola.etapy, dzis), utworzono: teraz, zmieniono: teraz, zamkniete: null }
   await ref.set(bezId(z))
   return z
 }
@@ -68,11 +68,11 @@ async function wTransakcji(tr: Transaction, id: string): Promise<Zadanie> {
 }
 
 /** Edycja całego zadania; `zmieniono` musi się zgadzać z bazą (druga karta). */
-export function zmienZadanie(id: string, pola: PolaZadania, zmieniono: number, teraz: number): Promise<Zadanie> {
+export function zmienZadanie(id: string, pola: PolaZadania, zmieniono: number, teraz: number, dzis: Data): Promise<Zadanie> {
   return transakcja(async (tr) => {
     const stare = await wTransakcji(tr, id)
     if (stare.zmieniono !== zmieniono) throw new BladOrbity('zmienione', KOMUNIKAT_KOLIZJI)
-    const nowe = scalEdycje(stare, pola, teraz)
+    const nowe = scalEdycje(stare, pola, teraz, dzis)
     if (typeof nowe === 'string') throw new BladOrbity('walidacja', nowe)
     tr.set(orbitaZadaniaRef().doc(id), bezId(nowe))
     return nowe
